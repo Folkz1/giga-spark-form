@@ -18,7 +18,7 @@ const StepSeedKeywords = ({ seedKeywords, keywordResults, customerId, onSeedChan
     if (!seedKeywords.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch("https://n8o.gigainteligencia.com.br/webhook/google-ads-keywords", {
+      const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-keywords", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ keywords: seedKeywords, customerId }),
