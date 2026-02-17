@@ -18,49 +18,25 @@ const StepSeedKeywords = ({ seedKeywords, keywordResults, customerId, onSeedChan
     if (!seedKeywords.trim()) return;
     setLoading(true);
     try {
-      const res = await fetch("/api/keywords", {
+      const res = await fetch("https://n8o.gigainteligencia.com.br/webhook/google-ads-keywords", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ keywords: seedKeywords, customerId }),
       });
-      if (res.ok) {
-        const data = await res.json();
-        onResults(data);
-      } else {
-        throw new Error();
-      }
-    } catch {
-      // Mock data
-      const seeds = seedKeywords.split(",").map((k) => k.trim()).filter(Boolean);
-      const intents: KeywordResult["intent"][] = ["Transacional", "Comercial", "Informacional"];
-      const competitions: KeywordResult["competition"][] = ["Alta", "Média", "Baixa"];
-      const mockResults: KeywordResult[] = seeds.flatMap((seed, i) => [
-        {
-          keyword: seed,
-          monthlyVolume: Math.floor(Math.random() * 10000) + 500,
-          competition: competitions[i % 3],
-          estimatedCPC: parseFloat((Math.random() * 8 + 1).toFixed(2)),
-          intent: intents[i % 3],
-          selected: intents[i % 3] !== "Informacional",
-        },
-        {
-          keyword: `${seed} preço`,
-          monthlyVolume: Math.floor(Math.random() * 5000) + 200,
-          competition: "Média",
-          estimatedCPC: parseFloat((Math.random() * 6 + 2).toFixed(2)),
-          intent: "Comercial" as const,
-          selected: true,
-        },
-        {
-          keyword: `${seed} empresa`,
-          monthlyVolume: Math.floor(Math.random() * 3000) + 100,
-          competition: "Baixa",
-          estimatedCPC: parseFloat((Math.random() * 4 + 1).toFixed(2)),
-          intent: "Transacional" as const,
-          selected: true,
-        },
-      ]);
-      onResults(mockResults);
+      if (!res.ok) throw new Error("Falha na requisição");
+      const data = await res.json();
+      // Map response to KeywordResult[], applying pre-selection logic
+      const results: KeywordResult[] = (Array.isArray(data) ? data : [data]).map((item: any) => ({
+        keyword: item.keyword || item.palavra_chave || item.Keyword || "",
+        monthlyVolume: Number(item.monthlyVolume || item.volume || item.Volume || item.avg_monthly_searches || 0),
+        competition: item.competition || item.competicao || item.Concorrência || item.Competition || "Média",
+        estimatedCPC: Number(item.estimatedCPC || item.cpc || item.CPC || item.estimated_cpc || 0),
+        intent: item.intent || item.intencao || item.Intenção || item.Intent || "Informacional",
+        selected: (item.intent || item.intencao || item.Intenção || item.Intent || "Informacional") !== "Informacional",
+      }));
+      onResults(results);
+    } catch (err) {
+      console.error("Erro ao analisar palavras-chave:", err);
     } finally {
       setLoading(false);
     }
