@@ -4,12 +4,15 @@ export interface Account {
   customerId: string;
 }
 
+export type MatchType = "EXACT" | "PHRASE" | "BROAD";
+
 export interface KeywordResult {
   keyword: string;
   monthlyVolume: number;
   competition: "Alta" | "Média" | "Baixa";
   estimatedCPC: number;
   intent: "Transacional" | "Comercial" | "Informacional";
+  matchType: MatchType;
   selected: boolean;
 }
 
