@@ -25,10 +25,14 @@ const StepSeedKeywords = ({ seedKeywords, keywordResults, customerId, onSeedChan
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ keywords: seedKeywords, customerId }),
       });
+      console.log("Keywords API status:", res.status);
+      console.log("Keywords API headers:", Object.fromEntries(res.headers.entries()));
+      
       if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
       
       const text = await res.text();
-      console.log("Keywords API raw response:", text);
+      console.log("Keywords API raw response length:", text.length);
+      console.log("Keywords API raw response:", JSON.stringify(text));
       
       if (!text || text.trim() === "") {
         throw new Error("A API retornou uma resposta vazia. Verifique se o webhook do n8n está ativo e configurado corretamente em principaln8o.gigainteligencia.com.br");
