@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Loader2, Search, Sparkles } from "lucide-react";
+import { Loader2, Search, Sparkles, AlertCircle } from "lucide-react";
 import type { KeywordResult } from "./types";
 
 interface StepSeedKeywordsProps {
@@ -13,20 +13,50 @@ interface StepSeedKeywordsProps {
 
 const StepSeedKeywords = ({ seedKeywords, keywordResults, customerId, onSeedChange, onResults }: StepSeedKeywordsProps) => {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const analyzeKeywords = async () => {
     if (!seedKeywords.trim()) return;
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-keywords", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ keywords: seedKeywords, customerId }),
       });
-      if (!res.ok) throw new Error("Falha na requisição");
-      const data = await res.json();
-      // Map response to KeywordResult[], applying pre-selection logic
-      const results: KeywordResult[] = (Array.isArray(data) ? data : [data]).map((item: any) => ({
+      if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
+      
+      const text = await res.text();
+      console.log("Keywords API raw response:", text);
+      
+      if (!text || text.trim() === "") {
+        throw new Error("API retornou resposta vazia");
+      }
+      
+      const data = JSON.parse(text);
+      console.log("Keywords API parsed:", data);
+      
+      // Extract array from various response structures
+      let items: any[] = [];
+      if (Array.isArray(data)) {
+        items = data;
+      } else if (data?.keywords && Array.isArray(data.keywords)) {
+        items = data.keywords;
+      } else if (data?.data && Array.isArray(data.data)) {
+        items = data.data;
+      } else if (data?.results && Array.isArray(data.results)) {
+        items = data.results;
+      } else {
+        // Maybe it's a single object
+        items = [data];
+      }
+      
+      if (items.length === 0) {
+        throw new Error("Nenhum resultado retornado pela API");
+      }
+      
+      const results: KeywordResult[] = items.map((item: any) => ({
         keyword: item.keyword || item.palavra_chave || item.Keyword || "",
         monthlyVolume: Number(item.monthlyVolume || item.volume || item.Volume || item.avg_monthly_searches || 0),
         competition: item.competition || item.competicao || item.Concorrência || item.Competition || "Média",
@@ -35,8 +65,9 @@ const StepSeedKeywords = ({ seedKeywords, keywordResults, customerId, onSeedChan
         selected: (item.intent || item.intencao || item.Intenção || item.Intent || "Informacional") !== "Informacional",
       }));
       onResults(results);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao analisar palavras-chave:", err);
+      setError(err?.message || "Erro ao analisar palavras-chave. Tente novamente.");
     } finally {
       setLoading(false);
     }
@@ -80,6 +111,12 @@ const StepSeedKeywords = ({ seedKeywords, keywordResults, customerId, onSeedChan
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
           {loading ? "Analisando..." : "Analisar palavras-chave"}
         </button>
+        {error && (
+          <div className="flex items-center gap-2 text-destructive text-sm mt-2">
+            <AlertCircle className="w-4 h-4" />
+            <span>{error}</span>
+          </div>
+        )}
       </div>
 
       {keywordResults.length > 0 && (
