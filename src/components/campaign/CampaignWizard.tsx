@@ -33,6 +33,40 @@ const CampaignWizard = () => {
 
   const totalSteps = 6;
 
+  const autoGroupByIntent = () => {
+    const selected = data.keywordResults.filter(k => k.selected);
+    const intentGroups: Record<string, string[]> = {};
+    selected.forEach(k => {
+      if (!intentGroups[k.intent]) intentGroups[k.intent] = [];
+      intentGroups[k.intent].push(k.keyword);
+    });
+
+    const prefixMap: Record<string, string> = {
+      Transacional: "Compra Direta",
+      Comercial: "Pesquisa de Preço",
+      Informacional: "Informativo",
+    };
+
+    const adGroups = Object.entries(intentGroups).map(([intent, keywords], i) => ({
+      id: `group-${i}`,
+      name: `${prefixMap[intent] || intent} - ${keywords[0]?.split(" ").slice(0, 2).join(" ") || "Grupo"}`,
+      keywords,
+    }));
+
+    const structure: CampaignStructure = {
+      campaignName: `Campanha - ${data.seedKeywords.split(",")[0]?.trim() || "Nova"}`,
+      adGroups,
+    };
+    setData(prev => ({ ...prev, structure }));
+  };
+
+  const handleNext = () => {
+    if (step === 1 && !data.structure) {
+      autoGroupByIntent();
+    }
+    setStep(s => Math.min(totalSteps - 1, s + 1));
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
@@ -109,7 +143,7 @@ const CampaignWizard = () => {
 
           {step < totalSteps - 1 && (
             <motion.button
-              onClick={() => setStep((s) => Math.min(totalSteps - 1, s + 1))}
+              onClick={handleNext}
               disabled={!canProceed()}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg gradient-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed glow-primary"
               whileTap={{ scale: 0.97 }}
