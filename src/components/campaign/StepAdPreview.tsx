@@ -21,10 +21,10 @@ const StepAdPreview = ({ structure, urls, onStructureChange }: StepAdPreviewProp
   const generateAds = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/ads", {
+      const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-ads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ structure, urls }),
+        body: JSON.stringify({ customerId: "", landingPageUrl: Object.values(urls)[0] || "", structure }),
       });
       if (res.ok) {
         const data = await res.json();

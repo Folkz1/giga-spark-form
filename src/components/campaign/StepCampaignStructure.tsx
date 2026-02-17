@@ -24,10 +24,14 @@ const StepCampaignStructure = ({ selectedKeywords, structure, onStructureChange 
   const fetchStructure = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/structure", {
+      const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-structure", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keywords: selectedKeywords.filter((k) => k.selected).map((k) => k.keyword) }),
+        body: JSON.stringify({
+          campaignName: "Campanha - Serviços",
+          customerId: "",
+          keywords: selectedKeywords.filter((k) => k.selected).map((k) => ({ keyword: k.keyword, intent: k.intent })),
+        }),
       });
       if (res.ok) {
         const data = await res.json();

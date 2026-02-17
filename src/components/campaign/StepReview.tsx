@@ -14,10 +14,17 @@ const StepReview = ({ data }: StepReviewProps) => {
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      await fetch("/api/submit", {
+      await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          accountName: data.selectedAccount?.name,
+          customerId: data.selectedAccount?.customerId,
+          campaignName: data.structure?.campaignName,
+          landingPageUrl: Object.values(data.urls)[0] || "",
+          structure: data.structure,
+          ads: data.structure?.adGroups,
+        }),
       });
     } catch {
       // Continue anyway for demo
