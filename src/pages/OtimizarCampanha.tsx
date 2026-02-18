@@ -297,20 +297,28 @@ const OtimizarCampanha = () => {
   const startAnalysis = useCallback(async () => {
     setStep(1);
     setAnalyzeError(null);
+    const requestBody = {
+      customerId: selectedAccount!.customerId,
+      campaignId: selectedCampaign!.id,
+      adGroupId: selectedAdGroup!.id,
+      adGroupName: selectedAdGroup!.name,
+      campaignName: selectedCampaign!.name,
+    };
+    console.log("Sending optimize request:", requestBody);
     try {
       const res = await fetch("https://appn8o2.gigainteligencia.com.br/webhook/google-ads-optimize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerId: selectedAccount!.customerId,
-          campaignId: selectedCampaign!.id,
-          adGroupId: selectedAdGroup!.id,
-          adGroupName: selectedAdGroup!.name,
-          campaignName: selectedCampaign!.name,
-        }),
+        body: JSON.stringify(requestBody),
       });
-      if (!res.ok) throw new Error("Falha na análise");
-      const data = await res.json();
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("Optimize API error:", res.status, errorText);
+        throw new Error(`Falha na análise: ${res.status}`);
+      }
+      const text = await res.text();
+      console.log("Optimize API raw response:", text);
+      const data = text ? JSON.parse(text) : {};
       const terms: SugestedTerm[] = Array.isArray(data)
         ? data
         : Array.isArray(data?.termos)
@@ -318,11 +326,13 @@ const OtimizarCampanha = () => {
         : Array.isArray(data?.suggestions)
         ? data.suggestions
         : [];
+      console.log("Parsed terms:", terms.length);
       setSuggestedTerms(terms);
       setSelectedTerms(new Set());
       setStep(2);
-    } catch {
-      setAnalyzeError("Erro na análise. Tente novamente.");
+    } catch (err: any) {
+      console.error("Optimize error:", err);
+      setAnalyzeError(err?.message || "Erro na análise. Tente novamente.");
       setStep(0);
     }
   }, [selectedAccount, selectedCampaign, selectedAdGroup]);
@@ -507,6 +517,13 @@ const OtimizarCampanha = () => {
                   disabled={!selectedCampaign}
                   searchable
                 />
+
+                {analyzeError && (
+                  <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-destructive/10 border border-destructive/30">
+                    <AlertCircle className="w-4 h-4 text-destructive shrink-0" />
+                    <span className="text-sm text-destructive">{analyzeError}</span>
+                  </div>
+                )}
 
                 <div className="pt-4">
                   <motion.button
