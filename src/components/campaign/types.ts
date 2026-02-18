@@ -46,13 +46,25 @@ export interface Briefing {
   proibidas: string;
 }
 
+export interface ConversaoOption {
+  id: string;
+  resourceName: string;
+  nome: string;
+}
+
+export interface RegiaoOption {
+  id: string;
+  resourceName: string;
+  nome: string;
+}
+
 export interface Configuracoes {
   tipoCampanha: string;
   orcamentoDiario: string;
   estrategiaLance: string;
   metaCPA: string;
-  conversao: string;
-  regiao: string;
+  conversao: ConversaoOption | null;
+  regiao: RegiaoOption | null;
   idioma: string;
   _mode?: "copy" | "manual" | null;
   _copiedFrom?: string;

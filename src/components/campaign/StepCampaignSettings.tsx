@@ -4,7 +4,7 @@ import { Loader2, Copy, Settings2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Configuracoes } from "./types";
+import type { Configuracoes, ConversaoOption, RegiaoOption } from "./types";
 
 interface StepCampaignSettingsProps {
   customerId: string;
@@ -29,18 +29,26 @@ const StepCampaignSettings = ({ customerId, configuracoes, onConfiguracaoChange 
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
   const [selectedCampaignId, setSelectedCampaignId] = useState<string>(configuracoes._copiedFrom || "");
 
+  const [conversions, setConversions] = useState<ConversaoOption[]>([]);
+  const [regions, setRegions] = useState<RegiaoOption[]>([]);
+  const [loadingConversions, setLoadingConversions] = useState(false);
+  const [loadingRegions, setLoadingRegions] = useState(false);
+
   useEffect(() => {
     if (mode === "copy" && campaigns.length === 0) {
       fetchCampaigns();
     }
   }, [mode]);
 
+  useEffect(() => {
+    if (mode && conversions.length === 0) fetchConversions();
+    if (mode && regions.length === 0) fetchRegions();
+  }, [mode]);
+
   const fetchCampaigns = async () => {
     setLoadingCampaigns(true);
     try {
-      const res = await fetch(
-        `https://appn8o2.gigainteligencia.com.br/webhook/google-ads-campaigns?customerId=${customerId}`
-      );
+      const res = await fetch(`https://appn8o2.gigainteligencia.com.br/webhook/google-ads-campaigns?customerId=${customerId}`);
       if (res.ok) {
         const data = await res.json();
         const list: ExistingCampaign[] = Array.isArray(data) ? data : data.campaigns || [];
@@ -50,6 +58,36 @@ const StepCampaignSettings = ({ customerId, configuracoes, onConfiguracaoChange 
       console.error("Error fetching campaigns:", err);
     } finally {
       setLoadingCampaigns(false);
+    }
+  };
+
+  const fetchConversions = async () => {
+    setLoadingConversions(true);
+    try {
+      const res = await fetch(`https://appn8o2.gigainteligencia.com.br/webhook/google-ads-conversions?customerId=${customerId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setConversions(Array.isArray(data) ? data : data.conversions || []);
+      }
+    } catch (err) {
+      console.error("Error fetching conversions:", err);
+    } finally {
+      setLoadingConversions(false);
+    }
+  };
+
+  const fetchRegions = async () => {
+    setLoadingRegions(true);
+    try {
+      const res = await fetch(`https://appn8o2.gigainteligencia.com.br/webhook/google-ads-regions?customerId=${customerId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setRegions(Array.isArray(data) ? data : data.regions || []);
+      }
+    } catch (err) {
+      console.error("Error fetching regions:", err);
+    } finally {
+      setLoadingRegions(false);
     }
   };
 
@@ -73,7 +111,7 @@ const StepCampaignSettings = ({ customerId, configuracoes, onConfiguracaoChange 
     onConfiguracaoChange({ ...configuracoes, _mode: m });
   };
 
-  const update = (field: keyof Configuracoes, value: string) => {
+  const update = (field: keyof Configuracoes, value: string | ConversaoOption | RegiaoOption | null) => {
     onConfiguracaoChange({ ...configuracoes, [field]: value });
   };
 
@@ -125,7 +163,6 @@ const StepCampaignSettings = ({ customerId, configuracoes, onConfiguracaoChange 
         </button>
       </div>
 
-      {/* Copy mode: campaign selector */}
       {mode === "copy" && (
         <div className="rounded-xl border border-border bg-card p-5 space-y-4">
           <Label>Campanha existente</Label>
@@ -140,9 +177,7 @@ const StepCampaignSettings = ({ customerId, configuracoes, onConfiguracaoChange 
               </SelectTrigger>
               <SelectContent>
                 {campaigns.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.nome}
-                  </SelectItem>
+                  <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -150,16 +185,13 @@ const StepCampaignSettings = ({ customerId, configuracoes, onConfiguracaoChange 
         </div>
       )}
 
-      {/* Config form (shown in both modes, editable) */}
       {(mode === "manual" || (mode === "copy" && selectedCampaignId)) && (
         <div className="rounded-xl border border-border bg-card p-5 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label>Tipo de campanha</Label>
               <Select value={configuracoes.tipoCampanha} onValueChange={(v) => update("tipoCampanha", v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Search">Search</SelectItem>
                   <SelectItem value="Performance Max">Performance Max</SelectItem>
@@ -180,9 +212,7 @@ const StepCampaignSettings = ({ customerId, configuracoes, onConfiguracaoChange 
             <div className="space-y-1.5">
               <Label>Estratégia de lance</Label>
               <Select value={configuracoes.estrategiaLance} onValueChange={(v) => update("estrategiaLance", v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Maximizar Conversões">Maximizar Conversões</SelectItem>
                   <SelectItem value="CPA Alvo">CPA Alvo</SelectItem>
@@ -206,28 +236,56 @@ const StepCampaignSettings = ({ customerId, configuracoes, onConfiguracaoChange 
 
             <div className="space-y-1.5">
               <Label>Conversão</Label>
-              <Input
-                placeholder="Ex: Formulário de contato"
-                value={configuracoes.conversao}
-                onChange={(e) => update("conversao", e.target.value)}
-              />
+              {loadingConversions ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm h-10">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
+                </div>
+              ) : (
+                <Select
+                  value={configuracoes.conversao?.id || ""}
+                  onValueChange={(id) => {
+                    const selected = conversions.find((c) => c.id === id) || null;
+                    update("conversao", selected);
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione a conversão" /></SelectTrigger>
+                  <SelectContent>
+                    {conversions.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label>Região</Label>
-              <Input
-                placeholder="Ex: São Paulo, SP"
-                value={configuracoes.regiao}
-                onChange={(e) => update("regiao", e.target.value)}
-              />
+              {loadingRegions ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm h-10">
+                  <Loader2 className="w-4 h-4 animate-spin" /> Carregando...
+                </div>
+              ) : (
+                <Select
+                  value={configuracoes.regiao?.id || ""}
+                  onValueChange={(id) => {
+                    const selected = regions.find((r) => r.id === id) || null;
+                    update("regiao", selected);
+                  }}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione a região" /></SelectTrigger>
+                  <SelectContent>
+                    {regions.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="space-y-1.5">
               <Label>Idioma</Label>
               <Select value={configuracoes.idioma} onValueChange={(v) => update("idioma", v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Selecione" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Português">Português</SelectItem>
                   <SelectItem value="Inglês">Inglês</SelectItem>
