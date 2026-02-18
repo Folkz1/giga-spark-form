@@ -24,6 +24,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import type { Account } from "@/components/campaign/types";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 
 /* ── Types ─────────────────────────────────────────── */
 
@@ -834,18 +835,18 @@ const OtimizarCampanha = () => {
 
                     {/* Table */}
                     <div className="overflow-x-auto">
-                      <Table>
+                      <Table className="min-w-[900px]">
                         <TableHeader>
                           <TableRow className="bg-secondary/30">
                             <TableHead className="w-10" />
-                            <TableHead>Grupo</TableHead>
+                            <TableHead style={{ maxWidth: 120, width: 120 }}>Grupo</TableHead>
                             <TableHead style={{ minWidth: 180 }}>Termo de Pesquisa</TableHead>
                             <TableHead className="text-center">Impressões</TableHead>
                             <TableHead className="text-center">Cliques</TableHead>
                             <TableHead className="text-center">Custo (R$)</TableHead>
                             <TableHead className="text-center">Conversões</TableHead>
-                            <TableHead style={{ minWidth: 200 }}>Motivo</TableHead>
-                            <TableHead>Prioridade</TableHead>
+                            <TableHead style={{ minWidth: 180 }}>Motivo</TableHead>
+                            <TableHead className="whitespace-nowrap">Prioridade</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -864,8 +865,17 @@ const OtimizarCampanha = () => {
                                     disabled={hasConversions}
                                   />
                                 </TableCell>
-                                <TableCell className="text-sm font-medium text-muted-foreground" style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
-                                  {term.grupo}
+                                <TableCell style={{ maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} className="text-sm font-medium text-muted-foreground">
+                                  <TooltipProvider delayDuration={200}>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span className="block truncate cursor-default">{term.grupo}</span>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="top">
+                                        <p className="max-w-xs">{term.grupo}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
                                 </TableCell>
                                 <TableCell className="font-medium" style={{ minWidth: 180, whiteSpace: "normal", wordBreak: "break-word" }}>
                                   {term.termo}
@@ -876,10 +886,10 @@ const OtimizarCampanha = () => {
                                   {parseCusto(term.custo).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                                 </TableCell>
                                 <TableCell className="text-center">{term.conversoes ?? 0}</TableCell>
-                                <TableCell className="text-sm text-muted-foreground" style={{ minWidth: 200, whiteSpace: "normal", wordBreak: "break-word" }}>
+                                <TableCell className="text-sm text-muted-foreground" style={{ minWidth: 180, whiteSpace: "normal", wordBreak: "break-word" }}>
                                   {term.motivo}
                                 </TableCell>
-                                <TableCell>{priorityBadge(term.prioridade)}</TableCell>
+                                <TableCell className="whitespace-nowrap">{priorityBadge(term.prioridade)}</TableCell>
                               </TableRow>
                             );
                           })}
