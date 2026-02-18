@@ -53,6 +53,7 @@ interface SugestedTerm {
   grupo: string;
   adGroupId: string;
   customerId: string;
+  accountName: string;
 }
 
 /* ── Multi-Select Dropdown ─────────────────────────── */
@@ -509,6 +510,7 @@ const OtimizarCampanha = () => {
               grupo: grp.name,
               adGroupId: grp.id.split("__")[2],
               customerId: grp.customerId,
+              accountName: accounts.find((a) => a.customerId === grp.customerId)?.name || grp.customerId,
             }));
           } catch (err) {
             console.error(`[OPTIMIZE] Erro geral para grupo ${grp.name}:`, err);
@@ -577,6 +579,16 @@ const OtimizarCampanha = () => {
     });
   };
 
+  const selectHighPriorityForAccount = (customerId: string) => {
+    const keys = selectableTerms.filter((t) => t.prioridade === "alta" && t.customerId === customerId).map(termKey);
+    setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.add(k)); return next; });
+  };
+
+  const selectAllForAccount = (customerId: string) => {
+    const keys = selectableTerms.filter((t) => t.customerId === customerId).map(termKey);
+    setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.add(k)); return next; });
+  };
+
   const selectHighPriority = () => {
     const keys = selectableTerms.filter((t) => t.prioridade === "alta").map(termKey);
     setSelectedTerms(new Set(keys));
@@ -585,6 +597,18 @@ const OtimizarCampanha = () => {
   const selectAll = () => {
     setSelectedTerms(new Set(selectableTerms.map(termKey)));
   };
+
+  // Group terms by account
+  const termsByAccount = useMemo(() => {
+    const map = new Map<string, { accountName: string; customerId: string; terms: SugestedTerm[] }>();
+    for (const t of suggestedTerms) {
+      if (!map.has(t.customerId)) {
+        map.set(t.customerId, { accountName: t.accountName, customerId: t.customerId, terms: [] });
+      }
+      map.get(t.customerId)!.terms.push(t);
+    }
+    return [...map.values()];
+  }, [suggestedTerms]);
 
   const resetFlow = () => {
     setStep(0);
@@ -773,97 +797,100 @@ const OtimizarCampanha = () => {
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={selectHighPriority}
-                    className="px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors border border-destructive/20"
-                  >
-                    Selecionar Alta Prioridade
-                  </button>
-                  <button
-                    onClick={selectAll}
-                    className="px-3 py-1.5 rounded-lg bg-secondary text-secondary-foreground text-xs font-medium hover:bg-surface-hover transition-colors"
-                  >
-                    Selecionar Todos
-                  </button>
-                </div>
+                {termsByAccount.length === 0 && (
+                  <div className="text-center text-muted-foreground py-12">
+                    Nenhuma sugestão encontrada.
+                  </div>
+                )}
 
-                <div className="overflow-x-auto rounded-xl border border-border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-secondary/50">
-                        <TableHead className="w-10" />
-                        <TableHead>Grupo</TableHead>
-                        <TableHead>Termo de Pesquisa</TableHead>
-                        <TableHead className="text-right">Impressões</TableHead>
-                        <TableHead className="text-right">Cliques</TableHead>
-                        <TableHead className="text-right">Custo (R$)</TableHead>
-                        <TableHead className="text-right">Conversões</TableHead>
-                        <TableHead>Motivo</TableHead>
-                        <TableHead>Prioridade</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {suggestedTerms.map((term) => {
-                        const hasConversions = term.conversoes > 0;
-                        const key = termKey(term);
-                        return (
-                          <TableRow
-                            key={key}
-                            className={hasConversions ? "opacity-40" : ""}
-                          >
-                            <TableCell>
-                              <Checkbox
-                                checked={selectedTerms.has(key)}
-                                onCheckedChange={() => toggleTerm(term)}
-                                disabled={hasConversions}
-                              />
-                            </TableCell>
-                            <TableCell className="text-sm font-medium text-muted-foreground whitespace-nowrap">
-                              {term.grupo}
-                            </TableCell>
-                            <TableCell className="font-medium">{term.termo}</TableCell>
-                            <TableCell className="text-right">{term.impressoes?.toLocaleString("pt-BR") ?? 0}</TableCell>
-                            <TableCell className="text-right">{term.cliques ?? 0}</TableCell>
-                            <TableCell className="text-right">
-                              {parseCusto(term.custo).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                            </TableCell>
-                            <TableCell className="text-right">{term.conversoes ?? 0}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
-                              {term.motivo}
-                            </TableCell>
-                            <TableCell>{priorityBadge(term.prioridade)}</TableCell>
+                {termsByAccount.map((group) => (
+                  <div key={group.customerId} className="rounded-xl border border-border overflow-hidden">
+                    {/* Account header */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-secondary/70 border-b border-border">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
+                          <Sparkles className="w-4 h-4 text-primary-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-foreground text-sm">{group.accountName}</p>
+                          <p className="text-xs text-muted-foreground">{group.terms.length} sugestões encontradas</p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => selectHighPriorityForAccount(group.customerId)}
+                          className="px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors border border-destructive/20"
+                        >
+                          Selecionar Alta Prioridade
+                        </button>
+                        <button
+                          onClick={() => selectAllForAccount(group.customerId)}
+                          className="px-3 py-1.5 rounded-lg bg-secondary text-secondary-foreground text-xs font-medium hover:bg-surface-hover transition-colors border border-border"
+                        >
+                          Selecionar Todos
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Table */}
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-secondary/30">
+                            <TableHead className="w-10" />
+                            <TableHead>Grupo</TableHead>
+                            <TableHead style={{ minWidth: 180 }}>Termo de Pesquisa</TableHead>
+                            <TableHead className="text-center">Impressões</TableHead>
+                            <TableHead className="text-center">Cliques</TableHead>
+                            <TableHead className="text-center">Custo (R$)</TableHead>
+                            <TableHead className="text-center">Conversões</TableHead>
+                            <TableHead style={{ minWidth: 200 }}>Motivo</TableHead>
+                            <TableHead>Prioridade</TableHead>
                           </TableRow>
-                        );
-                      })}
-                      {suggestedTerms.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
-                            Nenhuma sugestão encontrada.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
+                        </TableHeader>
+                        <TableBody>
+                          {group.terms.map((term) => {
+                            const hasConversions = term.conversoes > 0;
+                            const key = termKey(term);
+                            return (
+                              <TableRow
+                                key={key}
+                                className={hasConversions ? "opacity-50" : ""}
+                              >
+                                <TableCell>
+                                  <Checkbox
+                                    checked={selectedTerms.has(key)}
+                                    onCheckedChange={() => toggleTerm(term)}
+                                    disabled={hasConversions}
+                                  />
+                                </TableCell>
+                                <TableCell className="text-sm font-medium text-muted-foreground" style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+                                  {term.grupo}
+                                </TableCell>
+                                <TableCell className="font-medium" style={{ minWidth: 180, whiteSpace: "normal", wordBreak: "break-word" }}>
+                                  {term.termo}
+                                </TableCell>
+                                <TableCell className="text-center">{term.impressoes?.toLocaleString("pt-BR") ?? 0}</TableCell>
+                                <TableCell className="text-center">{term.cliques ?? 0}</TableCell>
+                                <TableCell className="text-center">
+                                  {parseCusto(term.custo).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                                </TableCell>
+                                <TableCell className="text-center">{term.conversoes ?? 0}</TableCell>
+                                <TableCell className="text-sm text-muted-foreground" style={{ minWidth: 200, whiteSpace: "normal", wordBreak: "break-word" }}>
+                                  {term.motivo}
+                                </TableCell>
+                                <TableCell>{priorityBadge(term.prioridade)}</TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                ))}
 
-                <div className="pt-2">
-                  <motion.button
-                    onClick={applyNegatives}
-                    disabled={selectedTerms.size === 0 || applyingLoading}
-                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl gradient-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed glow-primary"
-                    whileTap={{ scale: 0.97 }}
-                  >
-                    {applyingLoading ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        Aplicando...
-                      </>
-                    ) : (
-                      <>Aplicar Negativações Selecionadas ({selectedTerms.size})</>
-                    )}
-                  </motion.button>
-                </div>
+                {/* Spacer for fixed footer */}
+                <div className="h-20" />
               </motion.div>
             )}
 
@@ -904,6 +931,32 @@ const OtimizarCampanha = () => {
             )}
           </AnimatePresence>
         </div>
+
+        {/* ── Fixed footer for step 2 ─────────────── */}
+        {step === 2 && (
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-lg border-t border-border px-6 py-4">
+            <div className="max-w-5xl mx-auto flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground">{selectedTerms.size}</span> termos selecionados de {suggestedTerms.length}
+              </p>
+              <motion.button
+                onClick={applyNegatives}
+                disabled={selectedTerms.size === 0 || applyingLoading}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl gradient-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed glow-primary"
+                whileTap={{ scale: 0.97 }}
+              >
+                {applyingLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Aplicando...
+                  </>
+                ) : (
+                  <>Aplicar Negativações Selecionadas ({selectedTerms.size})</>
+                )}
+              </motion.button>
+            </div>
+          </div>
+        )}
 
         {/* Back button (steps 0-2) */}
         {step < 3 && (
