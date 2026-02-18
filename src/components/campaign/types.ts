@@ -46,6 +46,18 @@ export interface Briefing {
   proibidas: string;
 }
 
+export interface Configuracoes {
+  tipoCampanha: string;
+  orcamentoDiario: string;
+  estrategiaLance: string;
+  metaCPA: string;
+  conversao: string;
+  regiao: string;
+  idioma: string;
+  _mode?: "copy" | "manual" | null;
+  _copiedFrom?: string;
+}
+
 export interface WizardData {
   selectedAccount: Account | null;
   seedKeywords: string;
@@ -53,6 +65,7 @@ export interface WizardData {
   clusters: KeywordCluster[];
   structure: CampaignStructure | null;
   urls: Record<string, string>;
+  configuracoes: Configuracoes;
   briefing: Briefing;
 }
 
@@ -61,6 +74,7 @@ export const STEP_LABELS = [
   "Palavras-chave",
   "Estrutura",
   "URLs",
+  "Configurações",
   "Anúncios",
   "Revisão",
 ];
