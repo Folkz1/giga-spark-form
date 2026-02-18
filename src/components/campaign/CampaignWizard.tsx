@@ -115,6 +115,7 @@ const CampaignWizard = () => {
                 key="step-4"
                 structure={data.structure}
                 urls={data.urls}
+                customerId={data.selectedAccount?.customerId || ""}
                 onStructureChange={(structure: CampaignStructure) => setData((prev) => ({ ...prev, structure }))}
               />
             )}
