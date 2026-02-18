@@ -238,8 +238,8 @@ const OtimizarCampanha = () => {
       // Filter invalid accounts and deduplicate by id
       const seen = new Set<string>();
       const list = raw.filter((a: any) => {
-        const name = (a.name || "").trim();
-        if (!name || name === "--") return false;
+        const name = (a.name ?? "").trim();
+        if (name === "" || name === "--") return false;
         const id = String(a.id);
         if (seen.has(id)) return false;
         seen.add(id);
