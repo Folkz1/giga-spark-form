@@ -70,6 +70,7 @@ interface MultiSelectDropdownProps {
   selectedIds: Set<string>;
   onToggle: (id: string) => void;
   onToggleAll: (ids: string[]) => void;
+  onClose?: () => void;
   loading: boolean;
   error: string | null;
   onRetry?: () => void;
@@ -83,6 +84,7 @@ const MultiSelectDropdown = ({
   selectedIds,
   onToggle,
   onToggleAll,
+  onClose,
   loading,
   error,
   onRetry,
@@ -91,6 +93,14 @@ const MultiSelectDropdown = ({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+
+  const closeDropdown = useCallback(() => {
+    if (open) {
+      setOpen(false);
+      setSearch("");
+      onClose?.();
+    }
+  }, [open, onClose]);
 
   const filtered = useMemo(
     () =>
@@ -105,11 +115,11 @@ const MultiSelectDropdown = ({
   // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) closeDropdown();
     };
     if (open) document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
+  }, [open, closeDropdown]);
 
   const selectedCount = selectedIds.size;
 
@@ -409,14 +419,9 @@ const OtimizarCampanha = () => {
     });
   }, []);
 
-  // When selectedAccountIds changes, fetch campaigns
-  const prevAccountIds = useRef<string>("");
-  useEffect(() => {
-    const key = [...selectedAccountIds].sort().join(",");
-    if (key !== prevAccountIds.current) {
-      prevAccountIds.current = key;
-      fetchCampaignsForAccounts(selectedAccountIds);
-    }
+  // Fetch campaigns when accounts dropdown closes
+  const handleAccountsClose = useCallback(() => {
+    fetchCampaignsForAccounts(selectedAccountIds);
   }, [selectedAccountIds, fetchCampaignsForAccounts]);
 
   const toggleCampaign = useCallback((id: string) => {
@@ -427,14 +432,9 @@ const OtimizarCampanha = () => {
     });
   }, []);
 
-  // When selectedCampaignIds changes, fetch ad groups
-  const prevCampaignIds = useRef<string>("");
-  useEffect(() => {
-    const key = [...selectedCampaignIds].sort().join(",");
-    if (key !== prevCampaignIds.current) {
-      prevCampaignIds.current = key;
-      fetchAdGroupsForCampaigns(selectedCampaignIds);
-    }
+  // Fetch ad groups when campaigns dropdown closes
+  const handleCampaignsClose = useCallback(() => {
+    fetchAdGroupsForCampaigns(selectedCampaignIds);
   }, [selectedCampaignIds, fetchAdGroupsForCampaigns]);
 
   const toggleAdGroup = useCallback((id: string) => {
@@ -658,6 +658,7 @@ const OtimizarCampanha = () => {
                   loading={accountsLoading}
                   error={accountsError}
                   onRetry={fetchAccounts}
+                  onClose={handleAccountsClose}
                 />
 
                 <MultiSelectDropdown
@@ -670,6 +671,7 @@ const OtimizarCampanha = () => {
                   loading={campaignsLoading}
                   error={campaignsError}
                   disabled={selectedAccountIds.size === 0}
+                  onClose={handleCampaignsClose}
                 />
 
                 <MultiSelectDropdown
