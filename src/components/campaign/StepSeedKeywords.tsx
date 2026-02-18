@@ -68,12 +68,12 @@ const StepSeedKeywords = ({ seedKeywords, clusters, customerId, onSeedChange, on
           clusterName: seed.charAt(0).toUpperCase() + seed.slice(1),
           totalVolume: Math.floor(Math.random() * 50000) + 5000,
           campaignSuggestion: `Campanha: ${seed.charAt(0).toUpperCase() + seed.slice(1)}`,
-          selected: true,
+          selected: false,
           keywords: [
-            { keyword: seed, monthlyVolume: Math.floor(Math.random() * 30000) + 1000, competition: "Alta", estimatedCPC: +(Math.random() * 8 + 2).toFixed(2), intent: "Transacional" as const, matchType: "EXACT" as MatchType, conversionPotential: "high" as const, selected: true },
-            { keyword: `${seed} preço`, monthlyVolume: Math.floor(Math.random() * 5000) + 500, competition: "Média", estimatedCPC: +(Math.random() * 5 + 1).toFixed(2), intent: "Comercial" as const, matchType: "PHRASE" as MatchType, conversionPotential: "medium" as const, selected: true },
-            { keyword: `melhor ${seed}`, monthlyVolume: Math.floor(Math.random() * 8000) + 1000, competition: "Alta", estimatedCPC: +(Math.random() * 7 + 3).toFixed(2), intent: "Transacional" as const, matchType: "EXACT" as MatchType, conversionPotential: "high" as const, selected: true },
-            { keyword: `${seed} perto de mim`, monthlyVolume: Math.floor(Math.random() * 10000) + 2000, competition: "Alta", estimatedCPC: +(Math.random() * 10 + 4).toFixed(2), intent: "Transacional" as const, matchType: "EXACT" as MatchType, conversionPotential: "high" as const, selected: true },
+            { keyword: seed, monthlyVolume: Math.floor(Math.random() * 30000) + 1000, competition: "Alta", estimatedCPC: +(Math.random() * 8 + 2).toFixed(2), intent: "Transacional" as const, matchType: "EXACT" as MatchType, conversionPotential: "high" as const, selected: false },
+            { keyword: `${seed} preço`, monthlyVolume: Math.floor(Math.random() * 5000) + 500, competition: "Média", estimatedCPC: +(Math.random() * 5 + 1).toFixed(2), intent: "Comercial" as const, matchType: "PHRASE" as MatchType, conversionPotential: "medium" as const, selected: false },
+            { keyword: `melhor ${seed}`, monthlyVolume: Math.floor(Math.random() * 8000) + 1000, competition: "Alta", estimatedCPC: +(Math.random() * 7 + 3).toFixed(2), intent: "Transacional" as const, matchType: "EXACT" as MatchType, conversionPotential: "high" as const, selected: false },
+            { keyword: `${seed} perto de mim`, monthlyVolume: Math.floor(Math.random() * 10000) + 2000, competition: "Alta", estimatedCPC: +(Math.random() * 10 + 4).toFixed(2), intent: "Transacional" as const, matchType: "EXACT" as MatchType, conversionPotential: "high" as const, selected: false },
             { keyword: `o que é ${seed}`, monthlyVolume: Math.floor(Math.random() * 8000) + 1000, competition: "Baixa", estimatedCPC: +(Math.random() * 2 + 0.3).toFixed(2), intent: "Informacional" as const, matchType: "BROAD" as MatchType, conversionPotential: "low" as const, selected: false },
           ],
         }));
@@ -92,7 +92,7 @@ const StepSeedKeywords = ({ seedKeywords, clusters, customerId, onSeedChange, on
             intent: (kw.intent || "Comercial") as KeywordResult["intent"],
             matchType: (kw.matchType || "BROAD") as MatchType,
             conversionPotential: kw.conversionPotential || "medium",
-            selected: kw.intent !== "Informacional",
+            selected: false,
           }));
 
           return {
