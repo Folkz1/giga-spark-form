@@ -281,6 +281,7 @@ const OtimizarCampanha = () => {
   const [priorityFilters, setPriorityFilters] = useState<Record<string, string>>({});
   // Global filter: "alta"|"media"|"baixa"|null (toggle behavior)
   const [globalFilter, setGlobalFilter] = useState<string | null>(null);
+  const [openAccounts, setOpenAccounts] = useState<Set<string>>(new Set());
 
   // Step 4 state
   const [applyingLoading, setApplyingLoading] = useState(false);
@@ -914,9 +915,9 @@ const OtimizarCampanha = () => {
 
                 {/* ── Global priority filter bar ── */}
                 <div className="flex items-center gap-3 px-5 py-3.5 rounded-xl bg-secondary/80 border-2 border-primary/20">
-                  <span className="text-sm font-semibold text-foreground mr-1">Filtro global:</span>
+                  <span className="text-sm font-semibold text-foreground mr-1">Filtro:</span>
                   {(["alta", "media", "baixa", "todos"] as const).map((f) => {
-                    const active = globalFilter === f;
+                    const active = globalFilter === f || (f === "todos" && globalFilter === null);
                     const labels: Record<string, string> = { alta: "Alta", media: "Média", baixa: "Baixa", todos: "Todos" };
                     const styles: Record<string, string> = {
                       alta: active ? "bg-destructive text-destructive-foreground border-destructive shadow-md" : "bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20",
@@ -928,18 +929,15 @@ const OtimizarCampanha = () => {
                       <button
                         key={f}
                         onClick={() => {
-                          if (active) {
-                            // Toggle off
+                          if (f === "todos") {
+                            setGlobalFilter(null);
+                            setSelectedTerms(new Set(selectableTerms.map(termKey)));
+                          } else if (globalFilter === f) {
                             setGlobalFilter(null);
                           } else {
-                            setGlobalFilter(f === "todos" ? null : f);
-                            // Select matching terms globally
-                            if (f === "todos") {
-                              setSelectedTerms(new Set(selectableTerms.map(termKey)));
-                            } else {
-                              const keys = selectableTerms.filter((t) => t.prioridade === f).map(termKey);
-                              setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.add(k)); return next; });
-                            }
+                            setGlobalFilter(f);
+                            const keys = selectableTerms.filter((t) => t.prioridade === f).map(termKey);
+                            setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.add(k)); return next; });
                           }
                         }}
                         className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all border ${styles[f]}`}
@@ -948,6 +946,12 @@ const OtimizarCampanha = () => {
                       </button>
                     );
                   })}
+                  <button
+                    onClick={() => { setGlobalFilter(null); setSelectedTerms(new Set()); }}
+                    className="px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all border bg-secondary text-secondary-foreground border-border hover:bg-surface-hover"
+                  >
+                    Desmarcar
+                  </button>
                 </div>
 
                 {hierarchy.length === 0 && (
@@ -956,212 +960,122 @@ const OtimizarCampanha = () => {
                   </div>
                 )}
 
-                {hierarchy.map((account) => (
-                  <div key={account.customerId} className="rounded-xl border border-border overflow-hidden">
-                    {/* ── Level 1: Account header ── */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-secondary/70 border-b border-border">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-                          <Sparkles className="w-4 h-4 text-primary-foreground" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-foreground text-sm">{account.accountName}</p>
-                          <p className="text-xs text-muted-foreground">{account.totalTerms} sugestões encontradas</p>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {(["alta", "media", "baixa", "todos", "desmarcar"] as const).map((f) => {
-                          const active = getActiveFilter(`account_${account.customerId}`) === f;
-                          const labels: Record<string, string> = { alta: "Alta", media: "Média", baixa: "Baixa", todos: "Todos", desmarcar: "Desmarcar" };
-                          const styles: Record<string, string> = {
-                            alta: active ? "bg-destructive text-destructive-foreground border-destructive" : "bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20",
-                            media: active ? "bg-warning text-primary-foreground border-warning" : "bg-warning/10 text-warning border-warning/20 hover:bg-warning/20",
-                            baixa: active ? "bg-secondary text-foreground border-muted-foreground" : "bg-secondary/60 text-muted-foreground border-border hover:bg-secondary",
-                            todos: active ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-secondary-foreground border-border hover:bg-surface-hover",
-                            desmarcar: "bg-secondary text-secondary-foreground border-border hover:bg-surface-hover",
-                          };
-                          return (
-                            <button
-                              key={f}
-                              onClick={() => {
-                                if (f === "desmarcar") {
-                                  deselectAllForAccount(account.customerId);
-                                  setFilter(`account_${account.customerId}`, "");
-                                } else if (active) {
-                                  // Toggle off
-                                  setFilter(`account_${account.customerId}`, "");
-                                } else if (f === "todos") {
-                                  selectAllForAccount(account.customerId);
-                                  setFilter(`account_${account.customerId}`, "todos");
-                                } else {
-                                  selectPriorityForAccount(account.customerId, f);
-                                  setFilter(`account_${account.customerId}`, f);
-                                }
-                              }}
-                              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border ${styles[f]}`}
-                            >
-                              {labels[f]}
-                            </button>
-                          );
+                {/* ── Accordion per account ── */}
+                {hierarchy.map((account) => {
+                  const isOpen = openAccounts.has(account.customerId);
+                  const effectiveFilter = globalFilter;
+                  return (
+                    <div key={account.customerId} className="rounded-xl border border-border overflow-hidden">
+                      {/* Account header — clickable to expand */}
+                      <button
+                        onClick={() => setOpenAccounts((prev) => {
+                          const next = new Set(prev);
+                          next.has(account.customerId) ? next.delete(account.customerId) : next.add(account.customerId);
+                          return next;
                         })}
-                      </div>
-                    </div>
+                        className="w-full flex items-center justify-between gap-3 px-5 py-3.5 bg-secondary/70 hover:bg-secondary transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shrink-0">
+                            <Sparkles className="w-4 h-4 text-primary-foreground" />
+                          </div>
+                          <div className="text-left">
+                            <p className="font-semibold text-foreground text-sm">{account.accountName}</p>
+                            <p className="text-xs text-muted-foreground">{account.totalTerms} sugestões</p>
+                          </div>
+                        </div>
+                        <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                      </button>
 
-                    <div className="divide-y divide-border">
-                      {account.campaigns.map((campaign) => (
-                        <div key={`${account.customerId}__${campaign.campaignId}`} className="pl-4">
-                          {/* ── Level 2: Campaign header ── */}
-                          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-secondary/30 border-b border-border/50">
-                            <div className="flex items-center gap-2">
-                              <div className="w-1.5 h-6 rounded-full gradient-primary" />
-                              <p className="font-medium text-foreground text-sm">{campaign.campaignName}</p>
-                              <span className="text-xs text-muted-foreground">
-                                ({campaign.adGroups.reduce((s, g) => s + g.terms.length, 0)} sugestões)
-                              </span>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {(["alta", "media", "baixa", "todos", "desmarcar"] as const).map((f) => {
-                                const active = getActiveFilter(`campaign_${campaign.campaignId}`) === f;
-                                const labels: Record<string, string> = { alta: "Alta", media: "Média", baixa: "Baixa", todos: "Todos", desmarcar: "Desmarcar" };
-                                const styles: Record<string, string> = {
-                                  alta: active ? "bg-destructive text-destructive-foreground border-destructive" : "bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20",
-                                  media: active ? "bg-warning text-primary-foreground border-warning" : "bg-warning/10 text-warning border-warning/20 hover:bg-warning/20",
-                                  baixa: active ? "bg-secondary text-foreground border-muted-foreground" : "bg-secondary/60 text-muted-foreground border-border hover:bg-secondary",
-                                  todos: active ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-secondary-foreground border-border hover:bg-surface-hover",
-                                  desmarcar: "bg-secondary text-secondary-foreground border-border hover:bg-surface-hover",
-                                };
+                      {/* Expanded content */}
+                      {isOpen && (
+                        <div className="divide-y divide-border">
+                          {account.campaigns.map((campaign) => (
+                            <div key={`${account.customerId}__${campaign.campaignId}`}>
+                              {/* Campaign header */}
+                              <div className="flex items-center gap-2 px-6 py-2.5 bg-secondary/30 border-b border-border/50">
+                                <div className="w-1.5 h-5 rounded-full gradient-primary shrink-0" />
+                                <p className="font-medium text-foreground text-sm">{campaign.campaignName}</p>
+                                <span className="text-xs text-muted-foreground">
+                                  ({campaign.adGroups.reduce((s, g) => s + g.terms.length, 0)})
+                                </span>
+                              </div>
+
+                              {campaign.adGroups.map((adGroup) => {
+                                const filteredTerms = effectiveFilter
+                                  ? adGroup.terms.filter((t) => t.prioridade === effectiveFilter)
+                                  : adGroup.terms;
+                                if (filteredTerms.length === 0) return null;
                                 return (
-                                  <button
-                                    key={f}
-                                    onClick={() => {
-                                      if (f === "desmarcar") {
-                                        deselectAllForCampaign(campaign.campaignId, account.customerId);
-                                        setFilter(`campaign_${campaign.campaignId}`, "");
-                                      } else if (active) {
-                                        setFilter(`campaign_${campaign.campaignId}`, "");
-                                      } else if (f === "todos") {
-                                        selectAllForCampaign(campaign.campaignId, account.customerId);
-                                        setFilter(`campaign_${campaign.campaignId}`, "todos");
-                                      } else {
-                                        selectPriorityForCampaign(campaign.campaignId, account.customerId, f);
-                                        setFilter(`campaign_${campaign.campaignId}`, f);
-                                      }
-                                    }}
-                                    className={`px-2 py-0.5 rounded-md text-xs font-medium transition-colors border ${styles[f]}`}
-                                  >
-                                    {labels[f]}
-                                  </button>
+                                  <div key={adGroup.adGroupId}>
+                                    {/* Ad Group label */}
+                                    <div className="flex items-center gap-2 px-8 py-2 bg-muted/20 border-b border-border/30">
+                                      <div className="w-1 h-4 rounded-full bg-muted-foreground/30" />
+                                      <p className="text-sm text-muted-foreground font-medium">{adGroup.adGroupName}</p>
+                                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{filteredTerms.length}</Badge>
+                                    </div>
+
+                                    {/* Simplified table */}
+                                    <div className="overflow-x-auto">
+                                      <Table>
+                                        <TableHeader>
+                                          <TableRow className="bg-secondary/10">
+                                            <TableHead className="w-10" />
+                                            <TableHead>Termo de Pesquisa</TableHead>
+                                            <TableHead className="text-center w-24">Impressões</TableHead>
+                                            <TableHead className="text-center w-20">Cliques</TableHead>
+                                            <TableHead className="text-center w-24">Conversões</TableHead>
+                                            <TableHead className="w-24">Prioridade</TableHead>
+                                          </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                          {filteredTerms.map((term) => {
+                                            const hasConversions = term.conversoes > 0;
+                                            const key = termKey(term);
+                                            return (
+                                              <TableRow key={key} className={hasConversions ? "opacity-50" : ""}>
+                                                <TableCell>
+                                                  <Checkbox
+                                                    checked={selectedTerms.has(key)}
+                                                    onCheckedChange={() => toggleTerm(term)}
+                                                    disabled={hasConversions}
+                                                  />
+                                                </TableCell>
+                                                <TableCell className="font-medium">
+                                                  <TooltipProvider>
+                                                    <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                        <span className="cursor-default">{term.termo}</span>
+                                                      </TooltipTrigger>
+                                                      {term.motivo && (
+                                                        <TooltipContent side="top" className="max-w-xs">
+                                                          <p className="text-xs">{term.motivo}</p>
+                                                        </TooltipContent>
+                                                      )}
+                                                    </Tooltip>
+                                                  </TooltipProvider>
+                                                </TableCell>
+                                                <TableCell className="text-center">{term.impressoes?.toLocaleString("pt-BR") ?? 0}</TableCell>
+                                                <TableCell className="text-center">{term.cliques ?? 0}</TableCell>
+                                                <TableCell className="text-center">{term.conversoes ?? 0}</TableCell>
+                                                <TableCell>{priorityBadge(term.prioridade)}</TableCell>
+                                              </TableRow>
+                                            );
+                                          })}
+                                        </TableBody>
+                                      </Table>
+                                    </div>
+                                  </div>
                                 );
                               })}
                             </div>
-                          </div>
-
-                          <div className="divide-y divide-border/30">
-                            {campaign.adGroups.map((adGroup) => (
-                              <div key={adGroup.adGroupId} className="pl-4">
-                                {/* ── Level 3: Ad Group header ── */}
-                                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2 bg-muted/30 border-b border-border/30">
-                                  <div className="flex items-center gap-2">
-                                    <div className="w-1 h-4 rounded-full bg-muted-foreground/30" />
-                                    <p className="text-sm text-muted-foreground font-medium">{adGroup.adGroupName}</p>
-                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{adGroup.terms.length}</Badge>
-                                  </div>
-                                  <div className="flex flex-wrap gap-1.5">
-                                    {(["alta", "media", "baixa", "todos", "desmarcar"] as const).map((f) => {
-                                      const active = getActiveFilter(`group_${adGroup.adGroupId}`) === f;
-                                      const labels: Record<string, string> = { alta: "Alta", media: "Média", baixa: "Baixa", todos: "Todos", desmarcar: "Desmarcar" };
-                                      const styles: Record<string, string> = {
-                                        alta: active ? "bg-destructive text-destructive-foreground border-destructive" : "bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20",
-                                        media: active ? "bg-warning text-primary-foreground border-warning" : "bg-warning/10 text-warning border-warning/20 hover:bg-warning/20",
-                                        baixa: active ? "bg-secondary text-foreground border-muted-foreground" : "bg-secondary/60 text-muted-foreground border-border hover:bg-secondary",
-                                        todos: active ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-secondary-foreground border-border hover:bg-surface-hover",
-                                        desmarcar: "bg-secondary text-secondary-foreground border-border hover:bg-surface-hover",
-                                      };
-                                      return (
-                                        <button
-                                          key={f}
-                                          onClick={() => {
-                                            if (f === "desmarcar") {
-                                              deselectAllForGroup(adGroup.adGroupId);
-                                              setFilter(`group_${adGroup.adGroupId}`, "");
-                                            } else if (active) {
-                                              setFilter(`group_${adGroup.adGroupId}`, "");
-                                            } else if (f === "todos") {
-                                              selectAllForGroup(adGroup.adGroupId);
-                                              setFilter(`group_${adGroup.adGroupId}`, "todos");
-                                            } else {
-                                              selectPriorityForGroup(adGroup.adGroupId, f);
-                                              setFilter(`group_${adGroup.adGroupId}`, f);
-                                            }
-                                          }}
-                                          className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors border ${styles[f]}`}
-                                        >
-                                          {labels[f]}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </div>
-
-                                {/* ── Level 4: Table ── */}
-                                <div className="overflow-x-auto">
-                                  <Table className="min-w-[750px]">
-                                    <TableHeader>
-                                      <TableRow className="bg-secondary/20">
-                                        <TableHead className="w-10" />
-                                        <TableHead style={{ minWidth: 180 }}>Termo de Pesquisa</TableHead>
-                                        <TableHead className="text-center">Impressões</TableHead>
-                                        <TableHead className="text-center">Cliques</TableHead>
-                                        <TableHead className="text-center">Conversões</TableHead>
-                                        <TableHead style={{ minWidth: 180 }}>Motivo</TableHead>
-                                        <TableHead className="whitespace-nowrap">Prioridade</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {(() => {
-                                        const effectiveFilter = getEffectiveFilter(adGroup.adGroupId, campaign.campaignId, account.customerId);
-                                        const filteredTerms = effectiveFilter && effectiveFilter !== "todos"
-                                          ? adGroup.terms.filter((t) => t.prioridade === effectiveFilter)
-                                          : adGroup.terms;
-                                        return filteredTerms.map((term) => {
-                                          const hasConversions = term.conversoes > 0;
-                                          const key = termKey(term);
-                                          return (
-                                            <TableRow key={key} className={hasConversions ? "opacity-50" : ""}>
-                                              <TableCell>
-                                                <Checkbox
-                                                  checked={selectedTerms.has(key)}
-                                                  onCheckedChange={() => toggleTerm(term)}
-                                                  disabled={hasConversions}
-                                                />
-                                              </TableCell>
-                                              <TableCell className="font-medium" style={{ minWidth: 180, whiteSpace: "normal", wordBreak: "break-word" }}>
-                                                {term.termo}
-                                              </TableCell>
-                                              <TableCell className="text-center">{term.impressoes?.toLocaleString("pt-BR") ?? 0}</TableCell>
-                                              <TableCell className="text-center">{term.cliques ?? 0}</TableCell>
-                                              <TableCell className="text-center">{term.conversoes ?? 0}</TableCell>
-                                              <TableCell className="text-sm text-muted-foreground" style={{ minWidth: 180, whiteSpace: "normal", wordBreak: "break-word" }}>
-                                                {term.motivo}
-                                              </TableCell>
-                                              <TableCell className="whitespace-nowrap">{priorityBadge(term.prioridade)}</TableCell>
-                                            </TableRow>
-                                          );
-                                        });
-                                      })()}
-                                    </TableBody>
-                                  </Table>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
 
-                {/* Spacer for fixed footer */}
                 <div className="h-20" />
               </motion.div>
             )}
