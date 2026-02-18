@@ -310,27 +310,37 @@ const OtimizarCampanha = () => {
     };
     console.log("Sending optimize request:", requestBody);
     try {
-      const res = await fetch("https://appn8o2.gigainteligencia.com.br/webhook/google-ads-optimize", {
+      const response = await fetch("https://appn8o2.gigainteligencia.com.br/webhook/google-ads-optimize", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          customerId: selectedAccount!.customerId,
+          campaignId: selectedCampaign!.id,
+          adGroupId: selectedAdGroup!.id,
+          adGroupName: selectedAdGroup!.name,
+          campaignName: selectedCampaign!.name,
+        }),
       });
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error("Optimize API error:", res.status, errorText);
-        throw new Error(`Falha na análise: ${res.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Optimize API error:", response.status, errorText);
+        throw new Error(`Falha na análise: ${response.status}`);
       }
-      const text = await res.text();
-      console.log("Optimize API raw response:", text);
-      const data = text ? JSON.parse(text) : {};
+      const data = await response.json();
+      console.log("Full API Response:", data);
       const terms: SugestedTerm[] = Array.isArray(data)
         ? data
+        : Array.isArray(data?.sugestoes)
+        ? data.sugestoes
         : Array.isArray(data?.termos)
         ? data.termos
         : Array.isArray(data?.suggestions)
         ? data.suggestions
         : [];
       console.log("Parsed terms:", terms.length);
+      if (terms.length === 0) {
+        console.warn("API returned 0 suggestions. Full response keys:", Object.keys(data));
+      }
       setSuggestedTerms(terms);
       setSelectedTerms(new Set());
       setStep(2);
