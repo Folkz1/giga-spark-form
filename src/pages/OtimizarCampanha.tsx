@@ -69,6 +69,7 @@ interface MultiSelectDropdownProps {
   items: MultiSelectItem[];
   selectedIds: Set<string>;
   onToggle: (id: string) => void;
+  onToggleAll: (ids: string[]) => void;
   loading: boolean;
   error: string | null;
   onRetry?: () => void;
@@ -81,6 +82,7 @@ const MultiSelectDropdown = ({
   items,
   selectedIds,
   onToggle,
+  onToggleAll,
   loading,
   error,
   onRetry,
@@ -177,32 +179,64 @@ const MultiSelectDropdown = ({
                 {filtered.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">Nenhum item encontrado</p>
                 ) : (
-                  filtered.map((item) => {
-                    const checked = selectedIds.has(item.id);
-                    return (
-                      <button
-                        key={item.id}
-                        onClick={() => onToggle(item.id)}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-secondary transition-colors text-left ${
-                          checked ? "bg-secondary/60" : ""
-                        }`}
-                      >
-                        <div
-                          className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                            checked ? "bg-primary border-primary" : "border-muted-foreground/40"
+                  <>
+                    {/* Select All */}
+                    <button
+                      onClick={() => {
+                        const allFilteredIds = filtered.map((i) => i.id);
+                        const allSelected = allFilteredIds.every((id) => selectedIds.has(id));
+                        if (allSelected) {
+                          // deselect all filtered
+                          onToggleAll(allFilteredIds.filter((id) => selectedIds.has(id)));
+                        } else {
+                          // select all filtered that aren't selected
+                          onToggleAll(allFilteredIds.filter((id) => !selectedIds.has(id)));
+                        }
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-secondary transition-colors text-left border-b border-border"
+                    >
+                      {(() => {
+                        const allFilteredIds = filtered.map((i) => i.id);
+                        const allSelected = allFilteredIds.length > 0 && allFilteredIds.every((id) => selectedIds.has(id));
+                        return (
+                          <div
+                            className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                              allSelected ? "bg-primary border-primary" : "border-muted-foreground/40"
+                            }`}
+                          >
+                            {allSelected && <Check className="w-3 h-3 text-primary-foreground" />}
+                          </div>
+                        );
+                      })()}
+                      <p className="font-semibold text-foreground text-sm">Selecionar todos</p>
+                    </button>
+                    {filtered.map((item) => {
+                      const checked = selectedIds.has(item.id);
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => onToggle(item.id)}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-secondary transition-colors text-left ${
+                            checked ? "bg-secondary/60" : ""
                           }`}
                         >
-                          {checked && <Check className="w-3 h-3 text-primary-foreground" />}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="font-medium text-foreground text-sm truncate">{item.label}</p>
-                          {item.sublabel && (
-                            <p className="text-xs text-muted-foreground truncate">{item.sublabel}</p>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })
+                          <div
+                            className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                              checked ? "bg-primary border-primary" : "border-muted-foreground/40"
+                            }`}
+                          >
+                            {checked && <Check className="w-3 h-3 text-primary-foreground" />}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-foreground text-sm truncate">{item.label}</p>
+                            {item.sublabel && (
+                              <p className="text-xs text-muted-foreground truncate">{item.sublabel}</p>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </>
                 )}
               </div>
             </motion.div>
@@ -603,6 +637,7 @@ const OtimizarCampanha = () => {
                   items={accounts.map((a) => ({ id: a.customerId, label: a.name, sublabel: a.customerId }))}
                   selectedIds={selectedAccountIds}
                   onToggle={toggleAccount}
+                  onToggleAll={(ids) => ids.forEach(toggleAccount)}
                   loading={accountsLoading}
                   error={accountsError}
                   onRetry={fetchAccounts}
@@ -614,6 +649,7 @@ const OtimizarCampanha = () => {
                   items={campaigns.map((c) => ({ id: c.id, label: `${c.accountName} — ${c.name}` }))}
                   selectedIds={selectedCampaignIds}
                   onToggle={toggleCampaign}
+                  onToggleAll={(ids) => ids.forEach(toggleCampaign)}
                   loading={campaignsLoading}
                   error={campaignsError}
                   disabled={selectedAccountIds.size === 0}
@@ -625,6 +661,7 @@ const OtimizarCampanha = () => {
                   items={adGroups.map((g) => ({ id: g.id, label: `${g.campaignName} — ${g.name}` }))}
                   selectedIds={selectedAdGroupIds}
                   onToggle={toggleAdGroup}
+                  onToggleAll={(ids) => ids.forEach(toggleAdGroup)}
                   loading={adGroupsLoading}
                   error={adGroupsError}
                   disabled={selectedCampaignIds.size === 0}
