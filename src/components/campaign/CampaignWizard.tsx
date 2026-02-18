@@ -8,7 +8,7 @@ import StepCampaignStructure from "./StepCampaignStructure";
 import StepURLs from "./StepURLs";
 import StepAdPreview from "./StepAdPreview";
 import StepReview from "./StepReview";
-import type { Account, KeywordResult, CampaignStructure, WizardData } from "./types";
+import type { Account, KeywordResult, KeywordCluster, CampaignStructure, WizardData } from "./types";
 
 const CampaignWizard = () => {
   const [step, setStep] = useState(0);
@@ -16,14 +16,17 @@ const CampaignWizard = () => {
     selectedAccount: null,
     seedKeywords: "",
     keywordResults: [],
+    clusters: [],
     structure: null,
     urls: {},
   });
 
+  const allSelectedKeywords = data.clusters.flatMap(c => c.keywords.filter(k => k.selected));
+
   const canProceed = (): boolean => {
     switch (step) {
       case 0: return !!data.selectedAccount;
-      case 1: return data.keywordResults.some((k) => k.selected);
+      case 1: return allSelectedKeywords.length > 0;
       case 2: return !!data.structure;
       case 3: return data.structure?.adGroups.every((g) => !!data.urls[g.id]) ?? false;
       case 4: return data.structure?.adGroups.every((g) => g.headlines && g.headlines.length > 0) ?? false;
@@ -33,36 +36,27 @@ const CampaignWizard = () => {
 
   const totalSteps = 6;
 
-  const autoGroupByIntent = () => {
-    const selected = data.keywordResults.filter(k => k.selected);
-    const intentGroups: Record<string, string[]> = {};
-    selected.forEach(k => {
-      if (!intentGroups[k.intent]) intentGroups[k.intent] = [];
-      intentGroups[k.intent].push(k.keyword);
-    });
-
-    const prefixMap: Record<string, string> = {
-      Transacional: "Compra Direta",
-      Comercial: "Pesquisa de Preço",
-      Informacional: "Informativo",
-    };
-
-    const adGroups = Object.entries(intentGroups).map(([intent, keywords], i) => ({
-      id: `group-${i}`,
-      name: `${prefixMap[intent] || intent} - ${keywords[0]?.split(" ").slice(0, 2).join(" ") || "Grupo"}`,
-      keywords,
-    }));
+  const autoGroupByClusters = () => {
+    const adGroups = data.clusters
+      .filter(c => c.keywords.some(k => k.selected))
+      .map((cluster, i) => ({
+        id: `group-${i}`,
+        name: cluster.campaignSuggestion || cluster.clusterName,
+        keywords: cluster.keywords.filter(k => k.selected).map(k => k.keyword),
+      }));
 
     const structure: CampaignStructure = {
       campaignName: `Campanha - ${data.seedKeywords.split(",")[0]?.trim() || "Nova"}`,
       adGroups,
     };
-    setData(prev => ({ ...prev, structure }));
+
+    const flatKeywords = data.clusters.flatMap(c => c.keywords);
+    setData(prev => ({ ...prev, structure, keywordResults: flatKeywords }));
   };
 
   const handleNext = () => {
     if (step === 1 && !data.structure) {
-      autoGroupByIntent();
+      autoGroupByClusters();
     }
     setStep(s => Math.min(totalSteps - 1, s + 1));
   };
@@ -70,7 +64,6 @@ const CampaignWizard = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        {/* Header */}
         <div className="mb-8 text-center">
           <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight">
             <span className="text-gradient">Giga</span>{" "}
@@ -94,10 +87,10 @@ const CampaignWizard = () => {
               <StepSeedKeywords
                 key="step-1"
                 seedKeywords={data.seedKeywords}
-                keywordResults={data.keywordResults}
+                clusters={data.clusters}
                 customerId={data.selectedAccount?.customerId || ""}
                 onSeedChange={(val: string) => setData((prev) => ({ ...prev, seedKeywords: val }))}
-                onResults={(results: KeywordResult[]) => setData((prev) => ({ ...prev, keywordResults: results }))}
+                onClustersChange={(clusters: KeywordCluster[]) => setData((prev) => ({ ...prev, clusters }))}
               />
             )}
             {step === 2 && (
@@ -130,7 +123,6 @@ const CampaignWizard = () => {
           </AnimatePresence>
         </div>
 
-        {/* Navigation */}
         <div className="flex justify-between mt-6">
           <button
             onClick={() => setStep((s) => Math.max(0, s - 1))}
