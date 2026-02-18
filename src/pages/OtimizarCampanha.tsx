@@ -544,38 +544,61 @@ const OtimizarCampanha = () => {
   }, [adGroups, selectedAdGroupIds]);
 
   /* ── Apply negatives (grouped by adGroup) ────────── */
-  const applyNegatives = useCallback(async () => {
+  const [applyingPartial, setApplyingPartial] = useState(false);
+
+  const sendNegatives = useCallback(async () => {
+    const termsToApply = suggestedTerms.filter((t) => selectedTerms.has(`${t.adGroupId}__${t.termo}`));
+    const grouped = new Map<string, { customerId: string; adGroupId: string; termos: string[] }>();
+    for (const t of termsToApply) {
+      const key = `${t.customerId}__${t.adGroupId}`;
+      if (!grouped.has(key)) {
+        grouped.set(key, { customerId: t.customerId, adGroupId: t.adGroupId, termos: [] });
+      }
+      grouped.get(key)!.termos.push(t.termo);
+    }
+    await Promise.all(
+      [...grouped.values()].map(async (g) => {
+        const res = await fetch("https://appn8o2.gigainteligencia.com.br/webhook/google-ads-negative", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ customerId: g.customerId, adGroupId: g.adGroupId, termos: g.termos }),
+        });
+        if (!res.ok) throw new Error("Falha ao aplicar negativações");
+      })
+    );
+    return termsToApply.length;
+  }, [suggestedTerms, selectedTerms]);
+
+  const applyAndStay = useCallback(async () => {
+    setApplyingPartial(true);
+    try {
+      const count = await sendNegatives();
+      setAppliedCount((prev) => prev + count);
+      // Remove applied terms from suggestedTerms and clear selection
+      const appliedKeys = new Set([...selectedTerms]);
+      setSuggestedTerms((prev) => prev.filter((t) => !appliedKeys.has(termKey(t))));
+      setSelectedTerms(new Set());
+    } catch {
+      // stay on review
+    } finally {
+      setApplyingPartial(false);
+    }
+  }, [sendNegatives, selectedTerms]);
+
+  const applyAndFinish = useCallback(async () => {
     setApplyingLoading(true);
     try {
-      const termsToApply = suggestedTerms.filter((t) => selectedTerms.has(`${t.adGroupId}__${t.termo}`));
-      // Group by adGroupId + customerId
-      const grouped = new Map<string, { customerId: string; adGroupId: string; termos: string[] }>();
-      for (const t of termsToApply) {
-        const key = `${t.customerId}__${t.adGroupId}`;
-        if (!grouped.has(key)) {
-          grouped.set(key, { customerId: t.customerId, adGroupId: t.adGroupId, termos: [] });
-        }
-        grouped.get(key)!.termos.push(t.termo);
+      if (selectedTerms.size > 0) {
+        const count = await sendNegatives();
+        setAppliedCount((prev) => prev + count);
       }
-
-      await Promise.all(
-        [...grouped.values()].map(async (g) => {
-          const res = await fetch("https://appn8o2.gigainteligencia.com.br/webhook/google-ads-negative", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ customerId: g.customerId, adGroupId: g.adGroupId, termos: g.termos }),
-          });
-          if (!res.ok) throw new Error("Falha ao aplicar negativações");
-        })
-      );
-      setAppliedCount(termsToApply.length);
       setStep(3);
     } catch {
       // stay on review
     } finally {
       setApplyingLoading(false);
     }
-  }, [suggestedTerms, selectedTerms]);
+  }, [sendNegatives, selectedTerms]);
 
   /* ── Helpers ─────────────────────────────────────── */
 
@@ -876,7 +899,7 @@ const OtimizarCampanha = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="space-y-5 pb-[120px]"
+                className="space-y-5 pb-[140px]"
               >
                 <div>
                   <h2 className="text-xl font-bold text-foreground mb-1">
@@ -1137,38 +1160,72 @@ const OtimizarCampanha = () => {
         {/* ── Fixed footer for step 2 ─────────────── */}
         {step === 2 && (
           <div className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-lg border-t border-border px-6 py-4">
-            <div className="max-w-5xl mx-auto flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                <span className="font-semibold text-foreground">{selectedTerms.size}</span> termos selecionados de {suggestedTerms.length}
-              </p>
-              <motion.button
-                onClick={applyNegatives}
-                disabled={selectedTerms.size === 0 || applyingLoading}
-                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl gradient-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-30 disabled:cursor-not-allowed glow-primary"
-                whileTap={{ scale: 0.97 }}
+            <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
+              <button
+                onClick={() => setStep(0)}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg bg-secondary text-secondary-foreground font-medium text-sm hover:bg-surface-hover transition-colors shrink-0"
               >
-                {applyingLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Aplicando...
-                  </>
-                ) : (
-                  <>Aplicar Negativações Selecionadas ({selectedTerms.size})</>
-                )}
-              </motion.button>
+                <ArrowLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Voltar à Seleção</span>
+              </button>
+
+              <p className="text-sm text-muted-foreground text-center">
+                <span className="font-semibold text-foreground">{selectedTerms.size}</span>{" "}
+                {selectedTerms.size === 1 ? "termo selecionado" : "termos selecionados"} de {suggestedTerms.length}
+              </p>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <motion.button
+                  onClick={applyAndStay}
+                  disabled={selectedTerms.size === 0 || applyingPartial || applyingLoading}
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-sm transition-colors disabled:opacity-30 disabled:cursor-not-allowed glow-primary"
+                  whileTap={{ scale: 0.97 }}
+                >
+                  {applyingPartial ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Aplicando...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Aplicar Selecionadas ({selectedTerms.size})
+                    </>
+                  )}
+                </motion.button>
+
+                <motion.button
+                  onClick={applyAndFinish}
+                  disabled={applyingPartial || applyingLoading}
+                  className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-border bg-secondary text-secondary-foreground font-semibold text-sm hover:bg-surface-hover transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  whileTap={{ scale: 0.97 }}
+                >
+                  {applyingLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Finalizando...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Finalizar
+                    </>
+                  )}
+                </motion.button>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Back button (steps 0-2) */}
-        {step < 3 && (
+        {/* Back button (step 0 only) */}
+        {step === 0 && (
           <div className="mt-6">
             <button
-              onClick={() => (step === 0 ? navigate("/") : setStep(0))}
+              onClick={() => navigate("/")}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-secondary text-secondary-foreground font-medium text-sm hover:bg-surface-hover transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              {step === 0 ? "Voltar ao início" : "Voltar à seleção"}
+              Voltar ao início
             </button>
           </div>
         )}
