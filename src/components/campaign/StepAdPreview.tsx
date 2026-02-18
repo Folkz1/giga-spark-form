@@ -27,23 +27,22 @@ const StepAdPreview = ({ structure, urls, onStructureChange }: StepAdPreviewProp
   const [briefing, setBriefing] = useState<Briefing>({ diferenciais: "", oferta: "", tom: "Profissional", proibidas: "" });
   const [adjustments, setAdjustments] = useState<Record<string, string>>({});
 
-  useEffect(() => {
-    const hasAds = structure.adGroups.some((g) => g.headlines && g.headlines.length > 0);
-    if (!hasAds) generateAds();
-  }, []);
+  const isBriefingComplete = briefing.diferenciais.trim() !== "" && briefing.oferta.trim() !== "" && briefing.tom.trim() !== "" && briefing.proibidas.trim() !== "";
 
   const generateAds = async () => {
     setLoading(true);
     try {
+      const requestBody = {
+        customerId: "",
+        landingPageUrl: Object.values(urls)[0] || "",
+        structure,
+        briefing,
+      };
+      console.log("API Request Body (Generate Ads):", JSON.stringify(requestBody, null, 2));
       const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-ads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerId: "",
-          landingPageUrl: Object.values(urls)[0] || "",
-          structure,
-          briefing,
-        }),
+        body: JSON.stringify(requestBody),
       });
       if (res.ok) {
         const data = await res.json();
@@ -85,17 +84,19 @@ const StepAdPreview = ({ structure, urls, onStructureChange }: StepAdPreviewProp
 
     setRegeneratingGroup(groupId);
     try {
+      const requestBody = {
+        customerId: "",
+        landingPageUrl: urls[groupId] || Object.values(urls)[0] || "",
+        structure: { ...structure, adGroups: [group] },
+        briefing,
+        ajuste: adjustments[groupId] || "",
+        grupo: group.name,
+      };
+      console.log("API Request Body (Regenerate Group):", JSON.stringify(requestBody, null, 2));
       const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-ads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerId: "",
-          landingPageUrl: urls[groupId] || Object.values(urls)[0] || "",
-          structure: { ...structure, adGroups: [group] },
-          briefing,
-          ajuste: adjustments[groupId] || "",
-          grupo: group.name,
-        }),
+        body: JSON.stringify(requestBody),
       });
       if (res.ok) {
         const data = await res.json();
@@ -210,7 +211,15 @@ const StepAdPreview = ({ structure, urls, onStructureChange }: StepAdPreviewProp
             />
           </div>
         </div>
-      </div>
+        </div>
+        <button
+          onClick={generateAds}
+          disabled={!isBriefingComplete || loading}
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:opacity-90 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+          Gerar Anúncios
+        </button>
 
       {structure.adGroups.map((group) => (
         <div key={group.id} className="space-y-4">
@@ -309,7 +318,7 @@ const StepAdPreview = ({ structure, urls, onStructureChange }: StepAdPreviewProp
             </div>
             <button
               onClick={() => regenerateGroup(group.id)}
-              disabled={regeneratingGroup === group.id}
+              disabled={regeneratingGroup === group.id || !isBriefingComplete}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 whitespace-nowrap"
             >
               {regeneratingGroup === group.id ? (
