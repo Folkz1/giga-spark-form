@@ -17,10 +17,11 @@ interface Briefing {
 interface StepAdPreviewProps {
   structure: CampaignStructure;
   urls: Record<string, string>;
+  customerId: string;
   onStructureChange: (structure: CampaignStructure) => void;
 }
 
-const StepAdPreview = ({ structure, urls, onStructureChange }: StepAdPreviewProps) => {
+const StepAdPreview = ({ structure, urls, customerId, onStructureChange }: StepAdPreviewProps) => {
   const [loading, setLoading] = useState(false);
   const [regeneratingGroup, setRegeneratingGroup] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<{ groupId: string; type: "headline" | "description"; index: number } | null>(null);
@@ -33,7 +34,7 @@ const StepAdPreview = ({ structure, urls, onStructureChange }: StepAdPreviewProp
     setLoading(true);
     try {
       const requestBody = {
-        customerId: "",
+        customerId,
         landingPageUrl: Object.values(urls)[0] || "",
         structure,
         briefing,
@@ -89,7 +90,7 @@ const StepAdPreview = ({ structure, urls, onStructureChange }: StepAdPreviewProp
     setRegeneratingGroup(groupId);
     try {
       const requestBody = {
-        customerId: "",
+        customerId,
         landingPageUrl: urls[groupId] || Object.values(urls)[0] || "",
         structure: { ...structure, adGroups: [group] },
         briefing,
