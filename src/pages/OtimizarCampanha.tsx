@@ -279,6 +279,8 @@ const OtimizarCampanha = () => {
   const [selectedTerms, setSelectedTerms] = useState<Set<string>>(new Set());
   // Priority filters per level: key = "account_X" | "campaign_X" | "group_X", value = "alta"|"media"|"baixa"|"todos"
   const [priorityFilters, setPriorityFilters] = useState<Record<string, string>>({});
+  // Global filter: "alta"|"media"|"baixa"|null (toggle behavior)
+  const [globalFilter, setGlobalFilter] = useState<string | null>(null);
 
   // Step 4 state
   const [applyingLoading, setApplyingLoading] = useState(false);
@@ -683,7 +685,7 @@ const OtimizarCampanha = () => {
 
   // Get effective filter for a group (most specific wins: group > campaign > account)
   const getEffectiveFilter = (adGroupId: string, campaignId: string, customerId: string) => {
-    return priorityFilters[`group_${adGroupId}`] || priorityFilters[`campaign_${campaignId}`] || priorityFilters[`account_${customerId}`] || null;
+    return priorityFilters[`group_${adGroupId}`] || priorityFilters[`campaign_${campaignId}`] || priorityFilters[`account_${customerId}`] || globalFilter || null;
   };
 
   const selectHighPriority = () => {
@@ -910,6 +912,44 @@ const OtimizarCampanha = () => {
                   </p>
                 </div>
 
+                {/* ── Global priority filter bar ── */}
+                <div className="flex items-center gap-3 px-5 py-3.5 rounded-xl bg-secondary/80 border-2 border-primary/20">
+                  <span className="text-sm font-semibold text-foreground mr-1">Filtro global:</span>
+                  {(["alta", "media", "baixa", "todos"] as const).map((f) => {
+                    const active = globalFilter === f;
+                    const labels: Record<string, string> = { alta: "Alta", media: "Média", baixa: "Baixa", todos: "Todos" };
+                    const styles: Record<string, string> = {
+                      alta: active ? "bg-destructive text-destructive-foreground border-destructive shadow-md" : "bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20",
+                      media: active ? "bg-warning text-primary-foreground border-warning shadow-md" : "bg-warning/10 text-warning border-warning/20 hover:bg-warning/20",
+                      baixa: active ? "bg-secondary text-foreground border-muted-foreground shadow-md ring-1 ring-muted-foreground" : "bg-secondary/60 text-muted-foreground border-border hover:bg-secondary",
+                      todos: active ? "bg-primary text-primary-foreground border-primary shadow-md" : "bg-secondary text-secondary-foreground border-border hover:bg-surface-hover",
+                    };
+                    return (
+                      <button
+                        key={f}
+                        onClick={() => {
+                          if (active) {
+                            // Toggle off
+                            setGlobalFilter(null);
+                          } else {
+                            setGlobalFilter(f === "todos" ? null : f);
+                            // Select matching terms globally
+                            if (f === "todos") {
+                              setSelectedTerms(new Set(selectableTerms.map(termKey)));
+                            } else {
+                              const keys = selectableTerms.filter((t) => t.prioridade === f).map(termKey);
+                              setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.add(k)); return next; });
+                            }
+                          }
+                        }}
+                        className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all border ${styles[f]}`}
+                      >
+                        {labels[f]}
+                      </button>
+                    );
+                  })}
+                </div>
+
                 {hierarchy.length === 0 && (
                   <div className="text-center text-muted-foreground py-12">
                     Nenhuma sugestão encontrada.
@@ -946,6 +986,9 @@ const OtimizarCampanha = () => {
                               onClick={() => {
                                 if (f === "desmarcar") {
                                   deselectAllForAccount(account.customerId);
+                                  setFilter(`account_${account.customerId}`, "");
+                                } else if (active) {
+                                  // Toggle off
                                   setFilter(`account_${account.customerId}`, "");
                                 } else if (f === "todos") {
                                   selectAllForAccount(account.customerId);
@@ -994,6 +1037,8 @@ const OtimizarCampanha = () => {
                                       if (f === "desmarcar") {
                                         deselectAllForCampaign(campaign.campaignId, account.customerId);
                                         setFilter(`campaign_${campaign.campaignId}`, "");
+                                      } else if (active) {
+                                        setFilter(`campaign_${campaign.campaignId}`, "");
                                       } else if (f === "todos") {
                                         selectAllForCampaign(campaign.campaignId, account.customerId);
                                         setFilter(`campaign_${campaign.campaignId}`, "todos");
@@ -1038,6 +1083,8 @@ const OtimizarCampanha = () => {
                                           onClick={() => {
                                             if (f === "desmarcar") {
                                               deselectAllForGroup(adGroup.adGroupId);
+                                              setFilter(`group_${adGroup.adGroupId}`, "");
+                                            } else if (active) {
                                               setFilter(`group_${adGroup.adGroupId}`, "");
                                             } else if (f === "todos") {
                                               selectAllForGroup(adGroup.adGroupId);
