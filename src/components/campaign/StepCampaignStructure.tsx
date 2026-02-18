@@ -15,11 +15,14 @@ const StepCampaignStructure = ({ selectedKeywords, structure, onStructureChange 
   const [editingCampaign, setEditingCampaign] = useState(false);
   const [editingGroup, setEditingGroup] = useState<string | null>(null);
 
+  // Structure is now always created by autoGroupByClusters in CampaignWizard
+  // Only fetch from API if structure wasn't provided
   useEffect(() => {
     if (!structure && selectedKeywords.length > 0) {
       fetchStructure();
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [structure]);
 
   const fetchStructure = async () => {
     setLoading(true);
