@@ -88,8 +88,8 @@ const CustomDropdown = ({
     () =>
       items.filter(
         (i) =>
-          i.label.toLowerCase().includes(search.toLowerCase()) ||
-          i.sublabel?.toLowerCase().includes(search.toLowerCase())
+          (i.label ?? "").toLowerCase().includes(search.toLowerCase()) ||
+          (i.sublabel ?? "").toLowerCase().includes(search.toLowerCase())
       ),
     [items, search]
   );
