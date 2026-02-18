@@ -14,11 +14,13 @@ interface StepCampaignSettingsProps {
 
 interface ExistingCampaign {
   id: string;
-  name: string;
-  budget?: string;
-  biddingStrategy?: string;
-  region?: string;
-  conversion?: string;
+  nome: string;
+  tipo?: string;
+  status?: string;
+  orcamentoDiario?: string;
+  estrategiaLance?: string;
+  metaCPA?: string;
+  roasAlvo?: string;
 }
 
 const StepCampaignSettings = ({ customerId, configuracoes, onConfiguracaoChange }: StepCampaignSettingsProps) => {
@@ -37,11 +39,11 @@ const StepCampaignSettings = ({ customerId, configuracoes, onConfiguracaoChange 
     setLoadingCampaigns(true);
     try {
       const res = await fetch(
-        `https://principaln8o.gigainteligencia.com.br/webhook/google-ads-campaigns?customerId=${customerId}`
+        `https://appn8o2.gigainteligencia.com.br/webhook/google-ads-campaigns?customerId=${customerId}`
       );
       if (res.ok) {
         const data = await res.json();
-        const list = Array.isArray(data) ? data : data.campaigns || [];
+        const list: ExistingCampaign[] = Array.isArray(data) ? data : data.campaigns || [];
         setCampaigns(list);
       }
     } catch (err) {
@@ -57,10 +59,9 @@ const StepCampaignSettings = ({ customerId, configuracoes, onConfiguracaoChange 
     if (campaign) {
       onConfiguracaoChange({
         ...configuracoes,
-        orcamentoDiario: campaign.budget || configuracoes.orcamentoDiario,
-        estrategiaLance: campaign.biddingStrategy || configuracoes.estrategiaLance,
-        regiao: campaign.region || configuracoes.regiao,
-        conversao: campaign.conversion || configuracoes.conversao,
+        orcamentoDiario: campaign.orcamentoDiario || configuracoes.orcamentoDiario,
+        estrategiaLance: campaign.estrategiaLance || configuracoes.estrategiaLance,
+        metaCPA: campaign.metaCPA || configuracoes.metaCPA,
         _mode: "copy",
         _copiedFrom: campaignId,
       });
@@ -140,7 +141,7 @@ const StepCampaignSettings = ({ customerId, configuracoes, onConfiguracaoChange 
               <SelectContent>
                 {campaigns.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.name}
+                    {c.nome}
                   </SelectItem>
                 ))}
               </SelectContent>
