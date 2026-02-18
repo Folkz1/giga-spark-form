@@ -44,35 +44,39 @@ const StepAdPreview = ({ structure, urls, onStructureChange }: StepAdPreviewProp
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
       });
-      if (res.ok) {
-        const data = await res.json();
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("API Error (Generate Ads):", res.status, errorText);
+        throw new Error(`API error ${res.status}`);
+      }
+      const data = await res.json();
+      console.log("API Response (Generate Ads):", JSON.stringify(data, null, 2));
+      
+      // Handle different response formats
+      if (data && data.adGroups && Array.isArray(data.adGroups)) {
+        onStructureChange({ ...structure, ...data });
+      } else if (Array.isArray(data)) {
+        // Response is an array of ad groups
+        const updatedGroups = structure.adGroups.map((g, i) => {
+          const returned = data[i] || data.find((d: any) => d.id === g.id || d.name === g.name);
+          if (returned) {
+            return { ...g, headlines: returned.headlines || g.headlines, descriptions: returned.descriptions || g.descriptions };
+          }
+          return g;
+        });
+        onStructureChange({ ...structure, adGroups: updatedGroups });
+      } else if (data && (data.headlines || data.descriptions)) {
+        // Single group response
+        const updatedGroups = structure.adGroups.map((g, i) =>
+          i === 0 ? { ...g, headlines: data.headlines || g.headlines, descriptions: data.descriptions || g.descriptions } : g
+        );
+        onStructureChange({ ...structure, adGroups: updatedGroups });
+      } else {
+        console.warn("Unexpected API response format:", data);
         onStructureChange(data);
-      } else throw new Error();
-    } catch {
-      // Mock fallback
-      const updated: CampaignStructure = {
-        ...structure,
-        adGroups: structure.adGroups.map((group) => ({
-          ...group,
-          headlines: Array.from({ length: 15 }, (_, i) => {
-            const templates = [
-              `${group.name} Profissional`, `Orçamento Grátis Hoje`, `Serviço Especializado`,
-              `Melhor Preço da Região`, `Atendimento 24h`, `Qualidade Garantida`,
-              `Equipe Certificada`, `Ligue Agora`, `Desconto Especial`,
-              `Referência no Mercado`, `Mais de 10 Anos`, `Satisfação Total`,
-              `Resultado Imediato`, `Agende Sua Visita`, `Empresa Confiável`,
-            ];
-            return templates[i] || `Título ${i + 1}`;
-          }),
-          descriptions: [
-            `Serviço de ${group.keywords[0] || "limpeza"} com profissionais treinados. Solicite seu orçamento sem compromisso agora mesmo!`,
-            `A melhor empresa de ${group.keywords[0] || "limpeza"} da região. Preços competitivos e qualidade garantida. Ligue já!`,
-            `Precisa de ${group.keywords[0] || "limpeza"}? Somos especialistas com mais de 10 anos de experiência. Atendemos toda a região.`,
-            `Contrate nosso serviço de ${group.keywords[0] || "limpeza"} e ganhe 10% de desconto no primeiro orçamento. Confira!`,
-          ],
-        })),
-      };
-      onStructureChange(updated);
+      }
+    } catch (err) {
+      console.error("Error generating ads:", err);
     } finally {
       setLoading(false);
     }
@@ -110,19 +114,8 @@ const StepAdPreview = ({ structure, urls, onStructureChange }: StepAdPreviewProp
           });
         }
       } else throw new Error();
-    } catch {
-      // Mock: just shuffle existing headlines
-      onStructureChange({
-        ...structure,
-        adGroups: structure.adGroups.map((g) => {
-          if (g.id !== groupId) return g;
-          return {
-            ...g,
-            headlines: [...(g.headlines || [])].sort(() => Math.random() - 0.5),
-            descriptions: [...(g.descriptions || [])].sort(() => Math.random() - 0.5),
-          };
-        }),
-      });
+    } catch (err) {
+      console.error("Error regenerating group:", err);
     } finally {
       setRegeneratingGroup(null);
       setAdjustments((prev) => ({ ...prev, [groupId]: "" }));
