@@ -339,7 +339,13 @@ const OtimizarCampanha = () => {
             if (!text) { console.warn(`[CAMPAIGNS] Resposta vazia para ${acc.customerId}`); return []; }
             const data = JSON.parse(text);
             const raw = Array.isArray(data) ? data : Array.isArray(data?.campaigns) ? data.campaigns : [];
-            const enabled = raw.filter((c: any) => c.status === "ENABLED");
+            if (raw.length > 0) {
+              console.log('[CAMPAIGNS] Primeiro objeto campanha:', JSON.stringify(raw[0]));
+            }
+            const enabled = raw.filter((c: any) => {
+              const s = c.status || c.situacao || c.state || "";
+              return s === "ENABLED" || s === "ATIVO";
+            });
             console.log(`[CAMPAIGNS] ${acc.customerId}: ${raw.length} total, ${enabled.length} ENABLED`);
             return enabled.map((c: any): CampaignEntry => ({
                 id: `${acc.customerId}__${String(c.id)}`,
