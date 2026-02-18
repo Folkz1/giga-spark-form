@@ -234,17 +234,7 @@ const OtimizarCampanha = () => {
       const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-accounts");
       if (!res.ok) throw new Error("Falha ao carregar contas");
       const data = await res.json();
-      const raw = Array.isArray(data) ? data : Array.isArray(data?.accounts) ? data.accounts : [];
-      // Filter invalid accounts and deduplicate by id
-      const seen = new Set<string>();
-      const list = raw.filter((a: any) => {
-        const name = (a.name ?? "").trim();
-        if (name === "" || name === "--") return false;
-        const id = String(a.id);
-        if (seen.has(id)) return false;
-        seen.add(id);
-        return true;
-      });
+      const list = Array.isArray(data) ? data : Array.isArray(data?.accounts) ? data.accounts : [];
       setAccounts(list);
     } catch {
       setAccountsError("Erro ao carregar contas. Tente novamente.");
