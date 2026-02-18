@@ -277,6 +277,8 @@ const OtimizarCampanha = () => {
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const [suggestedTerms, setSuggestedTerms] = useState<SugestedTerm[]>([]);
   const [selectedTerms, setSelectedTerms] = useState<Set<string>>(new Set());
+  // Priority filters per level: key = "account_X" | "campaign_X" | "group_X", value = "alta"|"media"|"baixa"|"todos"
+  const [priorityFilters, setPriorityFilters] = useState<Record<string, string>>({});
 
   // Step 4 state
   const [applyingLoading, setApplyingLoading] = useState(false);
@@ -600,6 +602,16 @@ const OtimizarCampanha = () => {
     setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.add(k)); return next; });
   };
 
+  const deselectAllForAccount = (customerId: string) => {
+    const keys = selectableTerms.filter((t) => t.customerId === customerId).map(termKey);
+    setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.delete(k)); return next; });
+  };
+
+  const selectPriorityForAccount = (customerId: string, priority: string) => {
+    const keys = selectableTerms.filter((t) => t.prioridade === priority && t.customerId === customerId).map(termKey);
+    setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.add(k)); return next; });
+  };
+
   const selectHighPriorityForCampaign = (campaignId: string, customerId: string) => {
     const keys = selectableTerms.filter((t) => t.prioridade === "alta" && t.campaignId === campaignId && t.customerId === customerId).map(termKey);
     setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.add(k)); return next; });
@@ -607,6 +619,16 @@ const OtimizarCampanha = () => {
 
   const selectAllForCampaign = (campaignId: string, customerId: string) => {
     const keys = selectableTerms.filter((t) => t.campaignId === campaignId && t.customerId === customerId).map(termKey);
+    setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.add(k)); return next; });
+  };
+
+  const deselectAllForCampaign = (campaignId: string, customerId: string) => {
+    const keys = selectableTerms.filter((t) => t.campaignId === campaignId && t.customerId === customerId).map(termKey);
+    setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.delete(k)); return next; });
+  };
+
+  const selectPriorityForCampaign = (campaignId: string, customerId: string, priority: string) => {
+    const keys = selectableTerms.filter((t) => t.prioridade === priority && t.campaignId === campaignId && t.customerId === customerId).map(termKey);
     setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.add(k)); return next; });
   };
 
@@ -618,6 +640,27 @@ const OtimizarCampanha = () => {
   const selectAllForGroup = (adGroupId: string) => {
     const keys = selectableTerms.filter((t) => t.adGroupId === adGroupId).map(termKey);
     setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.add(k)); return next; });
+  };
+
+  const deselectAllForGroup = (adGroupId: string) => {
+    const keys = selectableTerms.filter((t) => t.adGroupId === adGroupId).map(termKey);
+    setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.delete(k)); return next; });
+  };
+
+  const selectPriorityForGroup = (adGroupId: string, priority: string) => {
+    const keys = selectableTerms.filter((t) => t.prioridade === priority && t.adGroupId === adGroupId).map(termKey);
+    setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.add(k)); return next; });
+  };
+
+  const setFilter = (levelKey: string, value: string) => {
+    setPriorityFilters((prev) => ({ ...prev, [levelKey]: value }));
+  };
+
+  const getActiveFilter = (levelKey: string) => priorityFilters[levelKey] || null;
+
+  // Get effective filter for a group (most specific wins: group > campaign > account)
+  const getEffectiveFilter = (adGroupId: string, campaignId: string, customerId: string) => {
+    return priorityFilters[`group_${adGroupId}`] || priorityFilters[`campaign_${campaignId}`] || priorityFilters[`account_${customerId}`] || null;
   };
 
   const selectHighPriority = () => {
@@ -863,19 +906,38 @@ const OtimizarCampanha = () => {
                           <p className="text-xs text-muted-foreground">{account.totalTerms} sugestões encontradas</p>
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => selectHighPriorityForAccount(account.customerId)}
-                          className="px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors border border-destructive/20"
-                        >
-                          Selecionar Alta Prioridade
-                        </button>
-                        <button
-                          onClick={() => selectAllForAccount(account.customerId)}
-                          className="px-3 py-1.5 rounded-lg bg-secondary text-secondary-foreground text-xs font-medium hover:bg-surface-hover transition-colors border border-border"
-                        >
-                          Selecionar Todos
-                        </button>
+                      <div className="flex flex-wrap gap-1.5">
+                        {(["alta", "media", "baixa", "todos", "desmarcar"] as const).map((f) => {
+                          const active = getActiveFilter(`account_${account.customerId}`) === f;
+                          const labels: Record<string, string> = { alta: "Alta", media: "Média", baixa: "Baixa", todos: "Todos", desmarcar: "Desmarcar" };
+                          const styles: Record<string, string> = {
+                            alta: active ? "bg-destructive text-destructive-foreground border-destructive" : "bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20",
+                            media: active ? "bg-warning text-primary-foreground border-warning" : "bg-warning/10 text-warning border-warning/20 hover:bg-warning/20",
+                            baixa: active ? "bg-secondary text-foreground border-muted-foreground" : "bg-secondary/60 text-muted-foreground border-border hover:bg-secondary",
+                            todos: active ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-secondary-foreground border-border hover:bg-surface-hover",
+                            desmarcar: "bg-secondary text-secondary-foreground border-border hover:bg-surface-hover",
+                          };
+                          return (
+                            <button
+                              key={f}
+                              onClick={() => {
+                                if (f === "desmarcar") {
+                                  deselectAllForAccount(account.customerId);
+                                  setFilter(`account_${account.customerId}`, "");
+                                } else if (f === "todos") {
+                                  selectAllForAccount(account.customerId);
+                                  setFilter(`account_${account.customerId}`, "todos");
+                                } else {
+                                  selectPriorityForAccount(account.customerId, f);
+                                  setFilter(`account_${account.customerId}`, f);
+                                }
+                              }}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors border ${styles[f]}`}
+                            >
+                              {labels[f]}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -891,19 +953,38 @@ const OtimizarCampanha = () => {
                                 ({campaign.adGroups.reduce((s, g) => s + g.terms.length, 0)} sugestões)
                               </span>
                             </div>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() => selectHighPriorityForCampaign(campaign.campaignId, account.customerId)}
-                                className="px-2.5 py-1 rounded-md bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors border border-destructive/20"
-                              >
-                                Alta Prioridade
-                              </button>
-                              <button
-                                onClick={() => selectAllForCampaign(campaign.campaignId, account.customerId)}
-                                className="px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground text-xs font-medium hover:bg-surface-hover transition-colors border border-border"
-                              >
-                                Selecionar Todos
-                              </button>
+                            <div className="flex flex-wrap gap-1.5">
+                              {(["alta", "media", "baixa", "todos", "desmarcar"] as const).map((f) => {
+                                const active = getActiveFilter(`campaign_${campaign.campaignId}`) === f;
+                                const labels: Record<string, string> = { alta: "Alta", media: "Média", baixa: "Baixa", todos: "Todos", desmarcar: "Desmarcar" };
+                                const styles: Record<string, string> = {
+                                  alta: active ? "bg-destructive text-destructive-foreground border-destructive" : "bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20",
+                                  media: active ? "bg-warning text-primary-foreground border-warning" : "bg-warning/10 text-warning border-warning/20 hover:bg-warning/20",
+                                  baixa: active ? "bg-secondary text-foreground border-muted-foreground" : "bg-secondary/60 text-muted-foreground border-border hover:bg-secondary",
+                                  todos: active ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-secondary-foreground border-border hover:bg-surface-hover",
+                                  desmarcar: "bg-secondary text-secondary-foreground border-border hover:bg-surface-hover",
+                                };
+                                return (
+                                  <button
+                                    key={f}
+                                    onClick={() => {
+                                      if (f === "desmarcar") {
+                                        deselectAllForCampaign(campaign.campaignId, account.customerId);
+                                        setFilter(`campaign_${campaign.campaignId}`, "");
+                                      } else if (f === "todos") {
+                                        selectAllForCampaign(campaign.campaignId, account.customerId);
+                                        setFilter(`campaign_${campaign.campaignId}`, "todos");
+                                      } else {
+                                        selectPriorityForCampaign(campaign.campaignId, account.customerId, f);
+                                        setFilter(`campaign_${campaign.campaignId}`, f);
+                                      }
+                                    }}
+                                    className={`px-2 py-0.5 rounded-md text-xs font-medium transition-colors border ${styles[f]}`}
+                                  >
+                                    {labels[f]}
+                                  </button>
+                                );
+                              })}
                             </div>
                           </div>
 
@@ -917,19 +998,38 @@ const OtimizarCampanha = () => {
                                     <p className="text-sm text-muted-foreground font-medium">{adGroup.adGroupName}</p>
                                     <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{adGroup.terms.length}</Badge>
                                   </div>
-                                  <div className="flex gap-2">
-                                    <button
-                                      onClick={() => selectHighPriorityForGroup(adGroup.adGroupId)}
-                                      className="px-2 py-0.5 rounded bg-destructive/10 text-destructive text-[11px] font-medium hover:bg-destructive/20 transition-colors"
-                                    >
-                                      Alta Prioridade
-                                    </button>
-                                    <button
-                                      onClick={() => selectAllForGroup(adGroup.adGroupId)}
-                                      className="px-2 py-0.5 rounded bg-secondary text-secondary-foreground text-[11px] font-medium hover:bg-surface-hover transition-colors"
-                                    >
-                                      Todos
-                                    </button>
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {(["alta", "media", "baixa", "todos", "desmarcar"] as const).map((f) => {
+                                      const active = getActiveFilter(`group_${adGroup.adGroupId}`) === f;
+                                      const labels: Record<string, string> = { alta: "Alta", media: "Média", baixa: "Baixa", todos: "Todos", desmarcar: "Desmarcar" };
+                                      const styles: Record<string, string> = {
+                                        alta: active ? "bg-destructive text-destructive-foreground border-destructive" : "bg-destructive/10 text-destructive border-destructive/20 hover:bg-destructive/20",
+                                        media: active ? "bg-warning text-primary-foreground border-warning" : "bg-warning/10 text-warning border-warning/20 hover:bg-warning/20",
+                                        baixa: active ? "bg-secondary text-foreground border-muted-foreground" : "bg-secondary/60 text-muted-foreground border-border hover:bg-secondary",
+                                        todos: active ? "bg-primary text-primary-foreground border-primary" : "bg-secondary text-secondary-foreground border-border hover:bg-surface-hover",
+                                        desmarcar: "bg-secondary text-secondary-foreground border-border hover:bg-surface-hover",
+                                      };
+                                      return (
+                                        <button
+                                          key={f}
+                                          onClick={() => {
+                                            if (f === "desmarcar") {
+                                              deselectAllForGroup(adGroup.adGroupId);
+                                              setFilter(`group_${adGroup.adGroupId}`, "");
+                                            } else if (f === "todos") {
+                                              selectAllForGroup(adGroup.adGroupId);
+                                              setFilter(`group_${adGroup.adGroupId}`, "todos");
+                                            } else {
+                                              selectPriorityForGroup(adGroup.adGroupId, f);
+                                              setFilter(`group_${adGroup.adGroupId}`, f);
+                                            }
+                                          }}
+                                          className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors border ${styles[f]}`}
+                                        >
+                                          {labels[f]}
+                                        </button>
+                                      );
+                                    })}
                                   </div>
                                 </div>
 
@@ -948,31 +1048,37 @@ const OtimizarCampanha = () => {
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                      {adGroup.terms.map((term) => {
-                                        const hasConversions = term.conversoes > 0;
-                                        const key = termKey(term);
-                                        return (
-                                          <TableRow key={key} className={hasConversions ? "opacity-50" : ""}>
-                                            <TableCell>
-                                              <Checkbox
-                                                checked={selectedTerms.has(key)}
-                                                onCheckedChange={() => toggleTerm(term)}
-                                                disabled={hasConversions}
-                                              />
-                                            </TableCell>
-                                            <TableCell className="font-medium" style={{ minWidth: 180, whiteSpace: "normal", wordBreak: "break-word" }}>
-                                              {term.termo}
-                                            </TableCell>
-                                            <TableCell className="text-center">{term.impressoes?.toLocaleString("pt-BR") ?? 0}</TableCell>
-                                            <TableCell className="text-center">{term.cliques ?? 0}</TableCell>
-                                            <TableCell className="text-center">{term.conversoes ?? 0}</TableCell>
-                                            <TableCell className="text-sm text-muted-foreground" style={{ minWidth: 180, whiteSpace: "normal", wordBreak: "break-word" }}>
-                                              {term.motivo}
-                                            </TableCell>
-                                            <TableCell className="whitespace-nowrap">{priorityBadge(term.prioridade)}</TableCell>
-                                          </TableRow>
-                                        );
-                                      })}
+                                      {(() => {
+                                        const effectiveFilter = getEffectiveFilter(adGroup.adGroupId, campaign.campaignId, account.customerId);
+                                        const filteredTerms = effectiveFilter && effectiveFilter !== "todos"
+                                          ? adGroup.terms.filter((t) => t.prioridade === effectiveFilter)
+                                          : adGroup.terms;
+                                        return filteredTerms.map((term) => {
+                                          const hasConversions = term.conversoes > 0;
+                                          const key = termKey(term);
+                                          return (
+                                            <TableRow key={key} className={hasConversions ? "opacity-50" : ""}>
+                                              <TableCell>
+                                                <Checkbox
+                                                  checked={selectedTerms.has(key)}
+                                                  onCheckedChange={() => toggleTerm(term)}
+                                                  disabled={hasConversions}
+                                                />
+                                              </TableCell>
+                                              <TableCell className="font-medium" style={{ minWidth: 180, whiteSpace: "normal", wordBreak: "break-word" }}>
+                                                {term.termo}
+                                              </TableCell>
+                                              <TableCell className="text-center">{term.impressoes?.toLocaleString("pt-BR") ?? 0}</TableCell>
+                                              <TableCell className="text-center">{term.cliques ?? 0}</TableCell>
+                                              <TableCell className="text-center">{term.conversoes ?? 0}</TableCell>
+                                              <TableCell className="text-sm text-muted-foreground" style={{ minWidth: 180, whiteSpace: "normal", wordBreak: "break-word" }}>
+                                                {term.motivo}
+                                              </TableCell>
+                                              <TableCell className="whitespace-nowrap">{priorityBadge(term.prioridade)}</TableCell>
+                                            </TableRow>
+                                          );
+                                        });
+                                      })()}
                                     </TableBody>
                                   </Table>
                                 </div>
