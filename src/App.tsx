@@ -9,14 +9,14 @@ import CriarCampanha from "./pages/CriarCampanha";
 import OtimizarCampanha from "./pages/OtimizarCampanha";
 import NotFound from "./pages/NotFound";
 import AuthGuard from "./components/AuthGuard";
-import LogoutButton from "./components/LogoutButton";
+import Header from "./components/Header";
 
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => (
   <AuthGuard>
-    <LogoutButton />
-    {children}
+    <Header />
+    <div className="pt-[60px]">{children}</div>
   </AuthGuard>
 );
 
