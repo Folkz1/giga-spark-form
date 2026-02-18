@@ -30,6 +30,7 @@ const StepReview = ({ data }: StepReviewProps) => {
           landingPageUrl: Object.values(data.urls)[0] || "",
           structure: data.structure,
           ads: data.structure?.adGroups,
+          configuracoes: data.configuracoes,
         }),
       });
     } catch {
