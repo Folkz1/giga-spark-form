@@ -410,7 +410,7 @@ const OtimizarCampanha = () => {
     }
   }, [campaigns]);
 
-  /* ── Toggle helpers with cascade ─────────────────── */
+  /* ── Toggle helpers (no cascade) ──────────────────── */
   const toggleAccount = useCallback((customerId: string) => {
     setSelectedAccountIds((prev) => {
       const next = new Set(prev);
@@ -418,11 +418,6 @@ const OtimizarCampanha = () => {
       return next;
     });
   }, []);
-
-  // Fetch campaigns when accounts dropdown closes
-  const handleAccountsClose = useCallback(() => {
-    fetchCampaignsForAccounts(selectedAccountIds);
-  }, [selectedAccountIds, fetchCampaignsForAccounts]);
 
   const toggleCampaign = useCallback((id: string) => {
     setSelectedCampaignIds((prev) => {
@@ -432,11 +427,6 @@ const OtimizarCampanha = () => {
     });
   }, []);
 
-  // Fetch ad groups when campaigns dropdown closes
-  const handleCampaignsClose = useCallback(() => {
-    fetchAdGroupsForCampaigns(selectedCampaignIds);
-  }, [selectedCampaignIds, fetchAdGroupsForCampaigns]);
-
   const toggleAdGroup = useCallback((id: string) => {
     setSelectedAdGroupIds((prev) => {
       const next = new Set(prev);
@@ -444,6 +434,15 @@ const OtimizarCampanha = () => {
       return next;
     });
   }, []);
+
+  /* ── Explicit button handlers ────────────────────── */
+  const handleFetchCampaigns = useCallback(() => {
+    fetchCampaignsForAccounts(selectedAccountIds);
+  }, [selectedAccountIds, fetchCampaignsForAccounts]);
+
+  const handleFetchAdGroups = useCallback(() => {
+    fetchAdGroupsForCampaigns(selectedCampaignIds);
+  }, [selectedCampaignIds, fetchAdGroupsForCampaigns]);
 
   /* ── Analyze (parallel per group) ────────────────── */
   const startAnalysis = useCallback(async () => {
@@ -658,32 +657,54 @@ const OtimizarCampanha = () => {
                   loading={accountsLoading}
                   error={accountsError}
                   onRetry={fetchAccounts}
-                  onClose={handleAccountsClose}
                 />
+
+                <button
+                  onClick={handleFetchCampaigns}
+                  disabled={selectedAccountIds.size === 0 || campaignsLoading}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-secondary-foreground font-medium text-sm hover:bg-surface-hover transition-colors disabled:opacity-30 disabled:cursor-not-allowed border border-border"
+                >
+                  {campaignsLoading ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Buscando campanhas...</>
+                  ) : (
+                    <>Buscar Campanhas ({selectedAccountIds.size} {selectedAccountIds.size === 1 ? "conta" : "contas"})</>
+                  )}
+                </button>
 
                 <MultiSelectDropdown
                   label="Campanhas"
-                  placeholder="Selecione campanhas..."
+                  placeholder={campaigns.length === 0 ? "Busque campanhas primeiro..." : "Selecione campanhas..."}
                   items={campaigns.map((c) => ({ id: c.id, label: `${c.accountName} — ${c.name}` }))}
                   selectedIds={selectedCampaignIds}
                   onToggle={toggleCampaign}
                   onToggleAll={(ids) => ids.forEach(toggleCampaign)}
-                  loading={campaignsLoading}
+                  loading={false}
                   error={campaignsError}
-                  disabled={selectedAccountIds.size === 0}
-                  onClose={handleCampaignsClose}
+                  disabled={campaigns.length === 0}
                 />
+
+                <button
+                  onClick={handleFetchAdGroups}
+                  disabled={selectedCampaignIds.size === 0 || adGroupsLoading}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-secondary-foreground font-medium text-sm hover:bg-surface-hover transition-colors disabled:opacity-30 disabled:cursor-not-allowed border border-border"
+                >
+                  {adGroupsLoading ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Buscando grupos...</>
+                  ) : (
+                    <>Buscar Grupos ({selectedCampaignIds.size} {selectedCampaignIds.size === 1 ? "campanha" : "campanhas"})</>
+                  )}
+                </button>
 
                 <MultiSelectDropdown
                   label="Grupos de Anúncios"
-                  placeholder="Selecione grupos..."
+                  placeholder={adGroups.length === 0 ? "Busque grupos primeiro..." : "Selecione grupos..."}
                   items={adGroups.map((g) => ({ id: g.id, label: `${g.campaignName} — ${g.name}` }))}
                   selectedIds={selectedAdGroupIds}
                   onToggle={toggleAdGroup}
                   onToggleAll={(ids) => ids.forEach(toggleAdGroup)}
-                  loading={adGroupsLoading}
+                  loading={false}
                   error={adGroupsError}
-                  disabled={selectedCampaignIds.size === 0}
+                  disabled={adGroups.length === 0}
                 />
 
                 {analyzeError && (
