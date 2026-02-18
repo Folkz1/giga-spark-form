@@ -50,8 +50,8 @@ const CampaignWizard = () => {
       adGroups,
     };
 
-    const flatKeywords = data.clusters.flatMap(c => c.keywords);
-    setData(prev => ({ ...prev, structure, keywordResults: flatKeywords }));
+    const selectedOnly = data.clusters.flatMap(c => c.keywords.filter(k => k.selected));
+    setData(prev => ({ ...prev, structure, keywordResults: selectedOnly }));
   };
 
   const handleNext = () => {
