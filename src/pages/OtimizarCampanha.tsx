@@ -285,10 +285,13 @@ const OtimizarCampanha = () => {
     try {
       const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-accounts");
       if (!res.ok) throw new Error("Falha ao carregar contas");
-      const data = await res.json();
+      const text = await res.text();
+      if (!text) throw new Error("Resposta vazia");
+      const data = JSON.parse(text);
       const list = Array.isArray(data) ? data : Array.isArray(data?.accounts) ? data.accounts : [];
       setAccounts(list);
-    } catch {
+    } catch (err) {
+      console.error("Fetch accounts error:", err);
       setAccountsError("Erro ao carregar contas. Tente novamente.");
     } finally {
       setAccountsLoading(false);
@@ -317,20 +320,27 @@ const OtimizarCampanha = () => {
       const selectedAccounts = accounts.filter((a) => accountIds.has(a.customerId));
       const results = await Promise.all(
         selectedAccounts.map(async (acc) => {
-          const res = await fetch(
-            `https://principaln8o.gigainteligencia.com.br/webhook/google-ads-campaigns?customerId=${acc.customerId}`
-          );
-          if (!res.ok) return [];
-          const data = await res.json();
-          const raw = Array.isArray(data) ? data : Array.isArray(data?.campaigns) ? data.campaigns : [];
-          return raw
-            .filter((c: any) => c.status === "ENABLED")
-            .map((c: any): CampaignEntry => ({
-              id: `${acc.customerId}__${String(c.id)}`,
-              name: c.nome || c.name || "",
-              accountName: acc.name,
-              customerId: acc.customerId,
-            }));
+          try {
+            const res = await fetch(
+              `https://principaln8o.gigainteligencia.com.br/webhook/google-ads-campaigns?customerId=${acc.customerId}`
+            );
+            if (!res.ok) return [];
+            const text = await res.text();
+            if (!text) return [];
+            const data = JSON.parse(text);
+            const raw = Array.isArray(data) ? data : Array.isArray(data?.campaigns) ? data.campaigns : [];
+            return raw
+              .filter((c: any) => c.status === "ENABLED")
+              .map((c: any): CampaignEntry => ({
+                id: `${acc.customerId}__${String(c.id)}`,
+                name: c.nome || c.name || "",
+                accountName: acc.name,
+                customerId: acc.customerId,
+              }));
+          } catch (err) {
+            console.error(`Fetch campaigns error for ${acc.customerId}:`, err);
+            return [];
+          }
         })
       );
       setCampaigns(results.flat());
@@ -357,22 +367,29 @@ const OtimizarCampanha = () => {
       const selectedCampaigns = campaigns.filter((c) => campaignIds.has(c.id));
       const results = await Promise.all(
         selectedCampaigns.map(async (camp) => {
-          const realCampaignId = camp.id.split("__")[1];
-          const res = await fetch(
-            `https://appn8o2.gigainteligencia.com.br/webhook/google-ads-adgroups?customerId=${camp.customerId}&campaignId=${realCampaignId}`
-          );
-          if (!res.ok) return [];
-          const data = await res.json();
-          const raw = Array.isArray(data) ? data : Array.isArray(data?.adGroups) ? data.adGroups : [];
-          return raw
-            .filter((g: any) => g.status === "ENABLED")
-            .map((g: any): AdGroupEntry => ({
-              id: `${camp.customerId}__${realCampaignId}__${String(g.id)}`,
-              name: g.nome || g.name || "",
-              campaignName: camp.name,
-              campaignId: realCampaignId,
-              customerId: camp.customerId,
-            }));
+          try {
+            const realCampaignId = camp.id.split("__")[1];
+            const res = await fetch(
+              `https://appn8o2.gigainteligencia.com.br/webhook/google-ads-adgroups?customerId=${camp.customerId}&campaignId=${realCampaignId}`
+            );
+            if (!res.ok) return [];
+            const text = await res.text();
+            if (!text) return [];
+            const data = JSON.parse(text);
+            const raw = Array.isArray(data) ? data : Array.isArray(data?.adGroups) ? data.adGroups : [];
+            return raw
+              .filter((g: any) => g.status === "ENABLED")
+              .map((g: any): AdGroupEntry => ({
+                id: `${camp.customerId}__${realCampaignId}__${String(g.id)}`,
+                name: g.nome || g.name || "",
+                campaignName: camp.name,
+                campaignId: realCampaignId,
+                customerId: camp.customerId,
+              }));
+          } catch (err) {
+            console.error(`Fetch adgroups error for ${camp.id}:`, err);
+            return [];
+          }
         })
       );
       setAdGroups(results.flat());
