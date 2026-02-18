@@ -833,7 +833,7 @@ const OtimizarCampanha = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="space-y-5"
+                className="space-y-5 pb-[120px]"
               >
                 <div>
                   <h2 className="text-xl font-bold text-foreground mb-1">
