@@ -13,6 +13,12 @@ const StepReview = ({ data }: StepReviewProps) => {
 
   const handleSubmit = async () => {
     setSubmitting(true);
+    const accountName = data.selectedAccount?.name;
+    const customerId = data.selectedAccount?.customerId;
+    const campaignName = data.structure?.campaignName;
+    const structure = data.structure;
+    const ads = data.structure?.adGroups;
+    console.log('SUBMIT BODY:', JSON.stringify({accountName, customerId, campaignName, structure, ads}, null, 2));
     try {
       await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-submit", {
         method: "POST",
