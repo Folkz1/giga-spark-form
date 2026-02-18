@@ -3,12 +3,22 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Login from "./pages/Login";
 import Index from "./pages/Index";
 import CriarCampanha from "./pages/CriarCampanha";
 import OtimizarCampanha from "./pages/OtimizarCampanha";
 import NotFound from "./pages/NotFound";
+import AuthGuard from "./components/AuthGuard";
+import LogoutButton from "./components/LogoutButton";
 
 const queryClient = new QueryClient();
+
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => (
+  <AuthGuard>
+    <LogoutButton />
+    {children}
+  </AuthGuard>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -17,10 +27,10 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/criar-campanha" element={<CriarCampanha />} />
-          <Route path="/otimizar-campanha" element={<OtimizarCampanha />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+          <Route path="/criar-campanha" element={<ProtectedRoute><CriarCampanha /></ProtectedRoute>} />
+          <Route path="/otimizar-campanha" element={<ProtectedRoute><OtimizarCampanha /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
