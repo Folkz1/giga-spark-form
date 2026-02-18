@@ -55,9 +55,18 @@ const StepAdPreview = ({ structure, urls, customerId, onStructureChange }: StepA
       
       // Handle different response formats
       if (data && data.adGroups && Array.isArray(data.adGroups)) {
-        onStructureChange({ ...structure, ...data });
+        onStructureChange({ ...structure, adGroups: data.adGroups });
+      } else if (data && data.ads && Array.isArray(data.ads)) {
+        // Response has "ads" array with groupName/headlines/descriptions
+        const updatedGroups = structure.adGroups.map((g, i) => {
+          const returned = data.ads[i] || data.ads.find((d: any) => d.groupName === g.name);
+          if (returned) {
+            return { ...g, headlines: returned.headlines || g.headlines, descriptions: returned.descriptions || g.descriptions };
+          }
+          return g;
+        });
+        onStructureChange({ ...structure, adGroups: updatedGroups });
       } else if (Array.isArray(data)) {
-        // Response is an array of ad groups
         const updatedGroups = structure.adGroups.map((g, i) => {
           const returned = data[i] || data.find((d: any) => d.id === g.id || d.name === g.name);
           if (returned) {
@@ -67,14 +76,12 @@ const StepAdPreview = ({ structure, urls, customerId, onStructureChange }: StepA
         });
         onStructureChange({ ...structure, adGroups: updatedGroups });
       } else if (data && (data.headlines || data.descriptions)) {
-        // Single group response
         const updatedGroups = structure.adGroups.map((g, i) =>
           i === 0 ? { ...g, headlines: data.headlines || g.headlines, descriptions: data.descriptions || g.descriptions } : g
         );
         onStructureChange({ ...structure, adGroups: updatedGroups });
       } else {
         console.warn("Unexpected API response format:", data);
-        onStructureChange(data);
       }
     } catch (err) {
       console.error("Error generating ads:", err);
