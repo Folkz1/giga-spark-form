@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { ChevronDown, Loader2, AlertCircle, Building2 } from "lucide-react";
+import { ChevronDown, Loader2, AlertCircle, Building2, Search, X } from "lucide-react";
 import type { Account } from "./types";
 
 interface StepAccountSelectionProps {
@@ -13,6 +13,15 @@ const StepAccountSelection = ({ selectedAccount, onSelect }: StepAccountSelectio
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filteredAccounts = useMemo(
+    () => accounts.filter(a =>
+      a.name.toLowerCase().includes(search.toLowerCase()) ||
+      a.customerId.toLowerCase().includes(search.toLowerCase())
+    ),
+    [accounts, search]
+  );
 
   const fetchAccounts = async () => {
     setLoading(true);
@@ -97,26 +106,47 @@ const StepAccountSelection = ({ selectedAccount, onSelect }: StepAccountSelectio
               animate={{ opacity: 1, y: 0 }}
               className="absolute z-50 w-full mt-2 rounded-xl bg-card border border-border shadow-2xl overflow-hidden"
             >
-              {accounts.map((account) => (
-                <button
-                  key={account.id}
-                  onClick={() => {
-                    onSelect(account);
-                    setOpen(false);
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary transition-colors text-left ${
-                    selectedAccount?.id === account.id ? "bg-secondary" : ""
-                  }`}
-                >
-                  <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
-                    <Building2 className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground text-sm">{account.name}</p>
-                    <p className="text-xs text-muted-foreground">{account.customerId}</p>
-                  </div>
-                </button>
-              ))}
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+                <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar conta..."
+                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+                  autoFocus
+                />
+                {search && (
+                  <button onClick={() => setSearch("")} className="text-muted-foreground hover:text-foreground">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              {filteredAccounts.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma conta encontrada</p>
+              ) : (
+                filteredAccounts.map((account) => (
+                  <button
+                    key={account.id}
+                    onClick={() => {
+                      onSelect(account);
+                      setOpen(false);
+                      setSearch("");
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary transition-colors text-left ${
+                      selectedAccount?.id === account.id ? "bg-secondary" : ""
+                    }`}
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+                      <Building2 className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground text-sm">{account.name}</p>
+                      <p className="text-xs text-muted-foreground">{account.customerId}</p>
+                    </div>
+                  </button>
+                ))
+              )}
             </motion.div>
           )}
         </div>
