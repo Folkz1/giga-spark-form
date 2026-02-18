@@ -1,17 +1,17 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   Loader2,
   AlertCircle,
-  Building2,
   ChevronDown,
   Search,
   X,
   CheckCircle2,
   Sparkles,
   Brain,
+  Check,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -27,63 +27,69 @@ import type { Account } from "@/components/campaign/types";
 
 /* ── Types ─────────────────────────────────────────── */
 
-interface Campaign {
+interface CampaignEntry {
   id: string;
   name: string;
+  accountName: string;
+  customerId: string;
 }
 
-interface AdGroupOption {
+interface AdGroupEntry {
   id: string;
   name: string;
+  campaignName: string;
+  campaignId: string;
+  customerId: string;
 }
 
 interface SugestedTerm {
   termo: string;
   impressoes: number;
   cliques: number;
-  custo: number;
+  custo: number | string;
   conversoes: number;
   motivo: string;
   prioridade: "alta" | "media" | "baixa";
+  grupo: string;
+  adGroupId: string;
+  customerId: string;
 }
 
-/* ── Reusable Dropdown ─────────────────────────────── */
+/* ── Multi-Select Dropdown ─────────────────────────── */
 
-interface DropdownItem {
+interface MultiSelectItem {
   id: string;
   label: string;
   sublabel?: string;
 }
 
-interface CustomDropdownProps {
+interface MultiSelectDropdownProps {
   label: string;
   placeholder: string;
-  items: DropdownItem[];
-  selectedId: string | null;
-  onSelect: (item: DropdownItem) => void;
+  items: MultiSelectItem[];
+  selectedIds: Set<string>;
+  onToggle: (id: string) => void;
   loading: boolean;
   error: string | null;
   onRetry?: () => void;
   disabled?: boolean;
-  searchable?: boolean;
 }
 
-const CustomDropdown = ({
+const MultiSelectDropdown = ({
   label,
   placeholder,
   items,
-  selectedId,
-  onSelect,
+  selectedIds,
+  onToggle,
   loading,
   error,
   onRetry,
   disabled,
-  searchable = false,
-}: CustomDropdownProps) => {
+}: MultiSelectDropdownProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
 
-  const selected = items.find((i) => i.id === selectedId);
   const filtered = useMemo(
     () =>
       items.filter(
@@ -94,8 +100,19 @@ const CustomDropdown = ({
     [items, search]
   );
 
+  // Close on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    if (open) document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const selectedCount = selectedIds.size;
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" ref={ref}>
       <label className="text-sm font-medium text-foreground">{label}</label>
 
       {loading ? (
@@ -119,18 +136,13 @@ const CustomDropdown = ({
             onClick={() => !disabled && setOpen(!open)}
             disabled={disabled}
             className={`w-full flex items-center justify-between px-4 py-3 rounded-xl bg-secondary border border-border transition-all text-left ${
-              disabled
-                ? "opacity-50 cursor-not-allowed"
-                : "hover:border-primary/40"
+              disabled ? "opacity-50 cursor-not-allowed" : "hover:border-primary/40"
             }`}
           >
-            {selected ? (
-              <div>
-                <p className="font-medium text-foreground text-sm">{selected.label}</p>
-                {selected.sublabel && (
-                  <p className="text-xs text-muted-foreground">{selected.sublabel}</p>
-                )}
-              </div>
+            {selectedCount > 0 ? (
+              <span className="text-foreground text-sm font-medium">
+                {selectedCount} {selectedCount === 1 ? "selecionado" : "selecionados"}
+              </span>
             ) : (
               <span className="text-muted-foreground text-sm">{placeholder}</span>
             )}
@@ -143,48 +155,54 @@ const CustomDropdown = ({
             <motion.div
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="absolute z-50 w-full mt-2 rounded-xl bg-card border border-border shadow-2xl overflow-hidden max-h-64 flex flex-col"
+              className="absolute z-50 w-full mt-2 rounded-xl bg-card border border-border shadow-2xl overflow-hidden max-h-72 flex flex-col"
             >
-              {searchable && (
-                <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
-                  <Search className="w-4 h-4 text-muted-foreground shrink-0" />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Buscar..."
-                    className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
-                    autoFocus
-                  />
-                  {search && (
-                    <button onClick={() => setSearch("")} className="text-muted-foreground hover:text-foreground">
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              )}
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+                <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar..."
+                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+                  autoFocus
+                />
+                {search && (
+                  <button onClick={() => setSearch("")} className="text-muted-foreground hover:text-foreground">
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
               <div className="overflow-y-auto">
                 {filtered.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">Nenhum item encontrado</p>
                 ) : (
-                  filtered.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => {
-                        onSelect(item);
-                        setOpen(false);
-                        setSearch("");
-                      }}
-                      className={`w-full px-4 py-3 hover:bg-secondary transition-colors text-left ${
-                        selectedId === item.id ? "bg-secondary" : ""
-                      }`}
-                    >
-                      <p className="font-medium text-foreground text-sm">{item.label}</p>
-                      {item.sublabel && (
-                        <p className="text-xs text-muted-foreground">{item.sublabel}</p>
-                      )}
-                    </button>
-                  ))
+                  filtered.map((item) => {
+                    const checked = selectedIds.has(item.id);
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => onToggle(item.id)}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 hover:bg-secondary transition-colors text-left ${
+                          checked ? "bg-secondary/60" : ""
+                        }`}
+                      >
+                        <div
+                          className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                            checked ? "bg-primary border-primary" : "border-muted-foreground/40"
+                          }`}
+                        >
+                          {checked && <Check className="w-3 h-3 text-primary-foreground" />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-medium text-foreground text-sm truncate">{item.label}</p>
+                          {item.sublabel && (
+                            <p className="text-xs text-muted-foreground truncate">{item.sublabel}</p>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })
                 )}
               </div>
             </motion.div>
@@ -201,21 +219,21 @@ const OtimizarCampanha = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
 
-  // Step 1 state
+  // Step 1 state — multi-select
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [accountsLoading, setAccountsLoading] = useState(true);
   const [accountsError, setAccountsError] = useState<string | null>(null);
-  const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
+  const [selectedAccountIds, setSelectedAccountIds] = useState<Set<string>>(new Set());
 
-  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [campaigns, setCampaigns] = useState<CampaignEntry[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(false);
   const [campaignsError, setCampaignsError] = useState<string | null>(null);
-  const [selectedCampaign, setSelectedCampaign] = useState<Campaign | null>(null);
+  const [selectedCampaignIds, setSelectedCampaignIds] = useState<Set<string>>(new Set());
 
-  const [adGroups, setAdGroups] = useState<AdGroupOption[]>([]);
+  const [adGroups, setAdGroups] = useState<AdGroupEntry[]>([]);
   const [adGroupsLoading, setAdGroupsLoading] = useState(false);
   const [adGroupsError, setAdGroupsError] = useState<string | null>(null);
-  const [selectedAdGroup, setSelectedAdGroup] = useState<AdGroupOption | null>(null);
+  const [selectedAdGroupIds, setSelectedAdGroupIds] = useState<Set<string>>(new Set());
 
   // Step 2-3 state
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
@@ -247,101 +265,183 @@ const OtimizarCampanha = () => {
     fetchAccounts();
   }, [fetchAccounts]);
 
-  /* ── Fetch campaigns ─────────────────────────────── */
-  const fetchCampaigns = useCallback(async (customerId: string) => {
+  /* ── Fetch campaigns for all selected accounts ───── */
+  const fetchCampaignsForAccounts = useCallback(async (accountIds: Set<string>) => {
     setCampaignsLoading(true);
     setCampaignsError(null);
     setCampaigns([]);
-    setSelectedCampaign(null);
+    setSelectedCampaignIds(new Set());
     setAdGroups([]);
-    setSelectedAdGroup(null);
+    setSelectedAdGroupIds(new Set());
+
+    if (accountIds.size === 0) {
+      setCampaignsLoading(false);
+      return;
+    }
+
     try {
-      const res = await fetch(
-        `https://principaln8o.gigainteligencia.com.br/webhook/google-ads-campaigns?customerId=${customerId}`
+      const selectedAccounts = accounts.filter((a) => accountIds.has(a.customerId));
+      const results = await Promise.all(
+        selectedAccounts.map(async (acc) => {
+          const res = await fetch(
+            `https://principaln8o.gigainteligencia.com.br/webhook/google-ads-campaigns?customerId=${acc.customerId}`
+          );
+          if (!res.ok) return [];
+          const data = await res.json();
+          const raw = Array.isArray(data) ? data : Array.isArray(data?.campaigns) ? data.campaigns : [];
+          return raw
+            .filter((c: any) => c.status === "ENABLED")
+            .map((c: any): CampaignEntry => ({
+              id: `${acc.customerId}__${String(c.id)}`,
+              name: c.nome || c.name || "",
+              accountName: acc.name,
+              customerId: acc.customerId,
+            }));
+        })
       );
-      if (!res.ok) throw new Error("Falha ao carregar campanhas");
-      const data = await res.json();
-      const raw = Array.isArray(data) ? data : Array.isArray(data?.campaigns) ? data.campaigns : [];
-      const list = raw
-        .filter((c: any) => c.status === "ENABLED")
-        .map((c: any) => ({ id: String(c.id), name: c.nome || c.name || "" }));
-      setCampaigns(list);
+      setCampaigns(results.flat());
     } catch {
       setCampaignsError("Erro ao carregar campanhas.");
     } finally {
       setCampaignsLoading(false);
     }
-  }, []);
+  }, [accounts]);
 
-  /* ── Fetch ad groups ─────────────────────────────── */
-  const fetchAdGroups = useCallback(async (customerId: string, campaignId: string) => {
+  /* ── Fetch ad groups for all selected campaigns ──── */
+  const fetchAdGroupsForCampaigns = useCallback(async (campaignIds: Set<string>) => {
     setAdGroupsLoading(true);
     setAdGroupsError(null);
     setAdGroups([]);
-    setSelectedAdGroup(null);
+    setSelectedAdGroupIds(new Set());
+
+    if (campaignIds.size === 0) {
+      setAdGroupsLoading(false);
+      return;
+    }
+
     try {
-      const res = await fetch(
-        `https://appn8o2.gigainteligencia.com.br/webhook/google-ads-adgroups?customerId=${customerId}&campaignId=${campaignId}`
+      const selectedCampaigns = campaigns.filter((c) => campaignIds.has(c.id));
+      const results = await Promise.all(
+        selectedCampaigns.map(async (camp) => {
+          const realCampaignId = camp.id.split("__")[1];
+          const res = await fetch(
+            `https://appn8o2.gigainteligencia.com.br/webhook/google-ads-adgroups?customerId=${camp.customerId}&campaignId=${realCampaignId}`
+          );
+          if (!res.ok) return [];
+          const data = await res.json();
+          const raw = Array.isArray(data) ? data : Array.isArray(data?.adGroups) ? data.adGroups : [];
+          return raw
+            .filter((g: any) => g.status === "ENABLED")
+            .map((g: any): AdGroupEntry => ({
+              id: `${camp.customerId}__${realCampaignId}__${String(g.id)}`,
+              name: g.nome || g.name || "",
+              campaignName: camp.name,
+              campaignId: realCampaignId,
+              customerId: camp.customerId,
+            }));
+        })
       );
-      if (!res.ok) throw new Error("Falha ao carregar grupos");
-      const data = await res.json();
-      const raw = Array.isArray(data) ? data : Array.isArray(data?.adGroups) ? data.adGroups : [];
-      const list = raw
-        .filter((g: any) => g.status === "ENABLED")
-        .map((g: any) => ({ id: String(g.id), name: g.nome || g.name || "" }));
-      setAdGroups(list);
+      setAdGroups(results.flat());
     } catch {
       setAdGroupsError("Erro ao carregar grupos de anúncios.");
     } finally {
       setAdGroupsLoading(false);
     }
+  }, [campaigns]);
+
+  /* ── Toggle helpers with cascade ─────────────────── */
+  const toggleAccount = useCallback((customerId: string) => {
+    setSelectedAccountIds((prev) => {
+      const next = new Set(prev);
+      next.has(customerId) ? next.delete(customerId) : next.add(customerId);
+      return next;
+    });
   }, []);
 
-  /* ── Analyze (step 2) ────────────────────────────── */
+  // When selectedAccountIds changes, fetch campaigns
+  const prevAccountIds = useRef<string>("");
+  useEffect(() => {
+    const key = [...selectedAccountIds].sort().join(",");
+    if (key !== prevAccountIds.current) {
+      prevAccountIds.current = key;
+      fetchCampaignsForAccounts(selectedAccountIds);
+    }
+  }, [selectedAccountIds, fetchCampaignsForAccounts]);
+
+  const toggleCampaign = useCallback((id: string) => {
+    setSelectedCampaignIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  // When selectedCampaignIds changes, fetch ad groups
+  const prevCampaignIds = useRef<string>("");
+  useEffect(() => {
+    const key = [...selectedCampaignIds].sort().join(",");
+    if (key !== prevCampaignIds.current) {
+      prevCampaignIds.current = key;
+      fetchAdGroupsForCampaigns(selectedCampaignIds);
+    }
+  }, [selectedCampaignIds, fetchAdGroupsForCampaigns]);
+
+  const toggleAdGroup = useCallback((id: string) => {
+    setSelectedAdGroupIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  /* ── Analyze (parallel per group) ────────────────── */
   const startAnalysis = useCallback(async () => {
     setStep(1);
     setAnalyzeError(null);
-    const requestBody = {
-      customerId: selectedAccount!.customerId,
-      campaignId: selectedCampaign!.id,
-      adGroupId: selectedAdGroup!.id,
-      adGroupName: selectedAdGroup!.name,
-      campaignName: selectedCampaign!.name,
-    };
-    console.log("Sending optimize request:", requestBody);
+
+    const selectedGroups = adGroups.filter((g) => selectedAdGroupIds.has(g.id));
+
     try {
-      const response = await fetch("https://appn8o2.gigainteligencia.com.br/webhook/google-ads-optimize", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerId: selectedAccount!.customerId,
-          campaignId: selectedCampaign!.id,
-          adGroupId: selectedAdGroup!.id,
-          adGroupName: selectedAdGroup!.name,
-          campaignName: selectedCampaign!.name,
-        }),
-      });
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("Optimize API error:", response.status, errorText);
-        throw new Error(`Falha na análise: ${response.status}`);
-      }
-      const data = await response.json();
-      console.log("Full API Response:", data);
-      const terms: SugestedTerm[] = Array.isArray(data)
-        ? data
-        : Array.isArray(data?.sugestoes)
-        ? data.sugestoes
-        : Array.isArray(data?.termos)
-        ? data.termos
-        : Array.isArray(data?.suggestions)
-        ? data.suggestions
-        : [];
-      console.log("Parsed terms:", terms.length);
-      if (terms.length === 0) {
-        console.warn("API returned 0 suggestions. Full response keys:", Object.keys(data));
-      }
-      setSuggestedTerms(terms);
+      const results = await Promise.all(
+        selectedGroups.map(async (grp) => {
+          const body = {
+            customerId: grp.customerId,
+            campaignId: grp.campaignId,
+            adGroupId: grp.id.split("__")[2],
+            adGroupName: grp.name,
+            campaignName: grp.campaignName,
+          };
+          console.log("Sending optimize request:", body);
+          const response = await fetch("https://appn8o2.gigainteligencia.com.br/webhook/google-ads-optimize", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          if (!response.ok) {
+            console.error("Optimize API error:", response.status);
+            return [];
+          }
+          const data = await response.json();
+          console.log("Full API Response for", grp.name, ":", data);
+          const terms: any[] = Array.isArray(data)
+            ? data
+            : Array.isArray(data?.sugestoes)
+            ? data.sugestoes
+            : Array.isArray(data?.termos)
+            ? data.termos
+            : [];
+          return terms.map((t: any): SugestedTerm => ({
+            ...t,
+            custo: t.custo,
+            grupo: grp.name,
+            adGroupId: grp.id.split("__")[2],
+            customerId: grp.customerId,
+          }));
+        })
+      );
+      const allTerms = results.flat();
+      console.log("Total terms across all groups:", allTerms.length);
+      setSuggestedTerms(allTerms);
       setSelectedTerms(new Set());
       setStep(2);
     } catch (err: any) {
@@ -349,57 +449,70 @@ const OtimizarCampanha = () => {
       setAnalyzeError(err?.message || "Erro na análise. Tente novamente.");
       setStep(0);
     }
-  }, [selectedAccount, selectedCampaign, selectedAdGroup]);
+  }, [adGroups, selectedAdGroupIds]);
 
-  /* ── Apply negatives (step 3→4) ──────────────────── */
+  /* ── Apply negatives (grouped by adGroup) ────────── */
   const applyNegatives = useCallback(async () => {
     setApplyingLoading(true);
     try {
-      const termos = suggestedTerms.filter((t) => selectedTerms.has(t.termo));
-      const res = await fetch("https://appn8o2.gigainteligencia.com.br/webhook/google-ads-negative", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customerId: selectedAccount!.customerId,
-          adGroupId: selectedAdGroup!.id,
-          termos: termos.map((t) => t.termo),
-        }),
-      });
-      if (!res.ok) throw new Error("Falha ao aplicar negativações");
-      setAppliedCount(termos.length);
+      const termsToApply = suggestedTerms.filter((t) => selectedTerms.has(`${t.adGroupId}__${t.termo}`));
+      // Group by adGroupId + customerId
+      const grouped = new Map<string, { customerId: string; adGroupId: string; termos: string[] }>();
+      for (const t of termsToApply) {
+        const key = `${t.customerId}__${t.adGroupId}`;
+        if (!grouped.has(key)) {
+          grouped.set(key, { customerId: t.customerId, adGroupId: t.adGroupId, termos: [] });
+        }
+        grouped.get(key)!.termos.push(t.termo);
+      }
+
+      await Promise.all(
+        [...grouped.values()].map(async (g) => {
+          const res = await fetch("https://appn8o2.gigainteligencia.com.br/webhook/google-ads-negative", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ customerId: g.customerId, adGroupId: g.adGroupId, termos: g.termos }),
+          });
+          if (!res.ok) throw new Error("Falha ao aplicar negativações");
+        })
+      );
+      setAppliedCount(termsToApply.length);
       setStep(3);
     } catch {
       // stay on review
     } finally {
       setApplyingLoading(false);
     }
-  }, [suggestedTerms, selectedTerms, selectedAccount, selectedAdGroup]);
+  }, [suggestedTerms, selectedTerms]);
 
   /* ── Helpers ─────────────────────────────────────── */
 
   const selectableTerms = suggestedTerms.filter((t) => t.conversoes === 0);
 
-  const toggleTerm = (termo: string) => {
+  const termKey = (t: SugestedTerm) => `${t.adGroupId}__${t.termo}`;
+
+  const toggleTerm = (t: SugestedTerm) => {
+    const key = termKey(t);
     setSelectedTerms((prev) => {
       const next = new Set(prev);
-      next.has(termo) ? next.delete(termo) : next.add(termo);
+      next.has(key) ? next.delete(key) : next.add(key);
       return next;
     });
   };
 
   const selectHighPriority = () => {
-    const high = selectableTerms.filter((t) => t.prioridade === "alta").map((t) => t.termo);
-    setSelectedTerms(new Set(high));
+    const keys = selectableTerms.filter((t) => t.prioridade === "alta").map(termKey);
+    setSelectedTerms(new Set(keys));
   };
 
   const selectAll = () => {
-    setSelectedTerms(new Set(selectableTerms.map((t) => t.termo)));
+    setSelectedTerms(new Set(selectableTerms.map(termKey)));
   };
 
   const resetFlow = () => {
     setStep(0);
-    setSelectedCampaign(null);
-    setSelectedAdGroup(null);
+    setSelectedCampaignIds(new Set());
+    setSelectedAdGroupIds(new Set());
     setCampaigns([]);
     setAdGroups([]);
     setSuggestedTerms([]);
@@ -417,9 +530,14 @@ const OtimizarCampanha = () => {
     }
   };
 
-  const canAnalyze = !!selectedAccount && !!selectedCampaign && !!selectedAdGroup;
+  const canAnalyze = selectedAdGroupIds.size > 0;
 
   const stepLabels = ["Seleção", "Analisando", "Revisão", "Confirmação"];
+
+  const parseCusto = (c: number | string) => {
+    const n = typeof c === "string" ? parseFloat(c) : c;
+    return isNaN(n) ? 0 : n;
+  };
 
   /* ── Render ──────────────────────────────────────── */
 
@@ -475,61 +593,41 @@ const OtimizarCampanha = () => {
                 <div>
                   <h2 className="text-2xl font-bold text-foreground mb-2">Selecione o que otimizar</h2>
                   <p className="text-muted-foreground">
-                    Escolha a conta, campanha e grupo de anúncios para análise.
+                    Escolha contas, campanhas e grupos de anúncios para análise.
                   </p>
                 </div>
 
-                <CustomDropdown
-                  label="Conta Google Ads"
-                  placeholder="Selecione uma conta..."
+                <MultiSelectDropdown
+                  label="Contas Google Ads"
+                  placeholder="Selecione contas..."
                   items={accounts.map((a) => ({ id: a.customerId, label: a.name, sublabel: a.customerId }))}
-                  selectedId={selectedAccount?.customerId ?? null}
-                  onSelect={(item) => {
-                    const acc = accounts.find((a) => a.customerId === item.id)!;
-                    setSelectedAccount(acc);
-                    fetchCampaigns(acc.customerId);
-                  }}
+                  selectedIds={selectedAccountIds}
+                  onToggle={toggleAccount}
                   loading={accountsLoading}
                   error={accountsError}
                   onRetry={fetchAccounts}
-                  searchable
                 />
 
-                <CustomDropdown
-                  label="Campanha"
-                  placeholder="Selecione uma campanha..."
-                  items={campaigns.map((c) => ({ id: c.id, label: c.name }))}
-                  selectedId={selectedCampaign?.id ?? null}
-                  onSelect={(item) => {
-                    const camp = campaigns.find((c) => c.id === item.id)!;
-                    setSelectedCampaign(camp);
-                    fetchAdGroups(selectedAccount!.customerId, camp.id);
-                  }}
+                <MultiSelectDropdown
+                  label="Campanhas"
+                  placeholder="Selecione campanhas..."
+                  items={campaigns.map((c) => ({ id: c.id, label: `${c.accountName} — ${c.name}` }))}
+                  selectedIds={selectedCampaignIds}
+                  onToggle={toggleCampaign}
                   loading={campaignsLoading}
                   error={campaignsError}
-                  onRetry={() => selectedAccount && fetchCampaigns(selectedAccount.customerId)}
-                  disabled={!selectedAccount}
-                  searchable
+                  disabled={selectedAccountIds.size === 0}
                 />
 
-                <CustomDropdown
-                  label="Grupo de Anúncios"
-                  placeholder="Selecione um grupo..."
-                  items={adGroups.map((g) => ({ id: g.id, label: g.name }))}
-                  selectedId={selectedAdGroup?.id ?? null}
-                  onSelect={(item) => {
-                    const grp = adGroups.find((g) => g.id === item.id)!;
-                    setSelectedAdGroup(grp);
-                  }}
+                <MultiSelectDropdown
+                  label="Grupos de Anúncios"
+                  placeholder="Selecione grupos..."
+                  items={adGroups.map((g) => ({ id: g.id, label: `${g.campaignName} — ${g.name}` }))}
+                  selectedIds={selectedAdGroupIds}
+                  onToggle={toggleAdGroup}
                   loading={adGroupsLoading}
                   error={adGroupsError}
-                  onRetry={() =>
-                    selectedAccount &&
-                    selectedCampaign &&
-                    fetchAdGroups(selectedAccount.customerId, selectedCampaign.id)
-                  }
-                  disabled={!selectedCampaign}
-                  searchable
+                  disabled={selectedCampaignIds.size === 0}
                 />
 
                 {analyzeError && (
@@ -547,7 +645,7 @@ const OtimizarCampanha = () => {
                     whileTap={{ scale: 0.97 }}
                   >
                     <Sparkles className="w-4 h-4" />
-                    Analisar com IA
+                    Analisar com IA ({selectedAdGroupIds.size} {selectedAdGroupIds.size === 1 ? "grupo" : "grupos"})
                   </motion.button>
                 </div>
               </motion.div>
@@ -570,7 +668,7 @@ const OtimizarCampanha = () => {
                 <div className="text-center space-y-2">
                   <h2 className="text-xl font-bold text-foreground">Analisando...</h2>
                   <p className="text-muted-foreground max-w-md">
-                    A IA está analisando os termos de pesquisa dos últimos 7 dias...
+                    A IA está analisando {selectedAdGroupIds.size} {selectedAdGroupIds.size === 1 ? "grupo" : "grupos"} de anúncios...
                   </p>
                 </div>
                 <Loader2 className="w-6 h-6 text-primary animate-spin" />
@@ -588,7 +686,7 @@ const OtimizarCampanha = () => {
               >
                 <div>
                   <h2 className="text-xl font-bold text-foreground mb-1">
-                    Sugestões de Negativação — {selectedAdGroup?.name}
+                    Sugestões de Negativação
                   </h2>
                   <p className="text-sm text-muted-foreground">
                     {suggestedTerms.length} termos encontrados · {selectedTerms.size} selecionados
@@ -615,6 +713,7 @@ const OtimizarCampanha = () => {
                     <TableHeader>
                       <TableRow className="bg-secondary/50">
                         <TableHead className="w-10" />
+                        <TableHead>Grupo</TableHead>
                         <TableHead>Termo de Pesquisa</TableHead>
                         <TableHead className="text-right">Impressões</TableHead>
                         <TableHead className="text-right">Cliques</TableHead>
@@ -627,25 +726,29 @@ const OtimizarCampanha = () => {
                     <TableBody>
                       {suggestedTerms.map((term) => {
                         const hasConversions = term.conversoes > 0;
+                        const key = termKey(term);
                         return (
                           <TableRow
-                            key={term.termo}
+                            key={key}
                             className={hasConversions ? "opacity-40" : ""}
                           >
                             <TableCell>
                               <Checkbox
-                                checked={selectedTerms.has(term.termo)}
-                                onCheckedChange={() => toggleTerm(term.termo)}
+                                checked={selectedTerms.has(key)}
+                                onCheckedChange={() => toggleTerm(term)}
                                 disabled={hasConversions}
                               />
                             </TableCell>
-                            <TableCell className="font-medium">{term.termo}</TableCell>
-                            <TableCell className="text-right">{term.impressoes.toLocaleString("pt-BR")}</TableCell>
-                            <TableCell className="text-right">{term.cliques}</TableCell>
-                            <TableCell className="text-right">
-                              {term.custo.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                            <TableCell className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                              {term.grupo}
                             </TableCell>
-                            <TableCell className="text-right">{term.conversoes}</TableCell>
+                            <TableCell className="font-medium">{term.termo}</TableCell>
+                            <TableCell className="text-right">{term.impressoes?.toLocaleString("pt-BR") ?? 0}</TableCell>
+                            <TableCell className="text-right">{term.cliques ?? 0}</TableCell>
+                            <TableCell className="text-right">
+                              {parseCusto(term.custo).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                            </TableCell>
+                            <TableCell className="text-right">{term.conversoes ?? 0}</TableCell>
                             <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
                               {term.motivo}
                             </TableCell>
@@ -655,7 +758,7 @@ const OtimizarCampanha = () => {
                       })}
                       {suggestedTerms.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                          <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                             Nenhuma sugestão encontrada.
                           </TableCell>
                         </TableRow>
@@ -699,8 +802,7 @@ const OtimizarCampanha = () => {
                 <div className="text-center space-y-2">
                   <h2 className="text-2xl font-bold text-foreground">Negativações Aplicadas!</h2>
                   <p className="text-muted-foreground">
-                    {appliedCount} {appliedCount === 1 ? "termo foi negativado" : "termos foram negativados"} com sucesso
-                    no grupo <span className="font-semibold text-foreground">{selectedAdGroup?.name}</span>.
+                    {appliedCount} {appliedCount === 1 ? "termo foi negativado" : "termos foram negativados"} com sucesso.
                   </p>
                 </div>
                 <div className="flex gap-3 pt-4">
