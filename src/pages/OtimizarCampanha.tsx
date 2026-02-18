@@ -55,6 +55,8 @@ interface SugestedTerm {
   adGroupId: string;
   customerId: string;
   accountName: string;
+  campaignName: string;
+  campaignId: string;
 }
 
 /* ── Multi-Select Dropdown ─────────────────────────── */
@@ -512,6 +514,8 @@ const OtimizarCampanha = () => {
               adGroupId: grp.id.split("__")[2],
               customerId: grp.customerId,
               accountName: accounts.find((a) => a.customerId === grp.customerId)?.name || grp.customerId,
+              campaignName: grp.campaignName,
+              campaignId: grp.campaignId,
             }));
           } catch (err) {
             console.error(`[OPTIMIZE] Erro geral para grupo ${grp.name}:`, err);
@@ -590,6 +594,26 @@ const OtimizarCampanha = () => {
     setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.add(k)); return next; });
   };
 
+  const selectHighPriorityForCampaign = (campaignId: string, customerId: string) => {
+    const keys = selectableTerms.filter((t) => t.prioridade === "alta" && t.campaignId === campaignId && t.customerId === customerId).map(termKey);
+    setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.add(k)); return next; });
+  };
+
+  const selectAllForCampaign = (campaignId: string, customerId: string) => {
+    const keys = selectableTerms.filter((t) => t.campaignId === campaignId && t.customerId === customerId).map(termKey);
+    setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.add(k)); return next; });
+  };
+
+  const selectHighPriorityForGroup = (adGroupId: string) => {
+    const keys = selectableTerms.filter((t) => t.prioridade === "alta" && t.adGroupId === adGroupId).map(termKey);
+    setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.add(k)); return next; });
+  };
+
+  const selectAllForGroup = (adGroupId: string) => {
+    const keys = selectableTerms.filter((t) => t.adGroupId === adGroupId).map(termKey);
+    setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.add(k)); return next; });
+  };
+
   const selectHighPriority = () => {
     const keys = selectableTerms.filter((t) => t.prioridade === "alta").map(termKey);
     setSelectedTerms(new Set(keys));
@@ -599,16 +623,32 @@ const OtimizarCampanha = () => {
     setSelectedTerms(new Set(selectableTerms.map(termKey)));
   };
 
-  // Group terms by account
-  const termsByAccount = useMemo(() => {
-    const map = new Map<string, { accountName: string; customerId: string; terms: SugestedTerm[] }>();
+  // Hierarchical grouping: Account > Campaign > AdGroup
+  interface AdGroupGroup { adGroupId: string; adGroupName: string; terms: SugestedTerm[] }
+  interface CampaignGroup { campaignId: string; campaignName: string; adGroups: AdGroupGroup[] }
+  interface AccountGroup { customerId: string; accountName: string; campaigns: CampaignGroup[]; totalTerms: number }
+
+  const hierarchy = useMemo<AccountGroup[]>(() => {
+    const accMap = new Map<string, { accountName: string; campMap: Map<string, { campaignName: string; groupMap: Map<string, { adGroupName: string; terms: SugestedTerm[] }> }> }>();
     for (const t of suggestedTerms) {
-      if (!map.has(t.customerId)) {
-        map.set(t.customerId, { accountName: t.accountName, customerId: t.customerId, terms: [] });
-      }
-      map.get(t.customerId)!.terms.push(t);
+      if (!accMap.has(t.customerId)) accMap.set(t.customerId, { accountName: t.accountName, campMap: new Map() });
+      const acc = accMap.get(t.customerId)!;
+      const campKey = `${t.customerId}__${t.campaignId}`;
+      if (!acc.campMap.has(campKey)) acc.campMap.set(campKey, { campaignName: t.campaignName, groupMap: new Map() });
+      const camp = acc.campMap.get(campKey)!;
+      if (!camp.groupMap.has(t.adGroupId)) camp.groupMap.set(t.adGroupId, { adGroupName: t.grupo, terms: [] });
+      camp.groupMap.get(t.adGroupId)!.terms.push(t);
     }
-    return [...map.values()];
+    return [...accMap.entries()].map(([customerId, { accountName, campMap }]) => ({
+      customerId,
+      accountName,
+      totalTerms: [...campMap.values()].reduce((s, c) => s + [...c.groupMap.values()].reduce((s2, g) => s2 + g.terms.length, 0), 0),
+      campaigns: [...campMap.entries()].map(([, { campaignName, groupMap }]) => ({
+        campaignId: [...groupMap.values()][0]?.terms[0]?.campaignId || "",
+        campaignName,
+        adGroups: [...groupMap.entries()].map(([adGroupId, { adGroupName, terms }]) => ({ adGroupId, adGroupName, terms })),
+      })),
+    }));
   }, [suggestedTerms]);
 
   const resetFlow = () => {
@@ -798,34 +838,34 @@ const OtimizarCampanha = () => {
                   </p>
                 </div>
 
-                {termsByAccount.length === 0 && (
+                {hierarchy.length === 0 && (
                   <div className="text-center text-muted-foreground py-12">
                     Nenhuma sugestão encontrada.
                   </div>
                 )}
 
-                {termsByAccount.map((group) => (
-                  <div key={group.customerId} className="rounded-xl border border-border overflow-hidden">
-                    {/* Account header */}
+                {hierarchy.map((account) => (
+                  <div key={account.customerId} className="rounded-xl border border-border overflow-hidden">
+                    {/* ── Level 1: Account header ── */}
                     <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-secondary/70 border-b border-border">
                       <div className="flex items-center gap-2">
                         <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
                           <Sparkles className="w-4 h-4 text-primary-foreground" />
                         </div>
                         <div>
-                          <p className="font-semibold text-foreground text-sm">{group.accountName}</p>
-                          <p className="text-xs text-muted-foreground">{group.terms.length} sugestões encontradas</p>
+                          <p className="font-semibold text-foreground text-sm">{account.accountName}</p>
+                          <p className="text-xs text-muted-foreground">{account.totalTerms} sugestões encontradas</p>
                         </div>
                       </div>
                       <div className="flex gap-2">
                         <button
-                          onClick={() => selectHighPriorityForAccount(group.customerId)}
+                          onClick={() => selectHighPriorityForAccount(account.customerId)}
                           className="px-3 py-1.5 rounded-lg bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors border border-destructive/20"
                         >
                           Selecionar Alta Prioridade
                         </button>
                         <button
-                          onClick={() => selectAllForAccount(group.customerId)}
+                          onClick={() => selectAllForAccount(account.customerId)}
                           className="px-3 py-1.5 rounded-lg bg-secondary text-secondary-foreground text-xs font-medium hover:bg-surface-hover transition-colors border border-border"
                         >
                           Selecionar Todos
@@ -833,68 +873,108 @@ const OtimizarCampanha = () => {
                       </div>
                     </div>
 
-                    {/* Table */}
-                    <div className="overflow-x-auto">
-                      <Table className="min-w-[900px]">
-                        <TableHeader>
-                          <TableRow className="bg-secondary/30">
-                            <TableHead className="w-10" />
-                            <TableHead style={{ maxWidth: 120, width: 120 }}>Grupo</TableHead>
-                            <TableHead style={{ minWidth: 180 }}>Termo de Pesquisa</TableHead>
-                            <TableHead className="text-center">Impressões</TableHead>
-                            <TableHead className="text-center">Cliques</TableHead>
-                            <TableHead className="text-center">Custo (R$)</TableHead>
-                            <TableHead className="text-center">Conversões</TableHead>
-                            <TableHead style={{ minWidth: 180 }}>Motivo</TableHead>
-                            <TableHead className="whitespace-nowrap">Prioridade</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {group.terms.map((term) => {
-                            const hasConversions = term.conversoes > 0;
-                            const key = termKey(term);
-                            return (
-                              <TableRow
-                                key={key}
-                                className={hasConversions ? "opacity-50" : ""}
+                    <div className="divide-y divide-border">
+                      {account.campaigns.map((campaign) => (
+                        <div key={`${account.customerId}__${campaign.campaignId}`} className="pl-4">
+                          {/* ── Level 2: Campaign header ── */}
+                          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-secondary/30 border-b border-border/50">
+                            <div className="flex items-center gap-2">
+                              <div className="w-1.5 h-6 rounded-full gradient-primary" />
+                              <p className="font-medium text-foreground text-sm">{campaign.campaignName}</p>
+                              <span className="text-xs text-muted-foreground">
+                                ({campaign.adGroups.reduce((s, g) => s + g.terms.length, 0)} sugestões)
+                              </span>
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => selectHighPriorityForCampaign(campaign.campaignId, account.customerId)}
+                                className="px-2.5 py-1 rounded-md bg-destructive/10 text-destructive text-xs font-medium hover:bg-destructive/20 transition-colors border border-destructive/20"
                               >
-                                <TableCell>
-                                  <Checkbox
-                                    checked={selectedTerms.has(key)}
-                                    onCheckedChange={() => toggleTerm(term)}
-                                    disabled={hasConversions}
-                                  />
-                                </TableCell>
-                                <TableCell style={{ maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} className="text-sm font-medium text-muted-foreground">
-                                  <TooltipProvider delayDuration={200}>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <span className="block truncate cursor-default">{term.grupo}</span>
-                                      </TooltipTrigger>
-                                      <TooltipContent side="top">
-                                        <p className="max-w-xs">{term.grupo}</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                </TableCell>
-                                <TableCell className="font-medium" style={{ minWidth: 180, whiteSpace: "normal", wordBreak: "break-word" }}>
-                                  {term.termo}
-                                </TableCell>
-                                <TableCell className="text-center">{term.impressoes?.toLocaleString("pt-BR") ?? 0}</TableCell>
-                                <TableCell className="text-center">{term.cliques ?? 0}</TableCell>
-                                <TableCell className="text-center">
-                                  {parseCusto(term.custo).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-                                </TableCell>
-                                <TableCell className="text-center">{term.conversoes ?? 0}</TableCell>
-                                <TableCell className="text-sm text-muted-foreground" style={{ minWidth: 180, whiteSpace: "normal", wordBreak: "break-word" }}>
-                                  {term.motivo}
-                                </TableCell>
-                                <TableCell className="whitespace-nowrap">{priorityBadge(term.prioridade)}</TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
+                                Alta Prioridade
+                              </button>
+                              <button
+                                onClick={() => selectAllForCampaign(campaign.campaignId, account.customerId)}
+                                className="px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground text-xs font-medium hover:bg-surface-hover transition-colors border border-border"
+                              >
+                                Selecionar Todos
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="divide-y divide-border/30">
+                            {campaign.adGroups.map((adGroup) => (
+                              <div key={adGroup.adGroupId} className="pl-4">
+                                {/* ── Level 3: Ad Group header ── */}
+                                <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2 bg-muted/30 border-b border-border/30">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-1 h-4 rounded-full bg-muted-foreground/30" />
+                                    <p className="text-sm text-muted-foreground font-medium">{adGroup.adGroupName}</p>
+                                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{adGroup.terms.length}</Badge>
+                                  </div>
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => selectHighPriorityForGroup(adGroup.adGroupId)}
+                                      className="px-2 py-0.5 rounded bg-destructive/10 text-destructive text-[11px] font-medium hover:bg-destructive/20 transition-colors"
+                                    >
+                                      Alta Prioridade
+                                    </button>
+                                    <button
+                                      onClick={() => selectAllForGroup(adGroup.adGroupId)}
+                                      className="px-2 py-0.5 rounded bg-secondary text-secondary-foreground text-[11px] font-medium hover:bg-surface-hover transition-colors"
+                                    >
+                                      Todos
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* ── Level 4: Table ── */}
+                                <div className="overflow-x-auto">
+                                  <Table className="min-w-[750px]">
+                                    <TableHeader>
+                                      <TableRow className="bg-secondary/20">
+                                        <TableHead className="w-10" />
+                                        <TableHead style={{ minWidth: 180 }}>Termo de Pesquisa</TableHead>
+                                        <TableHead className="text-center">Impressões</TableHead>
+                                        <TableHead className="text-center">Cliques</TableHead>
+                                        <TableHead className="text-center">Conversões</TableHead>
+                                        <TableHead style={{ minWidth: 180 }}>Motivo</TableHead>
+                                        <TableHead className="whitespace-nowrap">Prioridade</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {adGroup.terms.map((term) => {
+                                        const hasConversions = term.conversoes > 0;
+                                        const key = termKey(term);
+                                        return (
+                                          <TableRow key={key} className={hasConversions ? "opacity-50" : ""}>
+                                            <TableCell>
+                                              <Checkbox
+                                                checked={selectedTerms.has(key)}
+                                                onCheckedChange={() => toggleTerm(term)}
+                                                disabled={hasConversions}
+                                              />
+                                            </TableCell>
+                                            <TableCell className="font-medium" style={{ minWidth: 180, whiteSpace: "normal", wordBreak: "break-word" }}>
+                                              {term.termo}
+                                            </TableCell>
+                                            <TableCell className="text-center">{term.impressoes?.toLocaleString("pt-BR") ?? 0}</TableCell>
+                                            <TableCell className="text-center">{term.cliques ?? 0}</TableCell>
+                                            <TableCell className="text-center">{term.conversoes ?? 0}</TableCell>
+                                            <TableCell className="text-sm text-muted-foreground" style={{ minWidth: 180, whiteSpace: "normal", wordBreak: "break-word" }}>
+                                              {term.motivo}
+                                            </TableCell>
+                                            <TableCell className="whitespace-nowrap">{priorityBadge(term.prioridade)}</TableCell>
+                                          </TableRow>
+                                        );
+                                      })}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ))}
