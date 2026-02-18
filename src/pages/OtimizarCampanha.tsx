@@ -456,10 +456,10 @@ const OtimizarCampanha = () => {
                 <CustomDropdown
                   label="Conta Google Ads"
                   placeholder="Selecione uma conta..."
-                  items={accounts.map((a) => ({ id: a.id, label: a.name, sublabel: a.customerId }))}
-                  selectedId={selectedAccount?.id ?? null}
+                  items={accounts.map((a) => ({ id: a.customerId, label: a.name, sublabel: a.customerId }))}
+                  selectedId={selectedAccount?.customerId ?? null}
                   onSelect={(item) => {
-                    const acc = accounts.find((a) => a.id === item.id)!;
+                    const acc = accounts.find((a) => a.customerId === item.id)!;
                     setSelectedAccount(acc);
                     fetchCampaigns(acc.customerId);
                   }}
