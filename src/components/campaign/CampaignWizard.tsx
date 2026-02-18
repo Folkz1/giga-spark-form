@@ -8,7 +8,7 @@ import StepCampaignStructure from "./StepCampaignStructure";
 import StepURLs from "./StepURLs";
 import StepAdPreview from "./StepAdPreview";
 import StepReview from "./StepReview";
-import type { Account, KeywordResult, KeywordCluster, CampaignStructure, WizardData } from "./types";
+import type { Account, KeywordResult, KeywordCluster, CampaignStructure, Briefing, WizardData } from "./types";
 
 const CampaignWizard = () => {
   const [step, setStep] = useState(0);
@@ -19,6 +19,7 @@ const CampaignWizard = () => {
     clusters: [],
     structure: null,
     urls: {},
+    briefing: { diferenciais: "", oferta: "", tom: "Profissional", proibidas: "" },
   });
 
   const allSelectedKeywords = data.clusters.flatMap(c => c.keywords.filter(k => k.selected));
@@ -116,6 +117,8 @@ const CampaignWizard = () => {
                 structure={data.structure}
                 urls={data.urls}
                 customerId={data.selectedAccount?.customerId || ""}
+                briefing={data.briefing}
+                onBriefingChange={(briefing: Briefing) => setData((prev) => ({ ...prev, briefing }))}
                 onStructureChange={(structure: CampaignStructure) => setData((prev) => ({ ...prev, structure }))}
               />
             )}
