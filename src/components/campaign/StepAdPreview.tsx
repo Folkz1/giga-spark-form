@@ -1,31 +1,25 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Loader2, Pencil, Check, RefreshCw } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { CampaignStructure } from "./types";
-
-interface Briefing {
-  diferenciais: string;
-  oferta: string;
-  tom: string;
-  proibidas: string;
-}
+import type { CampaignStructure, Briefing } from "./types";
 
 interface StepAdPreviewProps {
   structure: CampaignStructure;
   urls: Record<string, string>;
   customerId: string;
+  briefing: Briefing;
+  onBriefingChange: (briefing: Briefing) => void;
   onStructureChange: (structure: CampaignStructure) => void;
 }
 
-const StepAdPreview = ({ structure, urls, customerId, onStructureChange }: StepAdPreviewProps) => {
+const StepAdPreview = ({ structure, urls, customerId, briefing, onBriefingChange, onStructureChange }: StepAdPreviewProps) => {
   const [loading, setLoading] = useState(false);
   const [regeneratingGroup, setRegeneratingGroup] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<{ groupId: string; type: "headline" | "description"; index: number } | null>(null);
-  const [briefing, setBriefing] = useState<Briefing>({ diferenciais: "", oferta: "", tom: "Profissional", proibidas: "" });
   const [adjustments, setAdjustments] = useState<Record<string, string>>({});
 
   const isBriefingComplete = briefing.diferenciais.trim() !== "" && briefing.oferta.trim() !== "" && briefing.tom.trim() !== "" && briefing.proibidas.trim() !== "";
@@ -174,7 +168,7 @@ const StepAdPreview = ({ structure, urls, customerId, onStructureChange }: StepA
               id="diferenciais"
               placeholder="Ex: 15 anos de mercado, parcelamento 12x, tecnologia alemã..."
               value={briefing.diferenciais}
-              onChange={(e) => setBriefing((b) => ({ ...b, diferenciais: e.target.value }))}
+              onChange={(e) => onBriefingChange({ ...briefing, diferenciais: e.target.value })}
               rows={2}
               className="resize-none"
             />
@@ -185,12 +179,12 @@ const StepAdPreview = ({ structure, urls, customerId, onStructureChange }: StepA
               id="oferta"
               placeholder="Ex: Primeira sessão com 30% off"
               value={briefing.oferta}
-              onChange={(e) => setBriefing((b) => ({ ...b, oferta: e.target.value }))}
+              onChange={(e) => onBriefingChange({ ...briefing, oferta: e.target.value })}
             />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="tom">Tom de voz</Label>
-            <Select value={briefing.tom} onValueChange={(val) => setBriefing((b) => ({ ...b, tom: val }))}>
+            <Select value={briefing.tom} onValueChange={(val) => onBriefingChange({ ...briefing, tom: val })}>
               <SelectTrigger id="tom">
                 <SelectValue placeholder="Selecione o tom" />
               </SelectTrigger>
@@ -208,7 +202,7 @@ const StepAdPreview = ({ structure, urls, customerId, onStructureChange }: StepA
               id="proibidas"
               placeholder="Ex: barato, preço baixo"
               value={briefing.proibidas}
-              onChange={(e) => setBriefing((b) => ({ ...b, proibidas: e.target.value }))}
+              onChange={(e) => onBriefingChange({ ...briefing, proibidas: e.target.value })}
             />
           </div>
         </div>

@@ -39,6 +39,13 @@ export interface CampaignStructure {
   adGroups: AdGroup[];
 }
 
+export interface Briefing {
+  diferenciais: string;
+  oferta: string;
+  tom: string;
+  proibidas: string;
+}
+
 export interface WizardData {
   selectedAccount: Account | null;
   seedKeywords: string;
@@ -46,6 +53,7 @@ export interface WizardData {
   clusters: KeywordCluster[];
   structure: CampaignStructure | null;
   urls: Record<string, string>;
+  briefing: Briefing;
 }
 
 export const STEP_LABELS = [
