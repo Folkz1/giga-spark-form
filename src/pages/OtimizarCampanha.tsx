@@ -463,39 +463,57 @@ const OtimizarCampanha = () => {
     try {
       const results = await Promise.all(
         selectedGroups.map(async (grp) => {
-          const body = {
-            customerId: grp.customerId,
-            campaignId: grp.campaignId,
-            adGroupId: grp.id.split("__")[2],
-            adGroupName: grp.name,
-            campaignName: grp.campaignName,
-          };
-          console.log("Sending optimize request:", body);
-          const response = await fetch("https://appn8o2.gigainteligencia.com.br/webhook/google-ads-optimize", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-          });
-          if (!response.ok) {
-            console.error("Optimize API error:", response.status);
+          try {
+            const body = {
+              customerId: grp.customerId,
+              campaignId: grp.campaignId,
+              adGroupId: grp.id.split("__")[2],
+              adGroupName: grp.name,
+              campaignName: grp.campaignName,
+            };
+            console.log("[OPTIMIZE] Enviando request para grupo:", grp.name, body);
+            const response = await fetch("https://appn8o2.gigainteligencia.com.br/webhook/google-ads-optimize", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            });
+            console.log(`[OPTIMIZE] Status para ${grp.name}:`, response.status);
+            if (!response.ok) {
+              console.error(`[OPTIMIZE] Erro HTTP para ${grp.name}:`, response.status);
+              return [];
+            }
+            const text = await response.text();
+            console.log(`[OPTIMIZE] Resposta raw para ${grp.name}:`, text?.substring(0, 500));
+            if (!text || text.trim() === '') {
+              console.warn(`[OPTIMIZE] Resposta vazia para grupo ${grp.name}`);
+              return [];
+            }
+            let data: any;
+            try {
+              data = JSON.parse(text);
+            } catch (e) {
+              console.warn(`[OPTIMIZE] JSON inválido para grupo ${grp.name}:`, text);
+              return [];
+            }
+            console.log("[OPTIMIZE] Parsed response for", grp.name, ":", data);
+            const terms: any[] = Array.isArray(data)
+              ? data
+              : Array.isArray(data?.sugestoes)
+              ? data.sugestoes
+              : Array.isArray(data?.termos)
+              ? data.termos
+              : [];
+            return terms.map((t: any): SugestedTerm => ({
+              ...t,
+              custo: t.custo,
+              grupo: grp.name,
+              adGroupId: grp.id.split("__")[2],
+              customerId: grp.customerId,
+            }));
+          } catch (err) {
+            console.error(`[OPTIMIZE] Erro geral para grupo ${grp.name}:`, err);
             return [];
           }
-          const data = await response.json();
-          console.log("Full API Response for", grp.name, ":", data);
-          const terms: any[] = Array.isArray(data)
-            ? data
-            : Array.isArray(data?.sugestoes)
-            ? data.sugestoes
-            : Array.isArray(data?.termos)
-            ? data.termos
-            : [];
-          return terms.map((t: any): SugestedTerm => ({
-            ...t,
-            custo: t.custo,
-            grupo: grp.name,
-            adGroupId: grp.id.split("__")[2],
-            customerId: grp.customerId,
-          }));
         })
       );
       const allTerms = results.flat();
