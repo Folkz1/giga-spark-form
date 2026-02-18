@@ -70,7 +70,6 @@ interface MultiSelectDropdownProps {
   selectedIds: Set<string>;
   onToggle: (id: string) => void;
   onToggleAll: (ids: string[]) => void;
-  onClose?: () => void;
   loading: boolean;
   error: string | null;
   onRetry?: () => void;
@@ -84,7 +83,6 @@ const MultiSelectDropdown = ({
   selectedIds,
   onToggle,
   onToggleAll,
-  onClose,
   loading,
   error,
   onRetry,
@@ -93,14 +91,6 @@ const MultiSelectDropdown = ({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
-
-  const closeDropdown = useCallback(() => {
-    if (open) {
-      setOpen(false);
-      setSearch("");
-      onClose?.();
-    }
-  }, [open, onClose]);
 
   const filtered = useMemo(
     () =>
@@ -115,11 +105,11 @@ const MultiSelectDropdown = ({
   // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) closeDropdown();
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     if (open) document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [open, closeDropdown]);
+  }, [open]);
 
   const selectedCount = selectedIds.size;
 
@@ -410,7 +400,7 @@ const OtimizarCampanha = () => {
     }
   }, [campaigns]);
 
-  /* ── Toggle helpers (no cascade) ──────────────────── */
+  /* ── Toggle helpers with cascade ─────────────────── */
   const toggleAccount = useCallback((customerId: string) => {
     setSelectedAccountIds((prev) => {
       const next = new Set(prev);
@@ -418,6 +408,16 @@ const OtimizarCampanha = () => {
       return next;
     });
   }, []);
+
+  // When selectedAccountIds changes, fetch campaigns
+  const prevAccountIds = useRef<string>("");
+  useEffect(() => {
+    const key = [...selectedAccountIds].sort().join(",");
+    if (key !== prevAccountIds.current) {
+      prevAccountIds.current = key;
+      fetchCampaignsForAccounts(selectedAccountIds);
+    }
+  }, [selectedAccountIds, fetchCampaignsForAccounts]);
 
   const toggleCampaign = useCallback((id: string) => {
     setSelectedCampaignIds((prev) => {
@@ -427,6 +427,16 @@ const OtimizarCampanha = () => {
     });
   }, []);
 
+  // When selectedCampaignIds changes, fetch ad groups
+  const prevCampaignIds = useRef<string>("");
+  useEffect(() => {
+    const key = [...selectedCampaignIds].sort().join(",");
+    if (key !== prevCampaignIds.current) {
+      prevCampaignIds.current = key;
+      fetchAdGroupsForCampaigns(selectedCampaignIds);
+    }
+  }, [selectedCampaignIds, fetchAdGroupsForCampaigns]);
+
   const toggleAdGroup = useCallback((id: string) => {
     setSelectedAdGroupIds((prev) => {
       const next = new Set(prev);
@@ -434,15 +444,6 @@ const OtimizarCampanha = () => {
       return next;
     });
   }, []);
-
-  /* ── Explicit button handlers ────────────────────── */
-  const handleFetchCampaigns = useCallback(() => {
-    fetchCampaignsForAccounts(selectedAccountIds);
-  }, [selectedAccountIds, fetchCampaignsForAccounts]);
-
-  const handleFetchAdGroups = useCallback(() => {
-    fetchAdGroupsForCampaigns(selectedCampaignIds);
-  }, [selectedCampaignIds, fetchAdGroupsForCampaigns]);
 
   /* ── Analyze (parallel per group) ────────────────── */
   const startAnalysis = useCallback(async () => {
@@ -659,52 +660,28 @@ const OtimizarCampanha = () => {
                   onRetry={fetchAccounts}
                 />
 
-                <button
-                  onClick={handleFetchCampaigns}
-                  disabled={selectedAccountIds.size === 0 || campaignsLoading}
-                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-secondary-foreground font-medium text-sm hover:bg-surface-hover transition-colors disabled:opacity-30 disabled:cursor-not-allowed border border-border"
-                >
-                  {campaignsLoading ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Buscando campanhas...</>
-                  ) : (
-                    <>Buscar Campanhas ({selectedAccountIds.size} {selectedAccountIds.size === 1 ? "conta" : "contas"})</>
-                  )}
-                </button>
-
                 <MultiSelectDropdown
                   label="Campanhas"
-                  placeholder={campaigns.length === 0 ? "Busque campanhas primeiro..." : "Selecione campanhas..."}
+                  placeholder="Selecione campanhas..."
                   items={campaigns.map((c) => ({ id: c.id, label: `${c.accountName} — ${c.name}` }))}
                   selectedIds={selectedCampaignIds}
                   onToggle={toggleCampaign}
                   onToggleAll={(ids) => ids.forEach(toggleCampaign)}
-                  loading={false}
+                  loading={campaignsLoading}
                   error={campaignsError}
-                  disabled={campaigns.length === 0}
+                  disabled={selectedAccountIds.size === 0}
                 />
-
-                <button
-                  onClick={handleFetchAdGroups}
-                  disabled={selectedCampaignIds.size === 0 || adGroupsLoading}
-                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-secondary text-secondary-foreground font-medium text-sm hover:bg-surface-hover transition-colors disabled:opacity-30 disabled:cursor-not-allowed border border-border"
-                >
-                  {adGroupsLoading ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Buscando grupos...</>
-                  ) : (
-                    <>Buscar Grupos ({selectedCampaignIds.size} {selectedCampaignIds.size === 1 ? "campanha" : "campanhas"})</>
-                  )}
-                </button>
 
                 <MultiSelectDropdown
                   label="Grupos de Anúncios"
-                  placeholder={adGroups.length === 0 ? "Busque grupos primeiro..." : "Selecione grupos..."}
+                  placeholder="Selecione grupos..."
                   items={adGroups.map((g) => ({ id: g.id, label: `${g.campaignName} — ${g.name}` }))}
                   selectedIds={selectedAdGroupIds}
                   onToggle={toggleAdGroup}
                   onToggleAll={(ids) => ids.forEach(toggleAdGroup)}
-                  loading={false}
+                  loading={adGroupsLoading}
                   error={adGroupsError}
-                  disabled={adGroups.length === 0}
+                  disabled={selectedCampaignIds.size === 0}
                 />
 
                 {analyzeError && (
