@@ -262,7 +262,9 @@ const OtimizarCampanha = () => {
       if (!res.ok) throw new Error("Falha ao carregar campanhas");
       const data = await res.json();
       const raw = Array.isArray(data) ? data : Array.isArray(data?.campaigns) ? data.campaigns : [];
-      const list = raw.map((c: any) => ({ id: String(c.id), name: c.nome || c.name || "" }));
+      const list = raw
+        .filter((c: any) => c.status === "ENABLED")
+        .map((c: any) => ({ id: String(c.id), name: c.nome || c.name || "" }));
       setCampaigns(list);
     } catch {
       setCampaignsError("Erro ao carregar campanhas.");
@@ -284,7 +286,9 @@ const OtimizarCampanha = () => {
       if (!res.ok) throw new Error("Falha ao carregar grupos");
       const data = await res.json();
       const raw = Array.isArray(data) ? data : Array.isArray(data?.adGroups) ? data.adGroups : [];
-      const list = raw.map((g: any) => ({ id: String(g.id), name: g.nome || g.name || "" }));
+      const list = raw
+        .filter((g: any) => g.status === "ENABLED")
+        .map((g: any) => ({ id: String(g.id), name: g.nome || g.name || "" }));
       setAdGroups(list);
     } catch {
       setAdGroupsError("Erro ao carregar grupos de anúncios.");
