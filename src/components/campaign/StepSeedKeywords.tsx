@@ -1,66 +1,46 @@
 import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, Sparkles, AlertCircle, ShoppingCart, DollarSign, BookOpen, Zap, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Sparkles, AlertCircle, Zap, ChevronDown, ChevronUp, CheckSquare, Square } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import type { KeywordResult, MatchType } from "./types";
+import type { KeywordResult, KeywordCluster, MatchType } from "./types";
 
 interface StepSeedKeywordsProps {
   seedKeywords: string;
-  keywordResults: KeywordResult[];
+  clusters: KeywordCluster[];
   customerId: string;
   onSeedChange: (val: string) => void;
-  onResults: (results: KeywordResult[]) => void;
+  onClustersChange: (clusters: KeywordCluster[]) => void;
 }
 
-const suggestMatchType = (intent: KeywordResult["intent"], volume: number): MatchType => {
-  if (intent === "Transacional") return volume > 2000 ? "EXACT" : "PHRASE";
-  if (intent === "Comercial") return "PHRASE";
-  return "BROAD";
+const CLUSTER_COLORS = [
+  { border: "border-emerald-500/40", bg: "bg-emerald-500/5", header: "bg-emerald-500/10", badge: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+  { border: "border-amber-500/40", bg: "bg-amber-500/5", header: "bg-amber-500/10", badge: "bg-amber-500/20 text-amber-400 border-amber-500/30" },
+  { border: "border-sky-500/40", bg: "bg-sky-500/5", header: "bg-sky-500/10", badge: "bg-sky-500/20 text-sky-400 border-sky-500/30" },
+  { border: "border-violet-500/40", bg: "bg-violet-500/5", header: "bg-violet-500/10", badge: "bg-violet-500/20 text-violet-400 border-violet-500/30" },
+  { border: "border-rose-500/40", bg: "bg-rose-500/5", header: "bg-rose-500/10", badge: "bg-rose-500/20 text-rose-400 border-rose-500/30" },
+  { border: "border-teal-500/40", bg: "bg-teal-500/5", header: "bg-teal-500/10", badge: "bg-teal-500/20 text-teal-400 border-teal-500/30" },
+  { border: "border-orange-500/40", bg: "bg-orange-500/5", header: "bg-orange-500/10", badge: "bg-orange-500/20 text-orange-400 border-orange-500/30" },
+  { border: "border-cyan-500/40", bg: "bg-cyan-500/5", header: "bg-cyan-500/10", badge: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30" },
+];
+
+const parseCPC = (cpc: any): number => {
+  if (typeof cpc === "number") return cpc;
+  if (typeof cpc === "string") {
+    const num = parseFloat(cpc.replace(/[^\d.,]/g, "").replace(",", "."));
+    return isNaN(num) ? 0 : num;
+  }
+  return 0;
 };
 
-const INTENT_CONFIG = {
-  Transacional: {
-    icon: ShoppingCart,
-    label: "Transacional",
-    sublabel: "Compra imediata",
-    borderClass: "border-emerald-500/40",
-    bgClass: "bg-emerald-500/5",
-    headerBg: "bg-emerald-500/10",
-    badgeClass: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-    dotClass: "bg-emerald-500",
-  },
-  Comercial: {
-    icon: DollarSign,
-    label: "Comercial",
-    sublabel: "Pesquisa de preço/empresa",
-    borderClass: "border-amber-500/40",
-    bgClass: "bg-amber-500/5",
-    headerBg: "bg-amber-500/10",
-    badgeClass: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-    dotClass: "bg-amber-500",
-  },
-  Informacional: {
-    icon: BookOpen,
-    label: "Informacional",
-    sublabel: "Pesquisa de conhecimento",
-    borderClass: "border-sky-500/40",
-    bgClass: "bg-sky-500/5",
-    headerBg: "bg-sky-500/10",
-    badgeClass: "bg-sky-500/20 text-sky-400 border-sky-500/30",
-    dotClass: "bg-sky-500",
-  },
-} as const;
-
-const StepSeedKeywords = ({ seedKeywords, keywordResults, customerId, onSeedChange, onResults }: StepSeedKeywordsProps) => {
+const StepSeedKeywords = ({ seedKeywords, clusters, customerId, onSeedChange, onClustersChange }: StepSeedKeywordsProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [highIntentOnly, setHighIntentOnly] = useState(true);
   const [minVolume, setMinVolume] = useState(500);
-  const [intentFilters, setIntentFilters] = useState({ Transacional: true, Comercial: true, Informacional: false });
-  const [collapsedCards, setCollapsedCards] = useState<Record<string, boolean>>({});
+  const [collapsedCards, setCollapsedCards] = useState<Record<number, boolean>>({});
 
   const analyzeKeywords = async () => {
     if (!seedKeywords.trim()) return;
@@ -77,100 +57,107 @@ const StepSeedKeywords = ({ seedKeywords, keywordResults, customerId, onSeedChan
       if (!res.ok) throw new Error(`Erro HTTP: ${res.status}`);
 
       const text = await res.text();
-      console.log("Keywords API raw text length:", text.length);
+      console.log("Keywords API raw response length:", text.length);
 
-      let items: any[] = [];
+      let parsedClusters: KeywordCluster[] = [];
 
       if (!text || text.trim() === "") {
-        console.warn("API retornou corpo vazio — usando dados mock para desenvolvimento");
+        console.warn("API retornou corpo vazio — usando dados mock");
         const seeds = seedKeywords.split(",").map(s => s.trim()).filter(Boolean);
-        items = seeds.flatMap(seed => [
-          { keyword: seed, monthlyVolume: Math.floor(Math.random() * 5000) + 500, competition: "Alta", estimatedCPC: +(Math.random() * 8 + 2).toFixed(2), intent: "Transacional" },
-          { keyword: `${seed} preço`, monthlyVolume: Math.floor(Math.random() * 3000) + 200, competition: "Média", estimatedCPC: +(Math.random() * 6 + 1).toFixed(2), intent: "Comercial" },
-          { keyword: `melhor ${seed}`, monthlyVolume: Math.floor(Math.random() * 4000) + 800, competition: "Alta", estimatedCPC: +(Math.random() * 7 + 3).toFixed(2), intent: "Transacional" },
-          { keyword: `${seed} perto de mim`, monthlyVolume: Math.floor(Math.random() * 6000) + 1200, competition: "Alta", estimatedCPC: +(Math.random() * 10 + 4).toFixed(2), intent: "Transacional" },
-          { keyword: `contratar ${seed}`, monthlyVolume: Math.floor(Math.random() * 3500) + 600, competition: "Média", estimatedCPC: +(Math.random() * 8 + 2).toFixed(2), intent: "Transacional" },
-          { keyword: `${seed} cotação`, monthlyVolume: Math.floor(Math.random() * 2500) + 300, competition: "Média", estimatedCPC: +(Math.random() * 5 + 1.5).toFixed(2), intent: "Comercial" },
-          { keyword: `${seed} empresa`, monthlyVolume: Math.floor(Math.random() * 2000) + 400, competition: "Baixa", estimatedCPC: +(Math.random() * 4 + 1).toFixed(2), intent: "Comercial" },
-          { keyword: `o que é ${seed}`, monthlyVolume: Math.floor(Math.random() * 8000) + 1000, competition: "Baixa", estimatedCPC: +(Math.random() * 3 + 0.5).toFixed(2), intent: "Informacional" },
-          { keyword: `como funciona ${seed}`, monthlyVolume: Math.floor(Math.random() * 5000) + 800, competition: "Baixa", estimatedCPC: +(Math.random() * 2 + 0.3).toFixed(2), intent: "Informacional" },
-        ]);
+        parsedClusters = seeds.map((seed, i) => ({
+          clusterName: seed.charAt(0).toUpperCase() + seed.slice(1),
+          totalVolume: Math.floor(Math.random() * 50000) + 5000,
+          campaignSuggestion: `Campanha: ${seed.charAt(0).toUpperCase() + seed.slice(1)}`,
+          selected: true,
+          keywords: [
+            { keyword: seed, monthlyVolume: Math.floor(Math.random() * 30000) + 1000, competition: "Alta", estimatedCPC: +(Math.random() * 8 + 2).toFixed(2), intent: "Transacional" as const, matchType: "EXACT" as MatchType, conversionPotential: "high" as const, selected: true },
+            { keyword: `${seed} preço`, monthlyVolume: Math.floor(Math.random() * 5000) + 500, competition: "Média", estimatedCPC: +(Math.random() * 5 + 1).toFixed(2), intent: "Comercial" as const, matchType: "PHRASE" as MatchType, conversionPotential: "medium" as const, selected: true },
+            { keyword: `melhor ${seed}`, monthlyVolume: Math.floor(Math.random() * 8000) + 1000, competition: "Alta", estimatedCPC: +(Math.random() * 7 + 3).toFixed(2), intent: "Transacional" as const, matchType: "EXACT" as MatchType, conversionPotential: "high" as const, selected: true },
+            { keyword: `${seed} perto de mim`, monthlyVolume: Math.floor(Math.random() * 10000) + 2000, competition: "Alta", estimatedCPC: +(Math.random() * 10 + 4).toFixed(2), intent: "Transacional" as const, matchType: "EXACT" as MatchType, conversionPotential: "high" as const, selected: true },
+            { keyword: `o que é ${seed}`, monthlyVolume: Math.floor(Math.random() * 8000) + 1000, competition: "Baixa", estimatedCPC: +(Math.random() * 2 + 0.3).toFixed(2), intent: "Informacional" as const, matchType: "BROAD" as MatchType, conversionPotential: "low" as const, selected: false },
+          ],
+        }));
       } else {
         const data = JSON.parse(text);
         console.log("Keywords API parsed:", data);
-        if (Array.isArray(data)) items = data;
-        else if (data?.keywords && Array.isArray(data.keywords)) items = data.keywords;
-        else if (data?.data && Array.isArray(data.data)) items = data.data;
-        else if (data?.results && Array.isArray(data.results)) items = data.results;
-        else items = [data];
+
+        const rawClusters: any[] = data.clusters || (Array.isArray(data) ? data : [data]);
+
+        parsedClusters = rawClusters.map((cluster: any) => {
+          const keywords: KeywordResult[] = (cluster.keywords || []).map((kw: any) => ({
+            keyword: kw.keyword || "",
+            monthlyVolume: Number(kw.volume || kw.monthlyVolume || 0),
+            competition: kw.competition || "Média",
+            estimatedCPC: parseCPC(kw.cpc || kw.estimatedCPC || 0),
+            intent: (kw.intent || "Comercial") as KeywordResult["intent"],
+            matchType: (kw.matchType || "BROAD") as MatchType,
+            conversionPotential: kw.conversionPotential || "medium",
+            selected: kw.intent !== "Informacional",
+          }));
+
+          return {
+            clusterName: cluster.clusterName || "Cluster",
+            totalVolume: Number(cluster.totalVolume || 0),
+            campaignSuggestion: cluster.campaignSuggestion || "",
+            selected: true,
+            keywords,
+          };
+        });
       }
 
-      if (items.length === 0) throw new Error("Nenhum resultado retornado pela API");
-
-      const results: KeywordResult[] = items.map((item: any) => {
-        const intent = item.intent || item.intencao || item.Intenção || item.Intent || "Informacional";
-        const volume = Number(item.monthlyVolume || item.volume || item.Volume || item.avg_monthly_searches || 0);
-        return {
-          keyword: item.keyword || item.palavra_chave || item.Keyword || "",
-          monthlyVolume: volume,
-          competition: item.competition || item.competicao || item.Concorrência || item.Competition || "Média",
-          estimatedCPC: Number(item.estimatedCPC || item.cpc || item.CPC || item.estimated_cpc || 0),
-          intent,
-          matchType: suggestMatchType(intent, volume),
-          selected: intent !== "Informacional",
-        };
-      });
-      onResults(results);
+      // Sort clusters by totalVolume desc
+      parsedClusters.sort((a, b) => b.totalVolume - a.totalVolume);
+      onClustersChange(parsedClusters);
     } catch (err: any) {
       console.error("Erro ao analisar palavras-chave:", err);
-      setError(err?.message || "Erro ao analisar palavras-chave. Tente novamente.");
+      setError(err?.message || "Erro ao analisar palavras-chave.");
     } finally {
       setLoading(false);
     }
   };
 
-  const toggleKeyword = (index: number) => {
-    const original = keywordResults[index];
-    const updated = [...keywordResults];
-    updated[index] = { ...original, selected: !original.selected };
-    onResults(updated);
+  const toggleClusterSelection = (clusterIdx: number) => {
+    const updated = clusters.map((c, i) => {
+      if (i !== clusterIdx) return c;
+      const newSelected = !c.selected;
+      return { ...c, selected: newSelected, keywords: c.keywords.map(k => ({ ...k, selected: newSelected })) };
+    });
+    onClustersChange(updated);
   };
 
-  const filteredResults = useMemo(() => {
-    return keywordResults.filter(kw => {
-      if (highIntentOnly && kw.intent === "Informacional") return false;
-      if (kw.monthlyVolume < minVolume) return false;
-      if (!intentFilters[kw.intent]) return false;
-      return true;
+  const toggleKeyword = (clusterIdx: number, kwIdx: number) => {
+    const updated = clusters.map((c, ci) => {
+      if (ci !== clusterIdx) return c;
+      const newKws = c.keywords.map((k, ki) => ki === kwIdx ? { ...k, selected: !k.selected } : k);
+      return { ...c, keywords: newKws, selected: newKws.some(k => k.selected) };
     });
-  }, [keywordResults, highIntentOnly, minVolume, intentFilters]);
+    onClustersChange(updated);
+  };
 
-  const groupedByIntent = useMemo(() => {
-    const groups: Record<string, KeywordResult[]> = { Transacional: [], Comercial: [], Informacional: [] };
-    filteredResults.forEach(kw => {
-      groups[kw.intent]?.push(kw);
-    });
-    // Sort each group by volume desc
-    Object.values(groups).forEach(arr => arr.sort((a, b) => b.monthlyVolume - a.monthlyVolume));
-    return groups;
-  }, [filteredResults]);
+  const filteredClusters = useMemo(() => {
+    return clusters.map(cluster => ({
+      ...cluster,
+      keywords: cluster.keywords.filter(kw => {
+        if (highIntentOnly && kw.intent === "Informacional") return false;
+        if (kw.monthlyVolume < minVolume) return false;
+        return true;
+      }),
+    })).filter(c => c.keywords.length > 0);
+  }, [clusters, highIntentOnly, minVolume]);
 
-  const selectedCount = keywordResults.filter(k => k.selected).length;
+  const totalSelected = clusters.reduce((acc, c) => acc + c.keywords.filter(k => k.selected).length, 0);
+  const totalVisible = filteredClusters.reduce((acc, c) => acc + c.keywords.length, 0);
 
   const selectTop10 = () => {
-    const sorted = [...keywordResults].sort((a, b) => b.monthlyVolume - a.monthlyVolume);
-    const top10Keywords = new Set(sorted.slice(0, 10).map(k => k.keyword));
-    onResults(keywordResults.map(k => ({ ...k, selected: top10Keywords.has(k.keyword) })));
-  };
-
-  const selectAllTransactional = () => {
-    onResults(keywordResults.map(k => ({ ...k, selected: k.intent === "Transacional" ? true : k.selected })));
-  };
-
-  const getOriginalIndex = (kw: KeywordResult) => keywordResults.findIndex(k => k.keyword === kw.keyword);
-
-  const toggleCard = (intent: string) => {
-    setCollapsedCards(prev => ({ ...prev, [intent]: !prev[intent] }));
+    const allKws = clusters.flatMap((c, ci) => c.keywords.map((k, ki) => ({ ci, ki, vol: k.monthlyVolume })));
+    allKws.sort((a, b) => b.vol - a.vol);
+    const top10 = new Set(allKws.slice(0, 10).map(x => `${x.ci}-${x.ki}`));
+    const updated = clusters.map((c, ci) => ({
+      ...c,
+      keywords: c.keywords.map((k, ki) => ({ ...k, selected: top10.has(`${ci}-${ki}`) })),
+      selected: c.keywords.some((_, ki) => top10.has(`${ci}-${ki}`)),
+    }));
+    onClustersChange(updated);
   };
 
   return (
@@ -207,110 +194,102 @@ const StepSeedKeywords = ({ seedKeywords, keywordResults, customerId, onSeedChan
       </div>
 
       {/* Filters + Results */}
-      {keywordResults.length > 0 && (
+      {clusters.length > 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
           {/* Filters bar */}
           <div className="rounded-xl border border-border bg-secondary/50 p-4 space-y-4">
             <div className="flex flex-wrap items-center gap-6">
-              {/* High intent toggle */}
               <div className="flex items-center gap-2">
-                <Switch checked={highIntentOnly} onCheckedChange={(v) => {
-                  setHighIntentOnly(v);
-                  if (v) setIntentFilters(prev => ({ ...prev, Informacional: false }));
-                  else setIntentFilters(prev => ({ ...prev, Informacional: true }));
-                }} />
+                <Switch checked={highIntentOnly} onCheckedChange={setHighIntentOnly} />
                 <label className="text-sm font-medium text-foreground">Apenas alta intenção de compra</label>
               </div>
-
-              {/* Intent checkboxes */}
-              <div className="flex items-center gap-4">
-                {(["Transacional", "Comercial", "Informacional"] as const).map(intent => (
-                  <label key={intent} className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                    <Checkbox
-                      checked={intentFilters[intent]}
-                      disabled={highIntentOnly && intent === "Informacional"}
-                      onCheckedChange={(checked) => {
-                        setIntentFilters(prev => ({ ...prev, [intent]: !!checked }));
-                        if (intent === "Informacional" && checked) setHighIntentOnly(false);
-                      }}
-                    />
-                    <span className={`w-2 h-2 rounded-full ${INTENT_CONFIG[intent].dotClass}`} />
-                    {intent}
-                  </label>
-                ))}
-              </div>
             </div>
-
-            {/* Volume slider */}
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted-foreground whitespace-nowrap">Volume mínimo:</span>
-              <Slider
-                value={[minVolume]}
-                onValueChange={([v]) => setMinVolume(v)}
-                min={0}
-                max={10000}
-                step={100}
-                className="flex-1 max-w-xs"
-              />
+              <Slider value={[minVolume]} onValueChange={([v]) => setMinVolume(v)} min={0} max={10000} step={100} className="flex-1 max-w-xs" />
               <span className="text-sm font-medium text-foreground w-16 text-right">{minVolume.toLocaleString("pt-BR")}</span>
             </div>
           </div>
 
-          {/* Action buttons + counter */}
+          {/* Action buttons */}
           <div className="flex flex-wrap items-center gap-3">
             <button onClick={selectTop10} className="px-3 py-1.5 rounded-lg bg-secondary text-secondary-foreground text-xs font-medium hover:bg-surface-hover transition-colors border border-border">
               Selecionar top 10 por volume
             </button>
-            <button onClick={selectAllTransactional} className="px-3 py-1.5 rounded-lg bg-secondary text-secondary-foreground text-xs font-medium hover:bg-surface-hover transition-colors border border-border">
-              Selecionar todas transacionais
-            </button>
             <div className="ml-auto flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">{selectedCount} selecionadas</span>
-              <Badge variant="secondary" className="text-xs">{filteredResults.length} visíveis</Badge>
+              <span className="text-xs text-muted-foreground">{totalSelected} selecionadas</span>
+              <Badge variant="secondary" className="text-xs">{totalVisible} visíveis</Badge>
             </div>
           </div>
 
-          {/* Grouped cards */}
+          {/* Cluster cards */}
           <div className="space-y-4">
-            {(["Transacional", "Comercial", "Informacional"] as const).map(intent => {
-              const keywords = groupedByIntent[intent];
-              if (!keywords || keywords.length === 0) return null;
-              const config = INTENT_CONFIG[intent];
-              const Icon = config.icon;
-              const isCollapsed = collapsedCards[intent];
+            {filteredClusters.map((cluster, displayIdx) => {
+              const originalIdx = clusters.findIndex(c => c.clusterName === cluster.clusterName);
+              const colorIdx = originalIdx % CLUSTER_COLORS.length;
+              const color = CLUSTER_COLORS[colorIdx];
+              const isCollapsed = collapsedCards[originalIdx];
+              const clusterSelectedCount = cluster.keywords.filter(k => k.selected).length;
+              const allSelected = clusterSelectedCount === cluster.keywords.length;
 
               return (
                 <motion.div
-                  key={intent}
+                  key={cluster.clusterName}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={`rounded-xl border ${config.borderClass} ${config.bgClass} overflow-hidden`}
+                  transition={{ delay: displayIdx * 0.05 }}
+                  className={`rounded-xl border ${color.border} ${color.bg} overflow-hidden`}
                 >
                   {/* Card header */}
-                  <button
-                    onClick={() => toggleCard(intent)}
-                    className={`w-full px-4 py-3 flex items-center gap-3 ${config.headerBg} transition-colors`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span className="font-semibold text-sm text-foreground">{config.label}</span>
-                    <span className="text-xs text-muted-foreground">— {config.sublabel}</span>
-                    <span className="ml-auto text-xs text-muted-foreground">{keywords.length} keywords</span>
-                    {isCollapsed ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronUp className="w-4 h-4 text-muted-foreground" />}
-                  </button>
+                  <div className={`px-4 py-3 flex items-center gap-3 ${color.header}`}>
+                    <button
+                      onClick={() => toggleClusterSelection(originalIdx)}
+                      className="shrink-0"
+                      title={allSelected ? "Desselecionar cluster" : "Selecionar cluster inteiro"}
+                    >
+                      {allSelected
+                        ? <CheckSquare className="w-4 h-4 text-primary" />
+                        : <Square className="w-4 h-4 text-muted-foreground" />
+                      }
+                    </button>
+                    <button
+                      onClick={() => setCollapsedCards(prev => ({ ...prev, [originalIdx]: !prev[originalIdx] }))}
+                      className="flex-1 flex items-center gap-3 text-left"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <span className="font-semibold text-sm text-foreground">{cluster.clusterName}</span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-muted-foreground">
+                            Volume total: {cluster.totalVolume.toLocaleString("pt-BR")} buscas/mês
+                          </span>
+                          {cluster.campaignSuggestion && (
+                            <>
+                              <span className="text-xs text-muted-foreground">•</span>
+                              <span className="text-xs text-muted-foreground">{cluster.campaignSuggestion}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${color.badge}`}>
+                        {clusterSelectedCount}/{cluster.keywords.length}
+                      </span>
+                      {isCollapsed ? <ChevronDown className="w-4 h-4 text-muted-foreground" /> : <ChevronUp className="w-4 h-4 text-muted-foreground" />}
+                    </button>
+                  </div>
 
                   <AnimatePresence>
                     {!isCollapsed && (
                       <motion.div initial={{ height: 0 }} animate={{ height: "auto" }} exit={{ height: 0 }} className="overflow-hidden">
                         <div className="divide-y divide-border/50">
-                          {keywords.map((kw) => {
-                            const origIdx = getOriginalIndex(kw);
-                            const isHighConversion = kw.intent === "Transacional" && kw.monthlyVolume > 1000;
+                          {cluster.keywords.map((kw, kwIdx) => {
+                            const origKwIdx = clusters[originalIdx].keywords.findIndex(k => k.keyword === kw.keyword);
+                            const isHighConversion = kw.conversionPotential === "high" || (kw.intent === "Transacional" && kw.monthlyVolume > 1000);
 
                             return (
                               <div key={kw.keyword} className="px-4 py-2.5 flex items-center gap-3 hover:bg-secondary/30 transition-colors">
                                 <Checkbox
                                   checked={kw.selected}
-                                  onCheckedChange={() => toggleKeyword(origIdx)}
+                                  onCheckedChange={() => toggleKeyword(originalIdx, origKwIdx)}
                                 />
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
@@ -325,12 +304,13 @@ const StepSeedKeywords = ({ seedKeywords, keywordResults, customerId, onSeedChan
                                 <div className="flex items-center gap-4 text-xs text-muted-foreground shrink-0">
                                   <span className="w-16 text-right" title="Volume mensal">{kw.monthlyVolume.toLocaleString("pt-BR")}</span>
                                   <span className="w-16 text-right" title="CPC estimado">R$ {kw.estimatedCPC.toFixed(2)}</span>
-                                  <span className="w-12 text-center" title="Competição">{kw.competition}</span>
+                                  <span className="w-16 text-center" title="Competição">{kw.competition}</span>
+                                  <Badge variant="outline" className="text-[10px] font-semibold" title="Intenção">{kw.intent}</Badge>
                                   <span className={`w-16 text-center px-1.5 py-0.5 rounded text-[10px] font-semibold border ${
                                     kw.matchType === "EXACT" ? "bg-primary/10 text-primary border-primary/30" :
                                     kw.matchType === "PHRASE" ? "bg-amber-500/10 text-amber-400 border-amber-500/30" :
                                     "bg-sky-500/10 text-sky-400 border-sky-500/30"
-                                  }`} title="Match type sugerido">{kw.matchType}</span>
+                                  }`} title="Match type">{kw.matchType}</span>
                                 </div>
                               </div>
                             );

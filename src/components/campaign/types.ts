@@ -9,10 +9,19 @@ export type MatchType = "EXACT" | "PHRASE" | "BROAD";
 export interface KeywordResult {
   keyword: string;
   monthlyVolume: number;
-  competition: "Alta" | "Média" | "Baixa";
+  competition: string;
   estimatedCPC: number;
   intent: "Transacional" | "Comercial" | "Informacional";
   matchType: MatchType;
+  conversionPotential?: "high" | "medium" | "low";
+  selected: boolean;
+}
+
+export interface KeywordCluster {
+  clusterName: string;
+  totalVolume: number;
+  campaignSuggestion: string;
+  keywords: KeywordResult[];
   selected: boolean;
 }
 
@@ -34,6 +43,7 @@ export interface WizardData {
   selectedAccount: Account | null;
   seedKeywords: string;
   keywordResults: KeywordResult[];
+  clusters: KeywordCluster[];
   structure: CampaignStructure | null;
   urls: Record<string, string>;
 }
