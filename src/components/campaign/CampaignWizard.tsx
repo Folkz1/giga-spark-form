@@ -57,6 +57,9 @@ const CampaignWizard = () => {
   const handleNext = () => {
     if (step === 1 && !data.structure) {
       autoGroupByClusters();
+      // Use callback to ensure structure is set before step advances
+      setStep(s => Math.min(totalSteps - 1, s + 1));
+      return;
     }
     setStep(s => Math.min(totalSteps - 1, s + 1));
   };
