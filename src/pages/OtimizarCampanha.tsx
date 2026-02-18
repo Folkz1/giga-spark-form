@@ -283,15 +283,19 @@ const OtimizarCampanha = () => {
     setAccountsLoading(true);
     setAccountsError(null);
     try {
+      console.log('[ACCOUNTS] Buscando contas...');
       const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-accounts");
-      if (!res.ok) throw new Error("Falha ao carregar contas");
+      console.log('[ACCOUNTS] Status:', res.status);
+      if (!res.ok) throw new Error(`Falha ao carregar contas (status ${res.status})`);
       const text = await res.text();
+      console.log('[ACCOUNTS] Resposta raw:', text?.substring(0, 500));
       if (!text) throw new Error("Resposta vazia");
       const data = JSON.parse(text);
       const list = Array.isArray(data) ? data : Array.isArray(data?.accounts) ? data.accounts : [];
+      console.log('[ACCOUNTS] Contas encontradas:', list.length);
       setAccounts(list);
     } catch (err) {
-      console.error("Fetch accounts error:", err);
+      console.error("[ACCOUNTS] Erro:", err);
       setAccountsError("Erro ao carregar contas. Tente novamente.");
     } finally {
       setAccountsLoading(false);
@@ -321,24 +325,26 @@ const OtimizarCampanha = () => {
       const results = await Promise.all(
         selectedAccounts.map(async (acc) => {
           try {
-            const res = await fetch(
-              `https://principaln8o.gigainteligencia.com.br/webhook/google-ads-campaigns?customerId=${acc.customerId}`
-            );
-            if (!res.ok) return [];
+            const url = `https://principaln8o.gigainteligencia.com.br/webhook/google-ads-campaigns?customerId=${acc.customerId}`;
+            console.log(`[CAMPAIGNS] Buscando campanhas para conta: ${acc.name} (${acc.customerId})`);
+            const res = await fetch(url);
+            console.log(`[CAMPAIGNS] Status para ${acc.customerId}:`, res.status);
             const text = await res.text();
-            if (!text) return [];
+            console.log(`[CAMPAIGNS] Resposta raw para ${acc.customerId}:`, text?.substring(0, 500));
+            if (!res.ok) return [];
+            if (!text) { console.warn(`[CAMPAIGNS] Resposta vazia para ${acc.customerId}`); return []; }
             const data = JSON.parse(text);
             const raw = Array.isArray(data) ? data : Array.isArray(data?.campaigns) ? data.campaigns : [];
-            return raw
-              .filter((c: any) => c.status === "ENABLED")
-              .map((c: any): CampaignEntry => ({
+            const enabled = raw.filter((c: any) => c.status === "ENABLED");
+            console.log(`[CAMPAIGNS] ${acc.customerId}: ${raw.length} total, ${enabled.length} ENABLED`);
+            return enabled.map((c: any): CampaignEntry => ({
                 id: `${acc.customerId}__${String(c.id)}`,
                 name: c.nome || c.name || "",
                 accountName: acc.name,
                 customerId: acc.customerId,
               }));
           } catch (err) {
-            console.error(`Fetch campaigns error for ${acc.customerId}:`, err);
+            console.error(`[CAMPAIGNS] Erro para ${acc.customerId}:`, err);
             return [];
           }
         })
@@ -369,17 +375,19 @@ const OtimizarCampanha = () => {
         selectedCampaigns.map(async (camp) => {
           try {
             const realCampaignId = camp.id.split("__")[1];
-            const res = await fetch(
-              `https://appn8o2.gigainteligencia.com.br/webhook/google-ads-adgroups?customerId=${camp.customerId}&campaignId=${realCampaignId}`
-            );
-            if (!res.ok) return [];
+            const url = `https://appn8o2.gigainteligencia.com.br/webhook/google-ads-adgroups?customerId=${camp.customerId}&campaignId=${realCampaignId}`;
+            console.log(`[ADGROUPS] Buscando grupos para campanha: ${camp.name} (${camp.customerId}/${realCampaignId})`);
+            const res = await fetch(url);
+            console.log(`[ADGROUPS] Status para ${camp.customerId}/${realCampaignId}:`, res.status);
             const text = await res.text();
-            if (!text) return [];
+            console.log(`[ADGROUPS] Resposta raw para ${camp.customerId}/${realCampaignId}:`, text?.substring(0, 500));
+            if (!res.ok) return [];
+            if (!text) { console.warn(`[ADGROUPS] Resposta vazia para ${camp.customerId}/${realCampaignId}`); return []; }
             const data = JSON.parse(text);
             const raw = Array.isArray(data) ? data : Array.isArray(data?.adGroups) ? data.adGroups : [];
-            return raw
-              .filter((g: any) => g.status === "ENABLED")
-              .map((g: any): AdGroupEntry => ({
+            const enabled = raw.filter((g: any) => g.status === "ENABLED");
+            console.log(`[ADGROUPS] ${camp.customerId}/${realCampaignId}: ${raw.length} total, ${enabled.length} ENABLED`);
+            return enabled.map((g: any): AdGroupEntry => ({
                 id: `${camp.customerId}__${realCampaignId}__${String(g.id)}`,
                 name: g.nome || g.name || "",
                 campaignName: camp.name,
@@ -387,7 +395,7 @@ const OtimizarCampanha = () => {
                 customerId: camp.customerId,
               }));
           } catch (err) {
-            console.error(`Fetch adgroups error for ${camp.id}:`, err);
+            console.error(`[ADGROUPS] Erro para ${camp.id}:`, err);
             return [];
           }
         })
