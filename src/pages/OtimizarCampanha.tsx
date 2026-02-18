@@ -1042,6 +1042,7 @@ const OtimizarCampanha = () => {
                                             <TableHead className="text-center w-24">Impressões</TableHead>
                                             <TableHead className="text-center w-20">Cliques</TableHead>
                                             <TableHead className="text-center w-24">Conversões</TableHead>
+                                            <TableHead className="min-w-[200px]">Motivo</TableHead>
                                             <TableHead className="w-24">Prioridade</TableHead>
                                           </TableRow>
                                         </TableHeader>
@@ -1075,6 +1076,9 @@ const OtimizarCampanha = () => {
                                                 <TableCell className="text-center">{term.impressoes?.toLocaleString("pt-BR") ?? 0}</TableCell>
                                                 <TableCell className="text-center">{term.cliques ?? 0}</TableCell>
                                                 <TableCell className="text-center">{term.conversoes ?? 0}</TableCell>
+                                                <TableCell className="min-w-[200px]" style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+                                                  <span className="text-xs text-muted-foreground">{term.motivo || "—"}</span>
+                                                </TableCell>
                                                 <TableCell>{priorityBadge(term.prioridade)}</TableCell>
                                               </TableRow>
                                             );
