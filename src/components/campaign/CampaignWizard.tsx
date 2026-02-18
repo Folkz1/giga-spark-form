@@ -25,8 +25,8 @@ const CampaignWizard = () => {
       orcamentoDiario: "",
       estrategiaLance: "",
       metaCPA: "",
-      conversao: "",
-      regiao: "",
+      conversao: null,
+      regiao: null,
       idioma: "Português",
     },
     briefing: { diferenciais: "", oferta: "", tom: "Profissional", proibidas: "" },
@@ -42,7 +42,7 @@ const CampaignWizard = () => {
       case 3: return data.structure?.adGroups.every((g) => !!data.urls[g.id]) ?? false;
       case 4: {
         const c = data.configuracoes;
-        return c.tipoCampanha !== "" && c.orcamentoDiario !== "" && c.estrategiaLance !== "" && c.regiao !== "" && c.idioma !== "";
+        return c.tipoCampanha !== "" && c.orcamentoDiario !== "" && c.estrategiaLance !== "" && c.regiao !== null && c.idioma !== "";
       }
       case 5: return data.structure?.adGroups.every((g) => g.headlines && g.headlines.length > 0) ?? false;
       default: return true;
