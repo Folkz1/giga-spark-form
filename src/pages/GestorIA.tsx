@@ -84,7 +84,34 @@ const GestorIA = () => {
 
   // Step 2/3 state
   const [relatorio, setRelatorio] = useState<RelatorioData | null>(null);
-  const [contexto, setContexto] = useState("");
+
+  // Structured context fields
+  const [tipoNegocio, setTipoNegocio] = useState("");
+  const [conversaoRastreada, setConversaoRastreada] = useState("");
+  const [metaCPA, setMetaCPA] = useState("");
+  const [ticketMedio, setTicketMedio] = useState("");
+  const [taxaFechamento, setTaxaFechamento] = useState("");
+  const [margemLucro, setMargemLucro] = useState("");
+  const [valorMedioCliente, setValorMedioCliente] = useState("");
+  const [ltvEstimado, setLtvEstimado] = useState("");
+
+  const buildContexto = () => {
+    const parts: string[] = [];
+    if (tipoNegocio) parts.push(`Tipo: ${tipoNegocio}`);
+    if (conversaoRastreada) parts.push(`Conversão rastreada: ${conversaoRastreada}`);
+    if (metaCPA) parts.push(`Meta CPA: R$${metaCPA}`);
+    if (tipoNegocio === "B2B (venda consultiva)") {
+      if (ticketMedio) parts.push(`Ticket médio: R$${ticketMedio}`);
+      if (taxaFechamento) parts.push(`Taxa fechamento: ${taxaFechamento}%`);
+    } else if (tipoNegocio === "B2C (venda direta)" || tipoNegocio === "E-commerce") {
+      if (ticketMedio) parts.push(`Ticket médio: R$${ticketMedio}`);
+      if (margemLucro) parts.push(`Margem de lucro: ${margemLucro}%`);
+    } else if (tipoNegocio === "Local/Serviço") {
+      if (valorMedioCliente) parts.push(`Valor médio por cliente: R$${valorMedioCliente}`);
+      if (ltvEstimado) parts.push(`LTV estimado: R$${ltvEstimado}`);
+    }
+    return parts.join(" | ");
+  };
 
   // Chat state
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -155,7 +182,7 @@ const GestorIA = () => {
           body: JSON.stringify({
             customerIds: selectedAccounts.map((a) => a.customerId),
             accountNames,
-            ...(contexto.trim() ? { contexto: contexto.trim() } : {}),
+            ...(buildContexto() ? { contexto: buildContexto() } : {}),
           }),
         }
       );
@@ -223,7 +250,14 @@ const GestorIA = () => {
     setRelatorio(null);
     setSearch("");
     setOpenDropdown(false);
-    setContexto("");
+    setTipoNegocio("");
+    setConversaoRastreada("");
+    setMetaCPA("");
+    setTicketMedio("");
+    setTaxaFechamento("");
+    setMargemLucro("");
+    setValorMedioCliente("");
+    setLtvEstimado("");
     setChatMessages([]);
     setChatInput("");
   };
@@ -434,23 +468,162 @@ const GestorIA = () => {
                         </div>
                       )}
 
-                      {/* Context textarea */}
-                      <div className="mb-6">
-                        <label className="block text-sm font-medium text-foreground mb-2">
-                          Contexto do cliente (opcional)
-                        </label>
-                        <Textarea
-                          value={contexto}
-                          onChange={(e) => setContexto(e.target.value)}
-                          placeholder="Ticket médio, meta de CPA, objetivo da campanha..."
-                          className="bg-secondary border-border resize-none"
-                          rows={3}
-                        />
+                       {/* Structured context form */}
+                      <div className="mb-6 space-y-4">
+                        <h3 className="text-sm font-semibold text-foreground">Contexto do cliente</h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {/* Tipo de negócio */}
+                          <div>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                              Tipo de negócio <span className="text-red-400">*</span>
+                            </label>
+                            <select
+                              value={tipoNegocio}
+                              onChange={(e) => {
+                                setTipoNegocio(e.target.value);
+                                setTicketMedio("");
+                                setTaxaFechamento("");
+                                setMargemLucro("");
+                                setValorMedioCliente("");
+                                setLtvEstimado("");
+                              }}
+                              className="w-full h-10 rounded-md border border-border bg-secondary px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                            >
+                              <option value="">Selecione...</option>
+                              <option value="B2B (venda consultiva)">B2B (venda consultiva)</option>
+                              <option value="B2C (venda direta)">B2C (venda direta)</option>
+                              <option value="E-commerce">E-commerce</option>
+                              <option value="Local/Serviço">Local/Serviço</option>
+                            </select>
+                          </div>
+
+                          {/* Conversão rastreada */}
+                          <div>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                              O que você rastreia como conversão? <span className="text-red-400">*</span>
+                            </label>
+                            <select
+                              value={conversaoRastreada}
+                              onChange={(e) => setConversaoRastreada(e.target.value)}
+                              className="w-full h-10 rounded-md border border-border bg-secondary px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                            >
+                              <option value="">Selecione...</option>
+                              <option value="Clique no WhatsApp">Clique no WhatsApp</option>
+                              <option value="Envio de formulário">Envio de formulário</option>
+                              <option value="Ligação telefônica">Ligação telefônica</option>
+                              <option value="Compra online">Compra online</option>
+                              <option value="Outro">Outro</option>
+                            </select>
+                          </div>
+
+                          {/* Meta CPA */}
+                          <div>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                              Meta de CPA (R$) <span className="text-red-400">*</span>
+                            </label>
+                            <input
+                              type="number"
+                              value={metaCPA}
+                              onChange={(e) => setMetaCPA(e.target.value)}
+                              placeholder="Ex: 300"
+                              className="w-full h-10 rounded-md border border-border bg-secondary px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Conditional fields */}
+                        {tipoNegocio === "B2B (venda consultiva)" && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                          >
+                            <div>
+                              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Ticket médio (R$)</label>
+                              <input
+                                type="number"
+                                value={ticketMedio}
+                                onChange={(e) => setTicketMedio(e.target.value)}
+                                placeholder="Ex: 75000"
+                                className="w-full h-10 rounded-md border border-border bg-secondary px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Taxa de fechamento estimada (%)</label>
+                              <input
+                                type="number"
+                                value={taxaFechamento}
+                                onChange={(e) => setTaxaFechamento(e.target.value)}
+                                placeholder="Ex: 10"
+                                className="w-full h-10 rounded-md border border-border bg-secondary px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+                              />
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {(tipoNegocio === "B2C (venda direta)" || tipoNegocio === "E-commerce") && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                          >
+                            <div>
+                              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Ticket médio (R$)</label>
+                              <input
+                                type="number"
+                                value={ticketMedio}
+                                onChange={(e) => setTicketMedio(e.target.value)}
+                                placeholder="Ex: 150"
+                                className="w-full h-10 rounded-md border border-border bg-secondary px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Margem de lucro (%)</label>
+                              <input
+                                type="number"
+                                value={margemLucro}
+                                onChange={(e) => setMargemLucro(e.target.value)}
+                                placeholder="Ex: 30"
+                                className="w-full h-10 rounded-md border border-border bg-secondary px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+                              />
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {tipoNegocio === "Local/Serviço" && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                          >
+                            <div>
+                              <label className="block text-xs font-medium text-muted-foreground mb-1.5">Valor médio por cliente (R$)</label>
+                              <input
+                                type="number"
+                                value={valorMedioCliente}
+                                onChange={(e) => setValorMedioCliente(e.target.value)}
+                                placeholder="Ex: 500"
+                                className="w-full h-10 rounded-md border border-border bg-secondary px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-muted-foreground mb-1.5">LTV estimado (R$)</label>
+                              <input
+                                type="number"
+                                value={ltvEstimado}
+                                onChange={(e) => setLtvEstimado(e.target.value)}
+                                placeholder="Ex: 3000"
+                                className="w-full h-10 rounded-md border border-border bg-secondary px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+                              />
+                            </div>
+                          </motion.div>
+                        )}
                       </div>
 
                       <Button
                         onClick={handleAnalyze}
-                        disabled={selectedIds.length === 0}
+                        disabled={selectedIds.length === 0 || !tipoNegocio || !conversaoRastreada || !metaCPA}
                         className="gradient-primary text-primary-foreground font-semibold px-8 glow-primary"
                       >
                         <Brain className="w-4 h-4 mr-2" />
