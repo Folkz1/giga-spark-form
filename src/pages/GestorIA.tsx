@@ -275,7 +275,7 @@ const GestorIA = () => {
               exit={{ opacity: 0, y: -20 }}
               className="space-y-6"
             >
-              <div className="glass-card rounded-2xl p-8">
+              <div className="glass-card rounded-2xl p-8 overflow-visible">
                 <h2 className="text-xl font-bold text-foreground mb-1">
                   Selecione as contas para análise
                 </h2>
@@ -299,7 +299,7 @@ const GestorIA = () => {
                 ) : (
                   <>
                     {/* Multi-select dropdown */}
-                    <div className="relative z-20 mb-6">
+                    <div className="relative z-30 mb-6">
                       <button
                         onClick={() => setOpenDropdown(!openDropdown)}
                         className="w-full flex items-center justify-between px-4 py-4 rounded-xl bg-secondary border border-border hover:border-primary/40 transition-all text-left"
@@ -381,30 +381,32 @@ const GestorIA = () => {
                     </div>
 
                     {/* Selected chips */}
-                    {selectedAccounts.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mb-6">
-                        {selectedAccounts.map((a) => (
-                          <span
-                            key={a.customerId}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm font-medium border border-primary/20"
-                          >
-                            {a.name}
-                            <button onClick={() => toggleAccount(a.customerId)} className="hover:text-primary/70">
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <div className="relative z-0">
+                      {selectedAccounts.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-6">
+                          {selectedAccounts.map((a) => (
+                            <span
+                              key={a.customerId}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm font-medium border border-primary/20"
+                            >
+                              {a.name}
+                              <button onClick={() => toggleAccount(a.customerId)} className="hover:text-primary/70">
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
 
-                    <Button
-                      onClick={handleAnalyze}
-                      disabled={selectedIds.length === 0}
-                      className="relative z-10 gradient-primary text-primary-foreground font-semibold px-8 glow-primary"
-                    >
-                      <Brain className="w-4 h-4 mr-2" />
-                      Analisar com IA
-                    </Button>
+                      <Button
+                        onClick={handleAnalyze}
+                        disabled={selectedIds.length === 0}
+                        className="gradient-primary text-primary-foreground font-semibold px-8 glow-primary"
+                      >
+                        <Brain className="w-4 h-4 mr-2" />
+                        Analisar com IA
+                      </Button>
+                    </div>
                   </>
                 )}
               </div>
