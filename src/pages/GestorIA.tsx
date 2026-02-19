@@ -339,6 +339,21 @@ const GestorIA = () => {
                               </button>
                             )}
                           </div>
+                          <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
+                            <button
+                              onClick={() => setSelectedIds(new Set(accounts.map((a) => a.id)))}
+                              className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
+                            >
+                              Selecionar Todas
+                            </button>
+                            <span className="text-border">|</span>
+                            <button
+                              onClick={() => setSelectedIds(new Set())}
+                              className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                              Desmarcar Todas
+                            </button>
+                          </div>
                           <div className="max-h-60 overflow-y-auto">
                             {filteredAccounts.length === 0 ? (
                               <p className="text-sm text-muted-foreground text-center py-4">Nenhuma conta encontrada</p>
