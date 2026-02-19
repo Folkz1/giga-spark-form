@@ -347,9 +347,8 @@ const GestorIA = () => {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            mensagem: msg,
-            historico: updatedHistory,
-            relatorio,
+            message: msg,
+            relatorio: JSON.stringify(relatorio),
           }),
         }
       );
