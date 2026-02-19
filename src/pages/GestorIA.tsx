@@ -353,15 +353,33 @@ const GestorIA = () => {
           }),
         }
       );
-      const data = await res.json();
+      const rawText = await res.text();
+      let data: any;
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        setChatMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `Erro: resposta inválida do servidor.\n\nStatus: ${res.status}\nResposta: ${rawText.substring(0, 500)}` },
+        ]);
+        return;
+      }
+      if (!res.ok) {
+        const errMsg = data.message || data.error || data.detail || JSON.stringify(data);
+        setChatMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `Erro do servidor (${res.status}): ${errMsg}` },
+        ]);
+        return;
+      }
       setChatMessages((prev) => [
         ...prev,
         { role: "assistant", content: data.resposta ?? "Sem resposta." },
       ]);
-    } catch {
+    } catch (err: any) {
       setChatMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Erro ao se comunicar com o assistente." },
+        { role: "assistant", content: `Erro de comunicação: ${err?.message || String(err)}` },
       ]);
     } finally {
       setChatLoading(false);
