@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Loader2,
@@ -15,11 +15,19 @@ import {
   RotateCcw,
   Brain,
   CheckCircle2,
+  Send,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+
+interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
 
 interface Account {
   id: string;
@@ -76,6 +84,13 @@ const GestorIA = () => {
 
   // Step 2/3 state
   const [relatorio, setRelatorio] = useState<RelatorioData | null>(null);
+  const [contexto, setContexto] = useState("");
+
+  // Chat state
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const filteredAccounts = useMemo(
     () =>
@@ -140,6 +155,7 @@ const GestorIA = () => {
           body: JSON.stringify({
             customerIds: selectedAccounts.map((a) => a.customerId),
             accountNames,
+            ...(contexto.trim() ? { contexto: contexto.trim() } : {}),
           }),
         }
       );
@@ -196,7 +212,50 @@ const GestorIA = () => {
     setRelatorio(null);
     setSearch("");
     setOpenDropdown(false);
+    setContexto("");
+    setChatMessages([]);
+    setChatInput("");
   };
+
+  const handleChatSend = async () => {
+    const msg = chatInput.trim();
+    if (!msg || chatLoading || !relatorio) return;
+    const userMsg: ChatMessage = { role: "user", content: msg };
+    const updatedHistory = [...chatMessages, userMsg];
+    setChatMessages(updatedHistory);
+    setChatInput("");
+    setChatLoading(true);
+    try {
+      const res = await fetch(
+        "https://appn8o2.gigainteligencia.com.br/webhook/google-ads-gestor-chat",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mensagem: msg,
+            historico: updatedHistory,
+            relatorio,
+          }),
+        }
+      );
+      const data = await res.json();
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: data.resposta ?? "Sem resposta." },
+      ]);
+    } catch {
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Erro ao se comunicar com o assistente." },
+      ]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages]);
 
   const formatCurrency = (v: number | null | undefined) =>
     (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -363,6 +422,20 @@ const GestorIA = () => {
                           ))}
                         </div>
                       )}
+
+                      {/* Context textarea */}
+                      <div className="mb-6">
+                        <label className="block text-sm font-medium text-foreground mb-2">
+                          Contexto do cliente (opcional)
+                        </label>
+                        <Textarea
+                          value={contexto}
+                          onChange={(e) => setContexto(e.target.value)}
+                          placeholder="Ticket médio, meta de CPA, objetivo da campanha..."
+                          className="bg-secondary border-border resize-none"
+                          rows={3}
+                        />
+                      </div>
 
                       <Button
                         onClick={handleAnalyze}
@@ -539,6 +612,65 @@ const GestorIA = () => {
                   </p>
                 </div>
               )}
+
+              {/* Chat Panel */}
+              <div className="glass-card rounded-2xl p-6 border-border">
+                <div className="flex items-center gap-2 mb-4">
+                  <MessageCircle className="w-5 h-5 text-primary" />
+                  <h3 className="text-lg font-bold text-foreground">Chat com Gestor IA</h3>
+                </div>
+                <div className="h-64 overflow-y-auto mb-4 space-y-3 rounded-xl bg-secondary/50 p-4">
+                  {chatMessages.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      Faça perguntas sobre o relatório gerado
+                    </p>
+                  )}
+                  {chatMessages.map((msg, i) => (
+                    <div
+                      key={i}
+                      className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                    >
+                      <div
+                        className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm whitespace-pre-line ${
+                          msg.role === "user"
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-card border border-border text-foreground"
+                        }`}
+                      >
+                        {msg.content}
+                      </div>
+                    </div>
+                  ))}
+                  {chatLoading && (
+                    <div className="flex justify-start">
+                      <div className="bg-card border border-border rounded-xl px-4 py-2.5 text-sm text-muted-foreground flex items-center gap-2">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        Pensando...
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleChatSend()}
+                    placeholder="Pergunte algo sobre o relatório..."
+                    className="flex-1 h-10 rounded-xl bg-secondary border border-border px-4 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/40 transition-colors"
+                    disabled={chatLoading}
+                  />
+                  <Button
+                    onClick={handleChatSend}
+                    disabled={!chatInput.trim() || chatLoading}
+                    size="icon"
+                    className="gradient-primary text-primary-foreground shrink-0"
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
 
               {/* Step 4 — New Analysis */}
               <div className="flex justify-center pt-4">
