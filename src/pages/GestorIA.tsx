@@ -940,14 +940,20 @@ const GestorIA = () => {
                   const conv30 = relatorio.resumo.conversoes30dias ?? 0;
                   const cpa = conv7 > 0 ? custo7 / conv7 : 0;
                   // Simulated trends (in real app, these would come from API)
+                  // For cost metrics (Investido, CPA): up=bad(red), down=good(green)
+                  // For conversion metrics: up=good(green), down=bad(red)
                   return [
-                    { label: "Investido 7d", value: formatCurrency(custo7), icon: DollarSign, trend: -5.2, positive: true },
-                    { label: "Investido 30d", value: formatCurrency(custo30), icon: DollarSign, trend: 3.1, positive: false },
-                    { label: "Conversões 7d", value: conv7.toString(), icon: Target, trend: 12.4, positive: true },
-                    { label: "Conversões 30d", value: conv30.toString(), icon: Target, trend: 8.7, positive: true },
-                    { label: "CPA Médio", value: formatCurrency(cpa), icon: TrendingUp, trend: -8.5, positive: true },
+                    { label: "Investido 7d", value: formatCurrency(custo7), icon: DollarSign, trend: -5.2, isCost: true },
+                    { label: "Investido 30d", value: formatCurrency(custo30), icon: DollarSign, trend: 3.1, isCost: true },
+                    { label: "Conversões 7d", value: conv7.toString(), icon: Target, trend: 12.4, isCost: false },
+                    { label: "Conversões 30d", value: conv30.toString(), icon: Target, trend: 8.7, isCost: false },
+                    { label: "CPA Médio", value: formatCurrency(cpa), icon: TrendingUp, trend: -8.5, isCost: true },
                   ];
-                })().map((card) => (
+                })().map((card) => {
+                  const isUp = card.trend > 0;
+                  const isGood = card.isCost ? !isUp : isUp;
+                  const colorClass = isGood ? "text-emerald-400" : "text-red-400";
+                  return (
                   <div key={card.label} className="glass-card rounded-xl p-4 space-y-1.5">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <card.icon className="w-4 h-4" />
@@ -955,18 +961,19 @@ const GestorIA = () => {
                     </div>
                     <p className="text-xl font-bold text-foreground">{card.value}</p>
                     <div className="flex items-center gap-1">
-                      {card.positive ? (
-                        <ArrowDownRight className="w-3 h-3 text-emerald-400" />
+                      {isUp ? (
+                        <ArrowUpRight className={`w-3 h-3 ${colorClass}`} />
                       ) : (
-                        <ArrowUpRight className="w-3 h-3 text-red-400" />
+                        <ArrowDownRight className={`w-3 h-3 ${colorClass}`} />
                       )}
-                      <span className={`text-[11px] font-medium ${card.positive ? "text-emerald-400" : "text-red-400"}`}>
-                        {Math.abs(card.trend)}%
+                      <span className={`text-[11px] font-medium ${colorClass}`}>
+                        {isUp ? "↑" : "↓"} {Math.abs(card.trend)}%
                       </span>
                       <span className="text-[10px] text-muted-foreground">vs período anterior</span>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Resumo Executivo — pills + expandable */}
@@ -980,11 +987,11 @@ const GestorIA = () => {
                   </div>
                   {/* Pills */}
                   {resumoPills.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-3">
+                    <div className="flex flex-wrap gap-[8px] mb-3">
                       {resumoPills.map((pill, i) => (
                         <span
                           key={i}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium ${pillColorClasses(pill.color)}`}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap shrink-0 ${pillColorClasses(pill.color)}`}
                         >
                           <span>{pill.icon}</span>
                           {pill.text}
@@ -1075,87 +1082,93 @@ const GestorIA = () => {
 
               {/* Collapsible Chat */}
               <div className="glass-card rounded-2xl border-border overflow-hidden">
-                <button
-                  onClick={() => setChatOpen(!chatOpen)}
-                  className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <MessageCircle className="w-5 h-5 text-primary" />
-                    <h3 className="text-base font-bold text-foreground">Chat com Gestor IA</h3>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!chatOpen && (
-                      <span className="text-xs text-primary font-medium">Perguntar</span>
-                    )}
-                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${chatOpen ? "rotate-180" : ""}`} />
-                  </div>
-                </button>
-
-                <AnimatePresence>
-                  {chatOpen && (
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: "auto" }}
-                      exit={{ height: 0 }}
-                      transition={{ duration: 0.25 }}
-                      className="overflow-hidden"
+                {!chatOpen ? (
+                  <div className="flex items-center justify-between p-4 h-[60px]">
+                    <div className="flex items-center gap-2">
+                      <MessageCircle className="w-5 h-5 text-primary" />
+                      <h3 className="text-base font-bold text-foreground">Chat com Gestor IA</h3>
+                    </div>
+                    <Button
+                      onClick={() => setChatOpen(true)}
+                      size="sm"
+                      className="gradient-primary text-primary-foreground font-semibold px-4"
                     >
-                      <div className="px-4 pb-4 space-y-3">
-                        <div className="h-56 overflow-y-auto space-y-3 rounded-xl bg-secondary/50 p-4">
-                          {chatMessages.length === 0 && (
-                            <p className="text-sm text-muted-foreground text-center py-8">
-                              Faça perguntas sobre o relatório gerado
-                            </p>
-                          )}
-                          {chatMessages.map((msg, i) => (
-                            <div
-                              key={i}
-                              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                            >
-                              <div
-                                className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm whitespace-pre-line ${
-                                  msg.role === "user"
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-card border border-border text-foreground"
-                                }`}
-                              >
-                                {msg.content}
-                              </div>
-                            </div>
-                          ))}
-                          {chatLoading && (
-                            <div className="flex justify-start">
-                              <div className="bg-card border border-border rounded-xl px-4 py-2.5 text-sm text-muted-foreground flex items-center gap-2">
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                Pensando...
-                              </div>
-                            </div>
-                          )}
-                          <div ref={chatEndRef} />
-                        </div>
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={chatInput}
-                            onChange={(e) => setChatInput(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleChatSend()}
-                            placeholder="Pergunte algo sobre o relatório..."
-                            className="flex-1 h-10 rounded-xl bg-secondary border border-border px-4 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/40 transition-colors"
-                            disabled={chatLoading}
-                          />
-                          <Button
-                            onClick={handleChatSend}
-                            disabled={!chatInput.trim() || chatLoading}
-                            size="icon"
-                            className="gradient-primary text-primary-foreground shrink-0"
-                          >
-                            <Send className="w-4 h-4" />
-                          </Button>
-                        </div>
+                      Perguntar
+                    </Button>
+                  </div>
+                ) : (
+                  <motion.div
+                    initial={{ height: 60 }}
+                    animate={{ height: "auto" }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                  >
+                    <div className="flex items-center justify-between p-4">
+                      <div className="flex items-center gap-2">
+                        <MessageCircle className="w-5 h-5 text-primary" />
+                        <h3 className="text-base font-bold text-foreground">Chat com Gestor IA</h3>
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                      <button
+                        onClick={() => setChatOpen(false)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div className="px-4 pb-4 space-y-3">
+                      <div className="h-56 overflow-y-auto space-y-3 rounded-xl bg-secondary/50 p-4">
+                        {chatMessages.length === 0 && (
+                          <p className="text-sm text-muted-foreground text-center py-8">
+                            Faça perguntas sobre o relatório gerado
+                          </p>
+                        )}
+                        {chatMessages.map((msg, i) => (
+                          <div
+                            key={i}
+                            className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                          >
+                            <div
+                              className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm whitespace-pre-line ${
+                                msg.role === "user"
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-card border border-border text-foreground"
+                              }`}
+                            >
+                              {msg.content}
+                            </div>
+                          </div>
+                        ))}
+                        {chatLoading && (
+                          <div className="flex justify-start">
+                            <div className="bg-card border border-border rounded-xl px-4 py-2.5 text-sm text-muted-foreground flex items-center gap-2">
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              Pensando...
+                            </div>
+                          </div>
+                        )}
+                        <div ref={chatEndRef} />
+                      </div>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleChatSend()}
+                          placeholder="Pergunte algo sobre o relatório..."
+                          className="flex-1 h-10 rounded-xl bg-secondary border border-border px-4 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/40 transition-colors"
+                          disabled={chatLoading}
+                        />
+                        <Button
+                          onClick={handleChatSend}
+                          disabled={!chatInput.trim() || chatLoading}
+                          size="icon"
+                          className="gradient-primary text-primary-foreground shrink-0"
+                        >
+                          <Send className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
               </div>
 
               {/* Nova Análise */}
