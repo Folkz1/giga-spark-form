@@ -212,12 +212,7 @@ const GestorIA = () => {
         : [];
       setAccounts(list);
     } catch {
-      setAccounts([
-        { id: "1", name: "Limpeza Industrial SP", customerId: "123-456-7890" },
-        { id: "2", name: "Dedetização Premium", customerId: "234-567-8901" },
-        { id: "3", name: "Higienização Total", customerId: "345-678-9012" },
-        { id: "4", name: "Clean Service BR", customerId: "456-789-0123" },
-      ]);
+      setAccounts([]);
     } finally {
       setLoadingAccounts(false);
       setAccountsFetched(true);
@@ -276,36 +271,10 @@ const GestorIA = () => {
         resumoExecutivo: analise.resumo_executivo ?? "",
       });
       setStep(3);
-    } catch {
-      setRelatorio({
-        resumo: {
-          totalCampanhas: 5,
-          custo7dias: "4520.00",
-          custo30dias: "18340.00",
-          conversoes7dias: 47,
-          conversoes30dias: 185,
-        },
-        alertas: [
-          { campanha: "Campanha Limpeza SP", alerta: "CPA acima do limite definido há 5 dias consecutivos", dado: "CPA atual: R$ 142,30 (limite: R$ 100)" },
-          { campanha: "Campanha Dedetização", alerta: "Taxa de conversão caiu 40% na última semana", dado: "De 4,2% para 2,5%" },
-          { campanha: "Campanha Higienização", alerta: "QS crítico em 3 keywords principais do grupo", dado: "QS médio: 3/10" },
-        ],
-        oportunidades: [
-          { campanha: "Campanha Limpeza SP", oportunidade: "Horários entre 18h-21h mostram CTR 30% acima da média", dado: "CTR: 5,8% vs média de 4,1%" },
-          { campanha: "Campanha Dedetização", oportunidade: "12 termos com alto volume ainda não cobertos", dado: "Volume estimado: 2.400 buscas/mês" },
-          { campanha: "Campanha Higienização", oportunidade: "Dispositivos móveis convertem 25% mais barato", dado: "CPA mobile: R$ 85 vs desktop: R$ 112" },
-        ],
-        recomendacoes: [
-          { prioridade: "alta", campanha: "Campanha Limpeza SP", acao: "Reduzir lance do grupo 'Genérico' em 20%", motivo: "CPA 42% acima da meta nas últimas 2 semanas", impacto_esperado: "Redução de CPA estimada em R$ 25-30", como_executar: "1) Abrir Google Ads\n2) Entrar na campanha Limpeza SP\n3) Clicar em Grupos de Anúncios\n4) Selecionar grupo 'Genérico'\n5) Reduzir lance máximo em 20%\n6) Monitorar por 7 dias", grupo: "01 - Genérico", keywords_afetadas: ["limpeza industrial", "limpeza predial sp", "serviço limpeza"] },
-          { prioridade: "alta", campanha: "Campanha Dedetização", acao: "Reescrever anúncios com CTR abaixo de 3%", motivo: "5 anúncios com CTR inferior à média do grupo", impacto_esperado: "Aumento de CTR estimado em 1-2%", como_executar: "1) Abrir Google Ads\n2) Entrar na campanha Dedetização\n3) Clicar em Anúncios\n4) Ordenar por CTR (menor para maior)\n5) Reescrever Título 1 e Título 2\n6) Pausar anúncios antigos após 14 dias", grupo: "02 - Dedetização Comercial", keywords_afetadas: ["dedetização comercial", "dedetização empresa", "controle pragas"] },
-          { prioridade: "media", campanha: "Campanha Dedetização", acao: "Adicionar 8 palavras-chave negativas identificadas", motivo: "Termos irrelevantes consumindo 15% do orçamento", impacto_esperado: "Economia estimada de R$ 180/mês", keywords_afetadas: ["dedetização residencial", "dedetização preço"] },
-          { prioridade: "media", campanha: "Campanha Limpeza SP", acao: "Aumentar lance em horários de pico (18h-21h)", motivo: "CTR e conversão superiores neste período", impacto_esperado: "Aumento de 15% nas conversões sem elevar CPA" },
-          { prioridade: "baixa", campanha: "Campanha Higienização", acao: "Testar novo texto de anúncio com CTA direto", motivo: "CTR estável há 30 dias, potencial de melhoria", impacto_esperado: "Aumento de CTR estimado em 0,5-1%" },
-          { prioridade: "baixa", campanha: "Campanha Higienização", acao: "Criar campanha separada para dispositivos móveis", motivo: "Performance mobile significativamente melhor", impacto_esperado: "Redução de CPA geral em 10-15%" },
-        ],
-        resumoExecutivo: "As campanhas analisadas apresentam desempenho geral estável, porém com pontos de atenção importantes. O tracking está configurado corretamente. Pressão competitiva elevou CPC em +13.9% no período. Breakeven estimado em 3.3 vendas por mês. 4 campanhas em queda de performance nas últimas 2 semanas. Keywords como limpeza industrial e dedetização comercial precisam de atenção imediata.",
-      });
-      setStep(3);
+    } catch (err: any) {
+      console.error("[GESTOR-IA] Erro na análise:", err);
+      setStep(1);
+      alert(`Erro ao analisar: ${err?.message || String(err)}`);
     }
   };
 
@@ -956,39 +925,26 @@ const GestorIA = () => {
                   const conv7 = relatorio.resumo.conversoes7dias ?? 0;
                   const conv30 = relatorio.resumo.conversoes30dias ?? 0;
                   const cpa = conv7 > 0 ? custo7 / conv7 : 0;
-                  // Simulated trends (in real app, these would come from API)
-                  // For cost metrics (Investido, CPA): up=bad(red), down=good(green)
-                  // For conversion metrics: up=good(green), down=bad(red)
                   return [
-                    { label: "Investido 7d", value: formatCurrency(custo7), icon: DollarSign, trend: -5.2, isCost: true },
-                    { label: "Investido 30d", value: formatCurrency(custo30), icon: DollarSign, trend: 3.1, isCost: true },
-                    { label: "Conversões 7d", value: conv7.toString(), icon: Target, trend: 12.4, isCost: false },
-                    { label: "Conversões 30d", value: conv30.toString(), icon: Target, trend: 8.7, isCost: false },
-                    { label: "CPA Médio", value: formatCurrency(cpa), icon: TrendingUp, trend: -8.5, isCost: true },
+                    { label: "Investido 7d", value: formatCurrency(custo7), icon: DollarSign },
+                    { label: "Investido 30d", value: formatCurrency(custo30), icon: DollarSign },
+                    { label: "Conversões 7d", value: conv7.toString(), icon: Target },
+                    { label: "Conversões 30d", value: conv30.toString(), icon: Target },
+                    { label: "CPA Médio", value: formatCurrency(cpa), icon: TrendingUp },
                   ];
                 })().map((card) => {
-                  const isUp = card.trend > 0;
-                  const isGood = card.isCost ? !isUp : isUp;
-                  const colorClass = isGood ? "text-emerald-400" : "text-red-400";
+                  const Icon = card.icon;
                   return (
-                  <div key={card.label} className="glass-card rounded-xl p-4 space-y-1.5">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <card.icon className="w-4 h-4" />
-                      <span className="text-[11px] font-medium uppercase tracking-wider">{card.label}</span>
+                    <div
+                      key={card.label}
+                      className="bg-card border border-border rounded-xl p-3 flex flex-col gap-1"
+                    >
+                      <div className="flex items-center gap-1.5 text-muted-foreground">
+                        <Icon className="w-3.5 h-3.5" />
+                        <span className="text-[11px]">{card.label}</span>
+                      </div>
+                      <p className="text-base font-bold text-foreground">{card.value}</p>
                     </div>
-                    <p className="text-xl font-bold text-foreground">{card.value}</p>
-                    <div className="flex items-center gap-1">
-                      {isUp ? (
-                        <ArrowUpRight className={`w-3 h-3 ${colorClass}`} />
-                      ) : (
-                        <ArrowDownRight className={`w-3 h-3 ${colorClass}`} />
-                      )}
-                      <span className={`text-[11px] font-medium ${colorClass}`}>
-                        {isUp ? "↑" : "↓"} {Math.abs(card.trend)}%
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">vs período anterior</span>
-                    </div>
-                  </div>
                   );
                 })}
               </div>
