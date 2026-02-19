@@ -299,7 +299,7 @@ const GestorIA = () => {
                 ) : (
                   <>
                     {/* Multi-select dropdown */}
-                    <div className="relative mb-6">
+                    <div className="relative z-20 mb-6">
                       <button
                         onClick={() => setOpenDropdown(!openDropdown)}
                         className="w-full flex items-center justify-between px-4 py-4 rounded-xl bg-secondary border border-border hover:border-primary/40 transition-all text-left"
@@ -400,7 +400,7 @@ const GestorIA = () => {
                     <Button
                       onClick={handleAnalyze}
                       disabled={selectedIds.length === 0}
-                      className="gradient-primary text-primary-foreground font-semibold px-8 glow-primary"
+                      className="relative z-10 gradient-primary text-primary-foreground font-semibold px-8 glow-primary"
                     >
                       <Brain className="w-4 h-4 mr-2" />
                       Analisar com IA
