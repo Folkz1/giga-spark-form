@@ -451,8 +451,8 @@ const GestorIA = () => {
                 {[
                   { label: "Investido 7d", value: formatCurrency(relatorio.resumo.totalInvestido7d), icon: DollarSign },
                   { label: "Investido 30d", value: formatCurrency(relatorio.resumo.totalInvestido30d), icon: DollarSign },
-                  { label: "Conversões 7d", value: relatorio.resumo.conversoes7d.toString(), icon: Target },
-                  { label: "Conversões 30d", value: relatorio.resumo.conversoes30d.toString(), icon: Target },
+                  { label: "Conversões 7d", value: (relatorio.resumo.conversoes7d ?? 0).toString(), icon: Target },
+                  { label: "Conversões 30d", value: (relatorio.resumo.conversoes30d ?? 0).toString(), icon: Target },
                   { label: "CPA Médio", value: formatCurrency(relatorio.resumo.cpaMedio), icon: TrendingUp },
                 ].map((card) => (
                   <div key={card.label} className="glass-card rounded-xl p-4 space-y-2">
