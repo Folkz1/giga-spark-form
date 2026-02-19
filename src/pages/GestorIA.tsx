@@ -88,6 +88,7 @@ const GestorIA = () => {
   // Structured context fields
   const [tipoNegocio, setTipoNegocio] = useState("");
   const [conversaoRastreada, setConversaoRastreada] = useState("");
+  const [tipoConversao, setTipoConversao] = useState("");
   const [metaCPA, setMetaCPA] = useState("");
   const [ticketMedio, setTicketMedio] = useState("");
   const [taxaFechamento, setTaxaFechamento] = useState("");
@@ -99,6 +100,7 @@ const GestorIA = () => {
     const parts: string[] = [];
     if (tipoNegocio) parts.push(`Tipo: ${tipoNegocio}`);
     if (conversaoRastreada) parts.push(`Conversão rastreada: ${conversaoRastreada}`);
+    if (tipoConversao) parts.push(`Conversões são: ${tipoConversao}`);
     if (metaCPA) parts.push(`Meta CPA: R$${metaCPA}`);
     if (tipoNegocio === "B2B (venda consultiva)") {
       if (ticketMedio) parts.push(`Ticket médio: R$${ticketMedio}`);
@@ -252,6 +254,7 @@ const GestorIA = () => {
     setOpenDropdown(false);
     setTipoNegocio("");
     setConversaoRastreada("");
+    setTipoConversao("");
     setMetaCPA("");
     setTicketMedio("");
     setTaxaFechamento("");
@@ -472,7 +475,7 @@ const GestorIA = () => {
                       <div className="mb-6 space-y-4">
                         <h3 className="text-sm font-semibold text-foreground">Contexto do cliente</h3>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                           {/* Tipo de negócio */}
                           <div>
                             <label className="block text-xs font-medium text-muted-foreground mb-1.5">
@@ -514,6 +517,24 @@ const GestorIA = () => {
                               <option value="Ligação telefônica">Ligação telefônica</option>
                               <option value="Compra online">Compra online</option>
                               <option value="Outro">Outro</option>
+                            </select>
+                          </div>
+
+                          {/* Suas conversões são */}
+                          <div>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
+                              Suas conversões são: <span className="text-red-400">*</span>
+                            </label>
+                            <select
+                              value={tipoConversao}
+                              onChange={(e) => setTipoConversao(e.target.value)}
+                              className="w-full h-10 rounded-md border border-border bg-secondary px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                            >
+                              <option value="">Selecione...</option>
+                              <option value="Leads (contato inicial — requer fechamento)">Leads (contato inicial — requer fechamento)</option>
+                              <option value="Vendas (receita confirmada)">Vendas (receita confirmada)</option>
+                              <option value="Visitas à loja / ligações">Visitas à loja / ligações</option>
+                              <option value="Downloads / cadastros">Downloads / cadastros</option>
                             </select>
                           </div>
 
@@ -623,7 +644,7 @@ const GestorIA = () => {
 
                       <Button
                         onClick={handleAnalyze}
-                        disabled={selectedIds.length === 0 || !tipoNegocio || !conversaoRastreada || !metaCPA}
+                        disabled={selectedIds.length === 0 || !tipoNegocio || !conversaoRastreada || !tipoConversao || !metaCPA}
                         className="gradient-primary text-primary-foreground font-semibold px-8 glow-primary"
                       >
                         <Brain className="w-4 h-4 mr-2" />
