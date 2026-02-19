@@ -286,8 +286,11 @@ const GestorIA = () => {
         console.error("[GESTOR-IA] Failed to parse JSON. Raw text was:", JSON.stringify(rawText));
         throw new Error(`Resposta inválida do servidor. Raw: ${rawText.substring(0, 300)}`);
       }
-
+ 
       console.log("[GESTOR-IA] Final data to use:", JSON.stringify(data, null, 2));
+      console.log("[DEBUG] data completo:", JSON.stringify(data).substring(0, 500));
+      console.log("[DEBUG] data.resumo:", data.resumo);
+      console.log("[DEBUG] data.campanhas:", data.campanhas?.[0]);
 
       const resumoData = data.resumo ?? data.analise?.resumo ?? {
         totalCampanhas: 0,
