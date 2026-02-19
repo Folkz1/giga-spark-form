@@ -70,7 +70,7 @@ const GestorIA = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [accountsFetched, setAccountsFetched] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set<string>());
   const [search, setSearch] = useState("");
   const [openDropdown, setOpenDropdown] = useState(false);
 
