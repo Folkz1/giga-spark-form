@@ -7,6 +7,7 @@ import Login from "./pages/Login";
 import Index from "./pages/Index";
 import CriarCampanha from "./pages/CriarCampanha";
 import OtimizarCampanha from "./pages/OtimizarCampanha";
+import GestorIA from "./pages/GestorIA";
 import NotFound from "./pages/NotFound";
 import AuthGuard from "./components/AuthGuard";
 import Header from "./components/Header";
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
           <Route path="/criar-campanha" element={<ProtectedRoute><CriarCampanha /></ProtectedRoute>} />
           <Route path="/otimizar-campanha" element={<ProtectedRoute><OtimizarCampanha /></ProtectedRoute>} />
+          <Route path="/gestor-ia" element={<ProtectedRoute><GestorIA /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
