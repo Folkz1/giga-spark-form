@@ -531,11 +531,24 @@ const GestorIA = () => {
                               className="w-full h-10 rounded-md border border-border bg-secondary px-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                             >
                               <option value="">Selecione...</option>
-                              <option value="Leads (contato inicial — requer fechamento)">Leads (contato inicial — requer fechamento)</option>
-                              <option value="Vendas (receita confirmada)">Vendas (receita confirmada)</option>
-                              <option value="Visitas à loja / ligações">Visitas à loja / ligações</option>
-                              <option value="Downloads / cadastros">Downloads / cadastros</option>
+                              <option value="Lead - Formulário preenchido">Lead - Formulário preenchido</option>
+                              <option value="Lead - Clique no WhatsApp">Lead - Clique no WhatsApp</option>
+                              <option value="Lead - Ligação telefônica">Lead - Ligação telefônica</option>
+                              <option value="Venda - Compra online confirmada">Venda - Compra online confirmada</option>
+                              <option value="Venda - Contrato assinado">Venda - Contrato assinado</option>
+                              <option value="Local - Visita à loja">Local - Visita à loja</option>
+                              <option value="Local - Ligação para agendamento">Local - Ligação para agendamento</option>
                             </select>
+                            {tipoConversao && (tipoConversao.startsWith("Lead") || tipoConversao.startsWith("Local")) && (
+                              <p className="mt-1.5 text-xs text-yellow-400">
+                                ⚠️ Conversões de contato não representam receita confirmada. O sistema calculará custo por lead vs meta de CPA.
+                              </p>
+                            )}
+                            {tipoConversao && tipoConversao.startsWith("Venda") && (
+                              <p className="mt-1.5 text-xs text-emerald-400">
+                                ✅ Conversões de venda permitem cálculo de ROI/ROAS real.
+                              </p>
+                            )}
                           </div>
 
                           {/* Meta CPA */}
