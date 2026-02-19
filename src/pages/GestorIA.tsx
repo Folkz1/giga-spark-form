@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Loader2,
@@ -39,6 +39,7 @@ interface Alerta {
   campanha: string;
   alerta: string;
   dado: string;
+  keywords_afetadas?: string[];
 }
 
 interface Oportunidade {
@@ -53,6 +54,7 @@ interface Recomendacao {
   acao: string;
   motivo: string;
   impacto_esperado: string;
+  keywords_afetadas?: string[];
 }
 
 interface Resumo {
@@ -70,6 +72,28 @@ interface RelatorioData {
   recomendacoes: Recomendacao[];
   resumoExecutivo: string;
 }
+
+const KeywordChip = ({ keyword }: { keyword: string }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(keyword);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      className="inline-flex items-center px-2 py-0.5 rounded border border-yellow-500/40 bg-secondary text-xs font-mono text-foreground hover:border-yellow-400 hover:bg-secondary/80 transition-all cursor-pointer"
+      title="Clique para copiar"
+    >
+      {copied ? (
+        <span className="text-emerald-400">Copiado!</span>
+      ) : (
+        keyword
+      )}
+    </button>
+  );
+};
 
 const GestorIA = () => {
   const [step, setStep] = useState(1);
@@ -235,11 +259,11 @@ const GestorIA = () => {
           { campanha: "Campanha Limpeza SP", oportunidade: "Horários entre 18h-21h mostram CTR 30% acima da média", dado: "CTR: 5,8% vs média de 4,1%" },
           { campanha: "Campanha Dedetização", oportunidade: "12 termos com alto volume ainda não cobertos", dado: "Volume estimado: 2.400 buscas/mês" },
         ],
-        recomendacoes: [
-          { prioridade: "alta", campanha: "Campanha Limpeza SP", acao: "Reduzir lance do grupo 'Genérico' em 20%", motivo: "CPA 42% acima da meta nas últimas 2 semanas", impacto_esperado: "Redução de CPA estimada em R$ 25-30" },
-          { prioridade: "media", campanha: "Campanha Dedetização", acao: "Adicionar 8 palavras-chave negativas identificadas", motivo: "Termos irrelevantes consumindo 15% do orçamento", impacto_esperado: "Economia estimada de R$ 180/mês" },
-          { prioridade: "baixa", campanha: "Campanha Higienização", acao: "Testar novo texto de anúncio com CTA direto", motivo: "CTR estável há 30 dias, potencial de melhoria", impacto_esperado: "Aumento de CTR estimado em 0,5-1%" },
-        ],
+          recomendacoes: [
+            { prioridade: "alta", campanha: "Campanha Limpeza SP", acao: "Reduzir lance do grupo 'Genérico' em 20%", motivo: "CPA 42% acima da meta nas últimas 2 semanas", impacto_esperado: "Redução de CPA estimada em R$ 25-30", keywords_afetadas: ["limpeza industrial", "limpeza predial sp", "serviço limpeza"] },
+            { prioridade: "media", campanha: "Campanha Dedetização", acao: "Adicionar 8 palavras-chave negativas identificadas", motivo: "Termos irrelevantes consumindo 15% do orçamento", impacto_esperado: "Economia estimada de R$ 180/mês", keywords_afetadas: ["dedetização residencial", "dedetização preço"] },
+            { prioridade: "baixa", campanha: "Campanha Higienização", acao: "Testar novo texto de anúncio com CTA direto", motivo: "CTR estável há 30 dias, potencial de melhoria", impacto_esperado: "Aumento de CTR estimado em 0,5-1%" },
+          ],
         resumoExecutivo: "As campanhas analisadas apresentam desempenho geral estável, porém com pontos de atenção importantes.",
       });
       setStep(3);
@@ -751,6 +775,22 @@ const GestorIA = () => {
                           <p className="text-sm font-semibold text-foreground">{alerta.campanha}</p>
                           <p className="text-sm text-muted-foreground">{alerta.alerta}</p>
                           <p className="text-xs text-red-400 font-medium">{alerta.dado}</p>
+                          {(() => {
+                            const kws = alerta.keywords_afetadas ??
+                              (alerta.alerta.toLowerCase().includes("qs") || alerta.alerta.toLowerCase().includes("quality score")
+                                ? relatorio.recomendacoes.find(r => r.campanha === alerta.campanha && r.keywords_afetadas?.length)?.keywords_afetadas
+                                : undefined);
+                            return kws && kws.length > 0 ? (
+                              <div className="pt-1 space-y-1">
+                                <p className="text-xs text-muted-foreground font-medium">Keywords afetadas:</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {kws.map((kw, ki) => (
+                                    <KeywordChip key={ki} keyword={kw} />
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null;
+                          })()}
                         </div>
                       ))
                     )}
@@ -811,6 +851,16 @@ const GestorIA = () => {
                           <p className="text-xs text-blue-400 font-medium">
                             <span className="text-muted-foreground font-normal">Impacto:</span> {rec.impacto_esperado}
                           </p>
+                          {rec.keywords_afetadas && rec.keywords_afetadas.length > 0 && (
+                            <div className="pt-1 space-y-1">
+                              <p className="text-xs text-muted-foreground font-medium">Keywords afetadas:</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                {rec.keywords_afetadas.map((kw, ki) => (
+                                  <KeywordChip key={ki} keyword={kw} />
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       ))
                     )}
@@ -826,7 +876,18 @@ const GestorIA = () => {
                     <h3 className="text-lg font-bold text-foreground">Resumo Executivo</h3>
                   </div>
                   <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
-                    {relatorio.resumoExecutivo}
+                    {(() => {
+                      const allKws = relatorio.recomendacoes.flatMap(r => r.keywords_afetadas ?? []);
+                      if (allKws.length === 0) return relatorio.resumoExecutivo;
+                      const escaped = allKws.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+                      const regex = new RegExp(`(${escaped.join('|')})`, 'gi');
+                      const parts = relatorio.resumoExecutivo.split(regex);
+                      return parts.map((part, i) =>
+                        allKws.some(kw => kw.toLowerCase() === part.toLowerCase())
+                          ? <strong key={i} className="text-foreground font-semibold">{part}</strong>
+                          : part
+                      );
+                    })()}
                   </p>
                 </div>
               )}
