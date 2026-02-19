@@ -246,15 +246,48 @@ const GestorIA = () => {
       );
       if (!res.ok) throw new Error("Erro na análise");
       const rawText = await res.text();
-      console.log("[GESTOR-IA] Raw response:", rawText);
-      let data: any;
+      console.log("[GESTOR-IA] Raw response (text):", rawText);
+      console.log("[GESTOR-IA] Response status:", res.status, "Content-Type:", res.headers.get("content-type"));
+
+      // Robust parser — try multiple formats in order
+      let data: any = null;
       try {
-        data = JSON.parse(rawText);
-      } catch {
-        console.error("[GESTOR-IA] Failed to parse JSON:", rawText);
-        throw new Error("Resposta inválida");
+        // Tentativa 1 e 4: parse do rawText como JSON (pode ser objeto ou string JSON)
+        const parsed = JSON.parse(rawText);
+        console.log("[GESTOR-IA] Parsed (attempt 1):", typeof parsed, parsed);
+
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          // Tentativa 2: parsed.data como objeto
+          if (parsed.data && typeof parsed.data === "object") {
+            console.log("[GESTOR-IA] Using parsed.data (object)");
+            data = parsed.data;
+          }
+          // Tentativa 3: parsed.data como string JSON
+          else if (parsed.data && typeof parsed.data === "string") {
+            console.log("[GESTOR-IA] Parsing parsed.data (string)");
+            data = JSON.parse(parsed.data);
+          }
+          // Tentativa 4: usa o próprio objeto parseado
+          else {
+            console.log("[GESTOR-IA] Using parsed directly");
+            data = parsed;
+          }
+        } else if (typeof parsed === "string") {
+          // Tentativa 5: resultado do parse ainda é string — parse duplo
+          console.log("[GESTOR-IA] Double-parsing string result");
+          data = JSON.parse(parsed);
+        } else if (Array.isArray(parsed) && parsed.length > 0) {
+          console.log("[GESTOR-IA] Response is array, using first element");
+          data = parsed[0];
+        } else {
+          data = parsed;
+        }
+      } catch (parseErr) {
+        console.error("[GESTOR-IA] Failed to parse JSON. Raw text was:", JSON.stringify(rawText));
+        throw new Error(`Resposta inválida do servidor. Raw: ${rawText.substring(0, 300)}`);
       }
-      console.log("[GESTOR-IA] Parsed data:", JSON.stringify(data, null, 2));
+
+      console.log("[GESTOR-IA] Final data to use:", JSON.stringify(data, null, 2));
 
       const analise = data.analise ?? {};
       setRelatorio({
