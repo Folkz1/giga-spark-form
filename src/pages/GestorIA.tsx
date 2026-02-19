@@ -160,7 +160,18 @@ const GestorIA = () => {
         }
       );
       if (!res.ok) throw new Error("Erro na análise");
-      const data = await res.json();
+      const rawText = await res.text();
+      console.log("[GESTOR-IA] Raw response:", rawText);
+      let data: any;
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        console.error("[GESTOR-IA] Failed to parse JSON:", rawText);
+        throw new Error("Resposta inválida");
+      }
+      console.log("[GESTOR-IA] Parsed data:", JSON.stringify(data, null, 2));
+      console.log("[GESTOR-IA] resumo:", data?.resumo);
+      console.log("[GESTOR-IA] analise:", data?.analise);
 
       const analise = data.analise ?? {};
       setRelatorio({
