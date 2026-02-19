@@ -70,7 +70,7 @@ const GestorIA = () => {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [accountsFetched, setAccountsFetched] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set<string>());
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [openDropdown, setOpenDropdown] = useState(false);
 
@@ -88,7 +88,7 @@ const GestorIA = () => {
   );
 
   const selectedAccounts = useMemo(
-    () => accounts.filter((a) => selectedIds.has(a.id)),
+    () => accounts.filter((a) => selectedIds.includes(a.customerId)),
     [accounts, selectedIds]
   );
 
@@ -120,12 +120,9 @@ const GestorIA = () => {
   };
 
   const toggleAccount = (id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
   };
 
   const handleAnalyze = async () => {
@@ -229,7 +226,7 @@ const GestorIA = () => {
 
   const handleReset = () => {
     setStep(1);
-    setSelectedIds(new Set());
+    setSelectedIds([]);
     setRelatorio(null);
     setSearch("");
     setOpenDropdown(false);
@@ -308,9 +305,9 @@ const GestorIA = () => {
                         className="w-full flex items-center justify-between px-4 py-4 rounded-xl bg-secondary border border-border hover:border-primary/40 transition-all text-left"
                       >
                         <span className="text-foreground font-medium">
-                          {selectedIds.size === 0
+                          {selectedIds.length === 0
                             ? "Selecione contas..."
-                            : `${selectedIds.size} conta${selectedIds.size > 1 ? "s" : ""} selecionada${selectedIds.size > 1 ? "s" : ""}`}
+                            : `${selectedIds.length} conta${selectedIds.length > 1 ? "s" : ""} selecionada${selectedIds.length > 1 ? "s" : ""}`}
                         </span>
                         <ChevronDown
                           className={`w-5 h-5 text-muted-foreground transition-transform ${openDropdown ? "rotate-180" : ""}`}
@@ -341,14 +338,14 @@ const GestorIA = () => {
                           </div>
                           <div className="flex items-center gap-2 px-3 py-2 border-b border-border">
                             <button
-                              onClick={() => setSelectedIds(new Set(accounts.map((a) => a.id)))}
+                              onClick={() => setSelectedIds(accounts.map((a) => a.customerId))}
                               className="text-xs font-medium text-primary hover:text-primary/80 transition-colors"
                             >
                               Selecionar Todas
                             </button>
                             <span className="text-border">|</span>
                             <button
-                              onClick={() => setSelectedIds(new Set())}
+                              onClick={() => setSelectedIds([])}
                               className="text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                             >
                               Desmarcar Todas
@@ -360,12 +357,12 @@ const GestorIA = () => {
                             ) : (
                               filteredAccounts.map((account) => (
                                 <button
-                                  key={account.id}
-                                  onClick={() => toggleAccount(account.id)}
+                                  key={account.customerId}
+                                  onClick={() => toggleAccount(account.customerId)}
                                   className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary transition-colors text-left"
                                 >
                                   <Checkbox
-                                    checked={selectedIds.has(account.id)}
+                                    checked={selectedIds.includes(account.customerId)}
                                     className="pointer-events-none"
                                   />
                                   <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center shrink-0">
@@ -388,11 +385,11 @@ const GestorIA = () => {
                       <div className="flex flex-wrap gap-2 mb-6">
                         {selectedAccounts.map((a) => (
                           <span
-                            key={a.id}
+                            key={a.customerId}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm font-medium border border-primary/20"
                           >
                             {a.name}
-                            <button onClick={() => toggleAccount(a.id)} className="hover:text-primary/70">
+                            <button onClick={() => toggleAccount(a.customerId)} className="hover:text-primary/70">
                               <X className="w-3.5 h-3.5" />
                             </button>
                           </span>
@@ -402,7 +399,7 @@ const GestorIA = () => {
 
                     <Button
                       onClick={handleAnalyze}
-                      disabled={selectedIds.size === 0}
+                      disabled={selectedIds.length === 0}
                       className="gradient-primary text-primary-foreground font-semibold px-8 glow-primary"
                     >
                       <Brain className="w-4 h-4 mr-2" />
