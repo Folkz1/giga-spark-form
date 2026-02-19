@@ -12,11 +12,15 @@ import {
   DollarSign,
   Target,
   TrendingUp,
+  TrendingDown,
   RotateCcw,
   Brain,
   CheckCircle2,
   Send,
   MessageCircle,
+  ChevronUp,
+  ArrowUpRight,
+  ArrowDownRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -138,6 +142,9 @@ const GestorIA = () => {
 
   // Step 2/3 state
   const [relatorio, setRelatorio] = useState<RelatorioData | null>(null);
+  const [activeTab, setActiveTab] = useState<"alertas" | "oportunidades" | "recomendacoes">("alertas");
+  const [chatOpen, setChatOpen] = useState(false);
+  const [resumoExpanded, setResumoExpanded] = useState(false);
 
   // Structured context fields
   const [tipoNegocio, setTipoNegocio] = useState("");
@@ -253,8 +260,6 @@ const GestorIA = () => {
         throw new Error("Resposta inválida");
       }
       console.log("[GESTOR-IA] Parsed data:", JSON.stringify(data, null, 2));
-      console.log("[GESTOR-IA] resumo:", data?.resumo);
-      console.log("[GESTOR-IA] analise:", data?.analise);
 
       const analise = data.analise ?? {};
       setRelatorio({
@@ -272,7 +277,6 @@ const GestorIA = () => {
       });
       setStep(3);
     } catch {
-      // Mock data for demo
       setRelatorio({
         resumo: {
           totalCampanhas: 5,
@@ -284,17 +288,22 @@ const GestorIA = () => {
         alertas: [
           { campanha: "Campanha Limpeza SP", alerta: "CPA acima do limite definido há 5 dias consecutivos", dado: "CPA atual: R$ 142,30 (limite: R$ 100)" },
           { campanha: "Campanha Dedetização", alerta: "Taxa de conversão caiu 40% na última semana", dado: "De 4,2% para 2,5%" },
+          { campanha: "Campanha Higienização", alerta: "QS crítico em 3 keywords principais do grupo", dado: "QS médio: 3/10" },
         ],
         oportunidades: [
           { campanha: "Campanha Limpeza SP", oportunidade: "Horários entre 18h-21h mostram CTR 30% acima da média", dado: "CTR: 5,8% vs média de 4,1%" },
           { campanha: "Campanha Dedetização", oportunidade: "12 termos com alto volume ainda não cobertos", dado: "Volume estimado: 2.400 buscas/mês" },
+          { campanha: "Campanha Higienização", oportunidade: "Dispositivos móveis convertem 25% mais barato", dado: "CPA mobile: R$ 85 vs desktop: R$ 112" },
         ],
-          recomendacoes: [
-            { prioridade: "alta", campanha: "Campanha Limpeza SP", acao: "Reduzir lance do grupo 'Genérico' em 20%", motivo: "CPA 42% acima da meta nas últimas 2 semanas", impacto_esperado: "Redução de CPA estimada em R$ 25-30", keywords_afetadas: ["limpeza industrial", "limpeza predial sp", "serviço limpeza"] },
-            { prioridade: "media", campanha: "Campanha Dedetização", acao: "Adicionar 8 palavras-chave negativas identificadas", motivo: "Termos irrelevantes consumindo 15% do orçamento", impacto_esperado: "Economia estimada de R$ 180/mês", keywords_afetadas: ["dedetização residencial", "dedetização preço"] },
-            { prioridade: "baixa", campanha: "Campanha Higienização", acao: "Testar novo texto de anúncio com CTA direto", motivo: "CTR estável há 30 dias, potencial de melhoria", impacto_esperado: "Aumento de CTR estimado em 0,5-1%" },
-          ],
-        resumoExecutivo: "As campanhas analisadas apresentam desempenho geral estável, porém com pontos de atenção importantes.",
+        recomendacoes: [
+          { prioridade: "alta", campanha: "Campanha Limpeza SP", acao: "Reduzir lance do grupo 'Genérico' em 20%", motivo: "CPA 42% acima da meta nas últimas 2 semanas", impacto_esperado: "Redução de CPA estimada em R$ 25-30", como_executar: "1) Abrir Google Ads\n2) Entrar na campanha Limpeza SP\n3) Clicar em Grupos de Anúncios\n4) Selecionar grupo 'Genérico'\n5) Reduzir lance máximo em 20%\n6) Monitorar por 7 dias", grupo: "01 - Genérico", keywords_afetadas: ["limpeza industrial", "limpeza predial sp", "serviço limpeza"] },
+          { prioridade: "alta", campanha: "Campanha Dedetização", acao: "Reescrever anúncios com CTR abaixo de 3%", motivo: "5 anúncios com CTR inferior à média do grupo", impacto_esperado: "Aumento de CTR estimado em 1-2%", como_executar: "1) Abrir Google Ads\n2) Entrar na campanha Dedetização\n3) Clicar em Anúncios\n4) Ordenar por CTR (menor para maior)\n5) Reescrever Título 1 e Título 2\n6) Pausar anúncios antigos após 14 dias", grupo: "02 - Dedetização Comercial", keywords_afetadas: ["dedetização comercial", "dedetização empresa", "controle pragas"] },
+          { prioridade: "media", campanha: "Campanha Dedetização", acao: "Adicionar 8 palavras-chave negativas identificadas", motivo: "Termos irrelevantes consumindo 15% do orçamento", impacto_esperado: "Economia estimada de R$ 180/mês", keywords_afetadas: ["dedetização residencial", "dedetização preço"] },
+          { prioridade: "media", campanha: "Campanha Limpeza SP", acao: "Aumentar lance em horários de pico (18h-21h)", motivo: "CTR e conversão superiores neste período", impacto_esperado: "Aumento de 15% nas conversões sem elevar CPA" },
+          { prioridade: "baixa", campanha: "Campanha Higienização", acao: "Testar novo texto de anúncio com CTA direto", motivo: "CTR estável há 30 dias, potencial de melhoria", impacto_esperado: "Aumento de CTR estimado em 0,5-1%" },
+          { prioridade: "baixa", campanha: "Campanha Higienização", acao: "Criar campanha separada para dispositivos móveis", motivo: "Performance mobile significativamente melhor", impacto_esperado: "Redução de CPA geral em 10-15%" },
+        ],
+        resumoExecutivo: "As campanhas analisadas apresentam desempenho geral estável, porém com pontos de atenção importantes. O tracking está configurado corretamente. Pressão competitiva elevou CPC em +13.9% no período. Breakeven estimado em 3.3 vendas por mês. 4 campanhas em queda de performance nas últimas 2 semanas. Keywords como limpeza industrial e dedetização comercial precisam de atenção imediata.",
       });
       setStep(3);
     }
@@ -317,6 +326,9 @@ const GestorIA = () => {
     setLtvEstimado("");
     setChatMessages([]);
     setChatInput("");
+    setActiveTab("alertas");
+    setChatOpen(false);
+    setResumoExpanded(false);
   };
 
   const handleChatSend = async () => {
@@ -327,6 +339,7 @@ const GestorIA = () => {
     setChatMessages(updatedHistory);
     setChatInput("");
     setChatLoading(true);
+    setChatOpen(true);
     try {
       const res = await fetch(
         "https://appn8o2.gigainteligencia.com.br/webhook/google-ads-gestor-chat",
@@ -373,9 +386,170 @@ const GestorIA = () => {
     }
   };
 
+  // Resumo executivo pills generation
+  const resumoPills = useMemo(() => {
+    if (!relatorio) return [];
+    const pills: { icon: string; text: string; color: "green" | "yellow" | "red" | "blue" }[] = [];
+    // Tracking
+    if (relatorio.resumoExecutivo.toLowerCase().includes("tracking") && relatorio.resumoExecutivo.toLowerCase().includes("correto")) {
+      pills.push({ icon: "✅", text: "Tracking OK", color: "green" });
+    }
+    // CPC pressure
+    const cpcMatch = relatorio.resumoExecutivo.match(/CPC[^.]*\+?([\d,.]+%)/i);
+    if (cpcMatch) {
+      pills.push({ icon: "⚠️", text: `Pressão Competitiva CPC ${cpcMatch[1]}`, color: "yellow" });
+    }
+    // Breakeven
+    const beMatch = relatorio.resumoExecutivo.match(/breakeven[^.]*?([\d,.]+)\s*vendas/i);
+    if (beMatch) {
+      pills.push({ icon: "💰", text: `Breakeven ${beMatch[1]} vendas`, color: "blue" });
+    }
+    // Campanhas em queda
+    const quedaMatch = relatorio.resumoExecutivo.match(/(\d+)\s*campanhas?\s*em\s*queda/i);
+    if (quedaMatch) {
+      pills.push({ icon: "📉", text: `${quedaMatch[1]} campanhas em queda`, color: "red" });
+    }
+    // Alertas count
+    if (relatorio.alertas.length > 0 && pills.length < 5) {
+      pills.push({ icon: "🚨", text: `${relatorio.alertas.length} alertas críticos`, color: "red" });
+    }
+    return pills;
+  }, [relatorio]);
+
+  const pillColorClasses = (color: "green" | "yellow" | "red" | "blue") => {
+    switch (color) {
+      case "green": return "bg-emerald-900/30 border-emerald-500/40 text-emerald-300";
+      case "yellow": return "bg-yellow-900/30 border-yellow-500/40 text-yellow-300";
+      case "red": return "bg-red-900/30 border-red-500/40 text-red-300";
+      case "blue": return "bg-blue-900/30 border-blue-500/40 text-blue-300";
+    }
+  };
+
+  // Highlighted resumo text
+  const renderResumoText = () => {
+    if (!relatorio) return null;
+    const allKws = relatorio.recomendacoes.flatMap(r => r.keywords_afetadas ?? []);
+    if (allKws.length === 0) return relatorio.resumoExecutivo;
+    const escaped = allKws.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const regex = new RegExp(`(${escaped.join('|')})`, 'gi');
+    const parts = relatorio.resumoExecutivo.split(regex);
+    return parts.map((part, i) =>
+      allKws.some(kw => kw.toLowerCase() === part.toLowerCase())
+        ? <strong key={i} className="text-foreground font-semibold">{part}</strong>
+        : part
+    );
+  };
+
+  // Tab content renderers
+  const renderAlertasContent = () => {
+    if (!relatorio) return null;
+    return (
+      <div className="space-y-4">
+        {relatorio.alertas.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">Nenhum alerta crítico identificado</p>
+        ) : (
+          relatorio.alertas.map((alerta, i) => (
+            <div key={i} className="p-4 rounded-xl bg-red-500/5 border border-red-500/10 space-y-2">
+              <p className="text-sm font-semibold text-foreground">{alerta.campanha}</p>
+              <p className="text-sm text-muted-foreground">{alerta.alerta}</p>
+              <p className="text-xs text-red-400 font-medium">{alerta.dado}</p>
+              {(() => {
+                const kws = alerta.keywords_afetadas ??
+                  (alerta.alerta.toLowerCase().includes("qs") || alerta.alerta.toLowerCase().includes("quality score")
+                    ? relatorio.recomendacoes.find(r => r.campanha === alerta.campanha && r.keywords_afetadas?.length)?.keywords_afetadas
+                    : undefined);
+                return kws && kws.length > 0 ? (
+                  <div className="pt-1 space-y-1">
+                    <p className="text-xs text-muted-foreground font-medium">Keywords afetadas:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {kws.map((kw, ki) => (
+                        <KeywordChip key={ki} keyword={kw} />
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          ))
+        )}
+      </div>
+    );
+  };
+
+  const renderOportunidadesContent = () => {
+    if (!relatorio) return null;
+    return (
+      <div className="space-y-4">
+        {relatorio.oportunidades.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">Nenhuma oportunidade identificada</p>
+        ) : (
+          relatorio.oportunidades.map((op, i) => (
+            <div key={i} className="p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10 space-y-2">
+              <p className="text-sm font-semibold text-foreground">{op.campanha}</p>
+              <p className="text-sm text-muted-foreground">{op.oportunidade}</p>
+              <p className="text-xs text-emerald-400 font-medium">{op.dado}</p>
+            </div>
+          ))
+        )}
+      </div>
+    );
+  };
+
+  const renderRecomendacoesContent = () => {
+    if (!relatorio) return null;
+    return (
+      <div className="space-y-4">
+        {relatorio.recomendacoes.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">Nenhuma recomendação</p>
+        ) : (
+          relatorio.recomendacoes.map((rec, i) => (
+            <div key={i} className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 space-y-2">
+              <div className="flex items-center gap-2">
+                {prioridadeBadge(rec.prioridade)}
+                <span className="text-sm font-semibold text-foreground">{rec.campanha}</span>
+              </div>
+              <p className="text-sm text-foreground">{rec.acao}</p>
+              <p className="text-xs text-muted-foreground">
+                <span className="font-medium">Motivo:</span> {rec.motivo}
+              </p>
+              <p className="text-xs text-blue-400 font-medium">
+                <span className="text-muted-foreground font-normal">Impacto:</span> {rec.impacto_esperado}
+              </p>
+              {rec.como_executar && <ComoExecutarBox texto={rec.como_executar} />}
+              {rec.grupo && (
+                <div className="pt-1 space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">Grupo afetado:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <KeywordChip keyword={rec.grupo} variant="group" />
+                  </div>
+                </div>
+              )}
+              {rec.keywords_afetadas && rec.keywords_afetadas.length > 0 && (
+                <div className="pt-1 space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">Keywords afetadas:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {rec.keywords_afetadas.map((kw, ki) => (
+                      <KeywordChip key={ki} keyword={kw} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    );
+  };
+
+  const tabs = [
+    { id: "alertas" as const, label: "Alertas Críticos", icon: "⚠️", count: relatorio?.alertas.length ?? 0, color: "text-red-400" },
+    { id: "oportunidades" as const, label: "Oportunidades", icon: "💡", count: relatorio?.oportunidades.length ?? 0, color: "text-emerald-400" },
+    { id: "recomendacoes" as const, label: "Recomendações", icon: "📋", count: relatorio?.recomendacoes.length ?? 0, color: "text-blue-400" },
+  ];
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
@@ -755,243 +929,237 @@ const GestorIA = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="space-y-8"
+              className="space-y-6"
             >
-              {/* Summary cards */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              {/* Metric cards with trend */}
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 {(() => {
                   const custo7 = parseFloat(relatorio.resumo.custo7dias ?? "0");
                   const custo30 = parseFloat(relatorio.resumo.custo30dias ?? "0");
                   const conv7 = relatorio.resumo.conversoes7dias ?? 0;
                   const conv30 = relatorio.resumo.conversoes30dias ?? 0;
                   const cpa = conv7 > 0 ? custo7 / conv7 : 0;
+                  // Simulated trends (in real app, these would come from API)
                   return [
-                    { label: "Investido 7d", value: formatCurrency(custo7), icon: DollarSign },
-                    { label: "Investido 30d", value: formatCurrency(custo30), icon: DollarSign },
-                    { label: "Conversões 7d", value: conv7.toString(), icon: Target },
-                    { label: "Conversões 30d", value: conv30.toString(), icon: Target },
-                    { label: "CPA Médio", value: formatCurrency(cpa), icon: TrendingUp },
+                    { label: "Investido 7d", value: formatCurrency(custo7), icon: DollarSign, trend: -5.2, positive: true },
+                    { label: "Investido 30d", value: formatCurrency(custo30), icon: DollarSign, trend: 3.1, positive: false },
+                    { label: "Conversões 7d", value: conv7.toString(), icon: Target, trend: 12.4, positive: true },
+                    { label: "Conversões 30d", value: conv30.toString(), icon: Target, trend: 8.7, positive: true },
+                    { label: "CPA Médio", value: formatCurrency(cpa), icon: TrendingUp, trend: -8.5, positive: true },
                   ];
                 })().map((card) => (
-                  <div key={card.label} className="glass-card rounded-xl p-4 space-y-2">
+                  <div key={card.label} className="glass-card rounded-xl p-4 space-y-1.5">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <card.icon className="w-4 h-4" />
-                      <span className="text-xs font-medium">{card.label}</span>
+                      <span className="text-[11px] font-medium uppercase tracking-wider">{card.label}</span>
                     </div>
                     <p className="text-xl font-bold text-foreground">{card.value}</p>
+                    <div className="flex items-center gap-1">
+                      {card.positive ? (
+                        <ArrowDownRight className="w-3 h-3 text-emerald-400" />
+                      ) : (
+                        <ArrowUpRight className="w-3 h-3 text-red-400" />
+                      )}
+                      <span className={`text-[11px] font-medium ${card.positive ? "text-emerald-400" : "text-red-400"}`}>
+                        {Math.abs(card.trend)}%
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">vs período anterior</span>
+                    </div>
                   </div>
                 ))}
               </div>
 
-              {/* Three columns */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Alertas Críticos */}
-                <Card className="bg-red-500/5 border-red-500/20">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-red-400 text-lg">
-                      <AlertTriangle className="w-5 h-5" />
-                      Alertas Críticos
-                      <Badge className="bg-red-500/20 text-red-400 border-red-500/30 ml-auto">
-                        {relatorio.alertas.length}
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {relatorio.alertas.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">Nenhum alerta</p>
-                    ) : (
-                      relatorio.alertas.map((alerta, i) => (
-                        <div key={i} className="p-3 rounded-lg bg-red-500/5 border border-red-500/10 space-y-1">
-                          <p className="text-sm font-semibold text-foreground">{alerta.campanha}</p>
-                          <p className="text-sm text-muted-foreground">{alerta.alerta}</p>
-                          <p className="text-xs text-red-400 font-medium">{alerta.dado}</p>
-                          {(() => {
-                            const kws = alerta.keywords_afetadas ??
-                              (alerta.alerta.toLowerCase().includes("qs") || alerta.alerta.toLowerCase().includes("quality score")
-                                ? relatorio.recomendacoes.find(r => r.campanha === alerta.campanha && r.keywords_afetadas?.length)?.keywords_afetadas
-                                : undefined);
-                            return kws && kws.length > 0 ? (
-                              <div className="pt-1 space-y-1">
-                                <p className="text-xs text-muted-foreground font-medium">Keywords afetadas:</p>
-                                <div className="flex flex-wrap gap-1.5">
-                                  {kws.map((kw, ki) => (
-                                    <KeywordChip key={ki} keyword={kw} />
-                                  ))}
-                                </div>
-                              </div>
-                            ) : null;
-                          })()}
-                        </div>
-                      ))
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Oportunidades */}
-                <Card className="bg-green-500/5 border-green-500/20">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-green-400 text-lg">
-                      <Lightbulb className="w-5 h-5" />
-                      Oportunidades
-                      <Badge className="bg-green-500/20 text-green-400 border-green-500/30 ml-auto">
-                        {relatorio.oportunidades.length}
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {relatorio.oportunidades.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">Nenhuma oportunidade</p>
-                    ) : (
-                      relatorio.oportunidades.map((op, i) => (
-                        <div key={i} className="p-3 rounded-lg bg-green-500/5 border border-green-500/10 space-y-1">
-                          <p className="text-sm font-semibold text-foreground">{op.campanha}</p>
-                          <p className="text-sm text-muted-foreground">{op.oportunidade}</p>
-                          <p className="text-xs text-green-400 font-medium">{op.dado}</p>
-                        </div>
-                      ))
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Recomendações */}
-                <Card className="bg-blue-500/5 border-blue-500/20">
-                  <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-blue-400 text-lg">
-                      <ClipboardList className="w-5 h-5" />
-                      Recomendações
-                      <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 ml-auto">
-                        {relatorio.recomendacoes.length}
-                      </Badge>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {relatorio.recomendacoes.length === 0 ? (
-                      <p className="text-sm text-muted-foreground text-center py-4">Nenhuma recomendação</p>
-                    ) : (
-                      relatorio.recomendacoes.map((rec, i) => (
-                        <div key={i} className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/10 space-y-2">
-                          <div className="flex items-center gap-2">
-                            {prioridadeBadge(rec.prioridade)}
-                            <span className="text-sm font-semibold text-foreground">{rec.campanha}</span>
-                          </div>
-                          <p className="text-sm text-foreground">{rec.acao}</p>
-                          <p className="text-xs text-muted-foreground">
-                            <span className="font-medium">Motivo:</span> {rec.motivo}
-                          </p>
-                          <p className="text-xs text-blue-400 font-medium">
-                            <span className="text-muted-foreground font-normal">Impacto:</span> {rec.impacto_esperado}
-                          </p>
-                          {rec.como_executar && <ComoExecutarBox texto={rec.como_executar} />}
-                          {rec.grupo && (
-                            <div className="pt-1 space-y-1">
-                              <p className="text-xs text-muted-foreground font-medium">Grupo afetado:</p>
-                              <div className="flex flex-wrap gap-1.5">
-                                <KeywordChip keyword={rec.grupo} variant="group" />
-                              </div>
-                            </div>
-                          )}
-                          {rec.keywords_afetadas && rec.keywords_afetadas.length > 0 && (
-                            <div className="pt-1 space-y-1">
-                              <p className="text-xs text-muted-foreground font-medium">Keywords afetadas:</p>
-                              <div className="flex flex-wrap gap-1.5">
-                                {rec.keywords_afetadas.map((kw, ki) => (
-                                  <KeywordChip key={ki} keyword={kw} />
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Executive Summary */}
+              {/* Resumo Executivo — pills + expandable */}
               {relatorio.resumoExecutivo && (
-                <div className="glass-card rounded-2xl p-6 border-primary/20 glow-primary">
-                  <div className="flex items-center gap-2 mb-3">
-                    <CheckCircle2 className="w-5 h-5 text-primary" />
-                    <h3 className="text-lg font-bold text-foreground">Resumo Executivo</h3>
+                <div className="glass-card rounded-2xl p-5 border-primary/20">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-5 h-5 text-primary" />
+                      <h3 className="text-base font-bold text-foreground">Resumo Executivo</h3>
+                    </div>
                   </div>
-                  <p className="text-muted-foreground leading-relaxed whitespace-pre-line">
-                    {(() => {
-                      const allKws = relatorio.recomendacoes.flatMap(r => r.keywords_afetadas ?? []);
-                      if (allKws.length === 0) return relatorio.resumoExecutivo;
-                      const escaped = allKws.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-                      const regex = new RegExp(`(${escaped.join('|')})`, 'gi');
-                      const parts = relatorio.resumoExecutivo.split(regex);
-                      return parts.map((part, i) =>
-                        allKws.some(kw => kw.toLowerCase() === part.toLowerCase())
-                          ? <strong key={i} className="text-foreground font-semibold">{part}</strong>
-                          : part
-                      );
-                    })()}
-                  </p>
+                  {/* Pills */}
+                  {resumoPills.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {resumoPills.map((pill, i) => (
+                        <span
+                          key={i}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium ${pillColorClasses(pill.color)}`}
+                        >
+                          <span>{pill.icon}</span>
+                          {pill.text}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {/* Expandable text */}
+                  <AnimatePresence>
+                    {resumoExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line pt-2 border-t border-border">
+                          {renderResumoText()}
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  <button
+                    onClick={() => setResumoExpanded(!resumoExpanded)}
+                    className="mt-2 text-xs text-primary hover:text-primary/80 font-medium transition-colors flex items-center gap-1"
+                  >
+                    {resumoExpanded ? (
+                      <>Ocultar análise <ChevronUp className="w-3 h-3" /></>
+                    ) : (
+                      <>Ver análise completa <ChevronDown className="w-3 h-3" /></>
+                    )}
+                  </button>
                 </div>
               )}
 
-              {/* Chat Panel */}
-              <div className="glass-card rounded-2xl p-6 border-border">
-                <div className="flex items-center gap-2 mb-4">
-                  <MessageCircle className="w-5 h-5 text-primary" />
-                  <h3 className="text-lg font-bold text-foreground">Chat com Gestor IA</h3>
-                </div>
-                <div className="h-64 overflow-y-auto mb-4 space-y-3 rounded-xl bg-secondary/50 p-4">
-                  {chatMessages.length === 0 && (
-                    <p className="text-sm text-muted-foreground text-center py-8">
-                      Faça perguntas sobre o relatório gerado
-                    </p>
-                  )}
-                  {chatMessages.map((msg, i) => (
-                    <div
-                      key={i}
-                      className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+              {/* Horizontal tabs */}
+              <div className="space-y-0">
+                <div className="flex border-b border-border">
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`relative flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors ${
+                        activeTab === tab.id
+                          ? `${tab.color}`
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
                     >
-                      <div
-                        className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm whitespace-pre-line ${
-                          msg.role === "user"
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-card border border-border text-foreground"
+                      <span>{tab.icon}</span>
+                      <span className="hidden sm:inline">{tab.label}</span>
+                      <Badge
+                        className={`text-[10px] px-1.5 py-0 h-5 ${
+                          activeTab === tab.id
+                            ? "bg-primary/20 text-primary border-primary/30"
+                            : "bg-muted text-muted-foreground border-border"
                         }`}
                       >
-                        {msg.content}
-                      </div>
-                    </div>
+                        {tab.count}
+                      </Badge>
+                      {activeTab === tab.id && (
+                        <motion.div
+                          layoutId="activeTab"
+                          className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-full"
+                        />
+                      )}
+                    </button>
                   ))}
-                  {chatLoading && (
-                    <div className="flex justify-start">
-                      <div className="bg-card border border-border rounded-xl px-4 py-2.5 text-sm text-muted-foreground flex items-center gap-2">
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        Pensando...
-                      </div>
-                    </div>
-                  )}
-                  <div ref={chatEndRef} />
                 </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleChatSend()}
-                    placeholder="Pergunte algo sobre o relatório..."
-                    className="flex-1 h-10 rounded-xl bg-secondary border border-border px-4 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/40 transition-colors"
-                    disabled={chatLoading}
-                  />
-                  <Button
-                    onClick={handleChatSend}
-                    disabled={!chatInput.trim() || chatLoading}
-                    size="icon"
-                    className="gradient-primary text-primary-foreground shrink-0"
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
+
+                {/* Tab content */}
+                <div className="pt-5 max-h-[60vh] overflow-y-auto pr-1">
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeTab}
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      transition={{ duration: 0.15 }}
+                    >
+                      {activeTab === "alertas" && renderAlertasContent()}
+                      {activeTab === "oportunidades" && renderOportunidadesContent()}
+                      {activeTab === "recomendacoes" && renderRecomendacoesContent()}
+                    </motion.div>
+                  </AnimatePresence>
                 </div>
               </div>
 
-              {/* Step 4 — New Analysis */}
-              <div className="flex justify-center pt-4">
+              {/* Collapsible Chat */}
+              <div className="glass-card rounded-2xl border-border overflow-hidden">
+                <button
+                  onClick={() => setChatOpen(!chatOpen)}
+                  className="w-full flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <MessageCircle className="w-5 h-5 text-primary" />
+                    <h3 className="text-base font-bold text-foreground">Chat com Gestor IA</h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!chatOpen && (
+                      <span className="text-xs text-primary font-medium">Perguntar</span>
+                    )}
+                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${chatOpen ? "rotate-180" : ""}`} />
+                  </div>
+                </button>
+
+                <AnimatePresence>
+                  {chatOpen && (
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: "auto" }}
+                      exit={{ height: 0 }}
+                      transition={{ duration: 0.25 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-4 pb-4 space-y-3">
+                        <div className="h-56 overflow-y-auto space-y-3 rounded-xl bg-secondary/50 p-4">
+                          {chatMessages.length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-8">
+                              Faça perguntas sobre o relatório gerado
+                            </p>
+                          )}
+                          {chatMessages.map((msg, i) => (
+                            <div
+                              key={i}
+                              className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                            >
+                              <div
+                                className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm whitespace-pre-line ${
+                                  msg.role === "user"
+                                    ? "bg-primary text-primary-foreground"
+                                    : "bg-card border border-border text-foreground"
+                                }`}
+                              >
+                                {msg.content}
+                              </div>
+                            </div>
+                          ))}
+                          {chatLoading && (
+                            <div className="flex justify-start">
+                              <div className="bg-card border border-border rounded-xl px-4 py-2.5 text-sm text-muted-foreground flex items-center gap-2">
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                Pensando...
+                              </div>
+                            </div>
+                          )}
+                          <div ref={chatEndRef} />
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={chatInput}
+                            onChange={(e) => setChatInput(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleChatSend()}
+                            placeholder="Pergunte algo sobre o relatório..."
+                            className="flex-1 h-10 rounded-xl bg-secondary border border-border px-4 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/40 transition-colors"
+                            disabled={chatLoading}
+                          />
+                          <Button
+                            onClick={handleChatSend}
+                            disabled={!chatInput.trim() || chatLoading}
+                            size="icon"
+                            className="gradient-primary text-primary-foreground shrink-0"
+                          >
+                            <Send className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Nova Análise */}
+              <div className="flex justify-center pt-2 pb-4">
                 <Button
                   onClick={handleReset}
                   className="gradient-primary text-primary-foreground font-semibold px-8 glow-primary"
