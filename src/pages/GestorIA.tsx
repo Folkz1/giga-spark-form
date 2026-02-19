@@ -29,13 +29,13 @@ interface Account {
 
 interface Alerta {
   campanha: string;
-  texto: string;
+  alerta: string;
   dado: string;
 }
 
 interface Oportunidade {
-  nome: string;
-  descricao: string;
+  campanha: string;
+  oportunidade: string;
   dado: string;
 }
 
@@ -44,15 +44,15 @@ interface Recomendacao {
   campanha: string;
   acao: string;
   motivo: string;
-  impactoEsperado: string;
+  impacto_esperado: string;
 }
 
 interface Resumo {
-  totalInvestido7d: number;
-  totalInvestido30d: number;
-  conversoes7d: number;
-  conversoes30d: number;
-  cpaMedio: number;
+  totalCampanhas: number;
+  custo7dias: string;
+  custo30dias: string;
+  conversoes7dias: number;
+  conversoes30dias: number;
 }
 
 interface RelatorioData {
@@ -146,79 +146,45 @@ const GestorIA = () => {
       if (!res.ok) throw new Error("Erro na análise");
       const data = await res.json();
 
+      const analise = data.analise ?? {};
       setRelatorio({
         resumo: data.resumo ?? {
-          totalInvestido7d: 0,
-          totalInvestido30d: 0,
-          conversoes7d: 0,
-          conversoes30d: 0,
-          cpaMedio: 0,
+          totalCampanhas: 0,
+          custo7dias: "0",
+          custo30dias: "0",
+          conversoes7dias: 0,
+          conversoes30dias: 0,
         },
-        alertas: Array.isArray(data.alertas) ? data.alertas : [],
-        oportunidades: Array.isArray(data.oportunidades) ? data.oportunidades : [],
-        recomendacoes: Array.isArray(data.recomendacoes) ? data.recomendacoes : [],
-        resumoExecutivo: data.resumoExecutivo ?? data.resumo_executivo ?? "",
+        alertas: Array.isArray(analise.alertas_criticos) ? analise.alertas_criticos : [],
+        oportunidades: Array.isArray(analise.oportunidades) ? analise.oportunidades : [],
+        recomendacoes: Array.isArray(analise.recomendacoes) ? analise.recomendacoes : [],
+        resumoExecutivo: analise.resumo_executivo ?? "",
       });
       setStep(3);
     } catch {
       // Mock data for demo
       setRelatorio({
         resumo: {
-          totalInvestido7d: 4520.0,
-          totalInvestido30d: 18340.0,
-          conversoes7d: 47,
-          conversoes30d: 185,
-          cpaMedio: 99.13,
+          totalCampanhas: 5,
+          custo7dias: "4520.00",
+          custo30dias: "18340.00",
+          conversoes7dias: 47,
+          conversoes30dias: 185,
         },
         alertas: [
-          {
-            campanha: "Campanha Limpeza SP",
-            texto: "CPA acima do limite definido há 5 dias consecutivos",
-            dado: "CPA atual: R$ 142,30 (limite: R$ 100)",
-          },
-          {
-            campanha: "Campanha Dedetização",
-            texto: "Taxa de conversão caiu 40% na última semana",
-            dado: "De 4,2% para 2,5%",
-          },
+          { campanha: "Campanha Limpeza SP", alerta: "CPA acima do limite definido há 5 dias consecutivos", dado: "CPA atual: R$ 142,30 (limite: R$ 100)" },
+          { campanha: "Campanha Dedetização", alerta: "Taxa de conversão caiu 40% na última semana", dado: "De 4,2% para 2,5%" },
         ],
         oportunidades: [
-          {
-            nome: "Expansão de horário",
-            descricao: "Horários entre 18h-21h mostram CTR 30% acima da média",
-            dado: "CTR: 5,8% vs média de 4,1%",
-          },
-          {
-            nome: "Novos termos de busca",
-            descricao: "12 termos com alto volume ainda não cobertos",
-            dado: "Volume estimado: 2.400 buscas/mês",
-          },
+          { campanha: "Campanha Limpeza SP", oportunidade: "Horários entre 18h-21h mostram CTR 30% acima da média", dado: "CTR: 5,8% vs média de 4,1%" },
+          { campanha: "Campanha Dedetização", oportunidade: "12 termos com alto volume ainda não cobertos", dado: "Volume estimado: 2.400 buscas/mês" },
         ],
         recomendacoes: [
-          {
-            prioridade: "alta",
-            campanha: "Campanha Limpeza SP",
-            acao: "Reduzir lance do grupo 'Genérico' em 20%",
-            motivo: "CPA 42% acima da meta nas últimas 2 semanas",
-            impactoEsperado: "Redução de CPA estimada em R$ 25-30",
-          },
-          {
-            prioridade: "media",
-            campanha: "Campanha Dedetização",
-            acao: "Adicionar 8 palavras-chave negativas identificadas",
-            motivo: "Termos irrelevantes consumindo 15% do orçamento",
-            impactoEsperado: "Economia estimada de R$ 180/mês",
-          },
-          {
-            prioridade: "baixa",
-            campanha: "Campanha Higienização",
-            acao: "Testar novo texto de anúncio com CTA direto",
-            motivo: "CTR estável há 30 dias, potencial de melhoria",
-            impactoEsperado: "Aumento de CTR estimado em 0,5-1%",
-          },
+          { prioridade: "alta", campanha: "Campanha Limpeza SP", acao: "Reduzir lance do grupo 'Genérico' em 20%", motivo: "CPA 42% acima da meta nas últimas 2 semanas", impacto_esperado: "Redução de CPA estimada em R$ 25-30" },
+          { prioridade: "media", campanha: "Campanha Dedetização", acao: "Adicionar 8 palavras-chave negativas identificadas", motivo: "Termos irrelevantes consumindo 15% do orçamento", impacto_esperado: "Economia estimada de R$ 180/mês" },
+          { prioridade: "baixa", campanha: "Campanha Higienização", acao: "Testar novo texto de anúncio com CTA direto", motivo: "CTR estável há 30 dias, potencial de melhoria", impacto_esperado: "Aumento de CTR estimado em 0,5-1%" },
         ],
-        resumoExecutivo:
-          "As campanhas analisadas apresentam desempenho geral estável, porém com pontos de atenção importantes. A Campanha Limpeza SP requer ajuste imediato de lances para conter o CPA crescente. As campanhas de Dedetização mostram queda recente na taxa de conversão que merece investigação. Por outro lado, existem oportunidades claras de expansão nos horários noturnos e em novos termos de busca com alto volume. Recomenda-se priorizar as ações de alta prioridade nos próximos 3 dias para estabilizar os custos.",
+        resumoExecutivo: "As campanhas analisadas apresentam desempenho geral estável, porém com pontos de atenção importantes.",
       });
       setStep(3);
     }
@@ -448,13 +414,20 @@ const GestorIA = () => {
             >
               {/* Summary cards */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {[
-                  { label: "Investido 7d", value: formatCurrency(relatorio.resumo.totalInvestido7d), icon: DollarSign },
-                  { label: "Investido 30d", value: formatCurrency(relatorio.resumo.totalInvestido30d), icon: DollarSign },
-                  { label: "Conversões 7d", value: (relatorio.resumo.conversoes7d ?? 0).toString(), icon: Target },
-                  { label: "Conversões 30d", value: (relatorio.resumo.conversoes30d ?? 0).toString(), icon: Target },
-                  { label: "CPA Médio", value: formatCurrency(relatorio.resumo.cpaMedio), icon: TrendingUp },
-                ].map((card) => (
+                {(() => {
+                  const custo7 = parseFloat(relatorio.resumo.custo7dias ?? "0");
+                  const custo30 = parseFloat(relatorio.resumo.custo30dias ?? "0");
+                  const conv7 = relatorio.resumo.conversoes7dias ?? 0;
+                  const conv30 = relatorio.resumo.conversoes30dias ?? 0;
+                  const cpa = conv7 > 0 ? custo7 / conv7 : 0;
+                  return [
+                    { label: "Investido 7d", value: formatCurrency(custo7), icon: DollarSign },
+                    { label: "Investido 30d", value: formatCurrency(custo30), icon: DollarSign },
+                    { label: "Conversões 7d", value: conv7.toString(), icon: Target },
+                    { label: "Conversões 30d", value: conv30.toString(), icon: Target },
+                    { label: "CPA Médio", value: formatCurrency(cpa), icon: TrendingUp },
+                  ];
+                })().map((card) => (
                   <div key={card.label} className="glass-card rounded-xl p-4 space-y-2">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <card.icon className="w-4 h-4" />
@@ -485,7 +458,7 @@ const GestorIA = () => {
                       relatorio.alertas.map((alerta, i) => (
                         <div key={i} className="p-3 rounded-lg bg-red-500/5 border border-red-500/10 space-y-1">
                           <p className="text-sm font-semibold text-foreground">{alerta.campanha}</p>
-                          <p className="text-sm text-muted-foreground">{alerta.texto}</p>
+                          <p className="text-sm text-muted-foreground">{alerta.alerta}</p>
                           <p className="text-xs text-red-400 font-medium">{alerta.dado}</p>
                         </div>
                       ))
@@ -510,8 +483,8 @@ const GestorIA = () => {
                     ) : (
                       relatorio.oportunidades.map((op, i) => (
                         <div key={i} className="p-3 rounded-lg bg-green-500/5 border border-green-500/10 space-y-1">
-                          <p className="text-sm font-semibold text-foreground">{op.nome}</p>
-                          <p className="text-sm text-muted-foreground">{op.descricao}</p>
+                          <p className="text-sm font-semibold text-foreground">{op.campanha}</p>
+                          <p className="text-sm text-muted-foreground">{op.oportunidade}</p>
                           <p className="text-xs text-green-400 font-medium">{op.dado}</p>
                         </div>
                       ))
@@ -545,7 +518,7 @@ const GestorIA = () => {
                             <span className="font-medium">Motivo:</span> {rec.motivo}
                           </p>
                           <p className="text-xs text-blue-400 font-medium">
-                            <span className="text-muted-foreground font-normal">Impacto:</span> {rec.impactoEsperado}
+                            <span className="text-muted-foreground font-normal">Impacto:</span> {rec.impacto_esperado}
                           </p>
                         </div>
                       ))
