@@ -54,6 +54,7 @@ interface Recomendacao {
   acao: string;
   motivo: string;
   impacto_esperado: string;
+  grupo?: string | null;
   keywords_afetadas?: string[];
 }
 
@@ -73,17 +74,20 @@ interface RelatorioData {
   resumoExecutivo: string;
 }
 
-const KeywordChip = ({ keyword }: { keyword: string }) => {
+const KeywordChip = ({ keyword, variant = "keyword" }: { keyword: string; variant?: "keyword" | "group" }) => {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
     await navigator.clipboard.writeText(keyword);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
+  const styles = variant === "group"
+    ? "border-emerald-500/50 bg-emerald-900/30 hover:border-emerald-400 hover:bg-emerald-900/40"
+    : "border-yellow-500/40 bg-secondary hover:border-yellow-400 hover:bg-secondary/80";
   return (
     <button
       onClick={handleCopy}
-      className="inline-flex items-center px-2 py-0.5 rounded border border-yellow-500/40 bg-secondary text-xs font-mono text-foreground hover:border-yellow-400 hover:bg-secondary/80 transition-all cursor-pointer"
+      className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-mono text-foreground transition-all cursor-pointer ${styles}`}
       title="Clique para copiar"
     >
       {copied ? (
@@ -851,6 +855,14 @@ const GestorIA = () => {
                           <p className="text-xs text-blue-400 font-medium">
                             <span className="text-muted-foreground font-normal">Impacto:</span> {rec.impacto_esperado}
                           </p>
+                          {rec.grupo && (
+                            <div className="pt-1 space-y-1">
+                              <p className="text-xs text-muted-foreground font-medium">Grupo afetado:</p>
+                              <div className="flex flex-wrap gap-1.5">
+                                <KeywordChip keyword={rec.grupo} variant="group" />
+                              </div>
+                            </div>
+                          )}
                           {rec.keywords_afetadas && rec.keywords_afetadas.length > 0 && (
                             <div className="pt-1 space-y-1">
                               <p className="text-xs text-muted-foreground font-medium">Keywords afetadas:</p>
