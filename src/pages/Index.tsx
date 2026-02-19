@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Rocket, TrendingUp, Lock } from "lucide-react";
+import { Rocket, TrendingUp, Lock, Brain } from "lucide-react";
 
 const cards = [
   {
@@ -15,6 +15,13 @@ const cards = [
     description: "Identifique e aplique otimizações inteligentes nas suas campanhas Google Ads",
     icon: TrendingUp,
     path: "/otimizar-campanha",
+    disabled: false,
+  },
+  {
+    title: "Gestor de Tráfego IA",
+    description: "Análise inteligente das suas campanhas com alertas, oportunidades e recomendações",
+    icon: Brain,
+    path: "/gestor-ia",
     disabled: false,
   },
   {
