@@ -289,14 +289,15 @@ const GestorIA = () => {
 
       console.log("[GESTOR-IA] Final data to use:", JSON.stringify(data, null, 2));
 
+      const resumoData = data.resumo ?? data.analise?.resumo ?? {
+        totalCampanhas: 0,
+        custo7dias: data.campanhas?.[0]?.['7dias']?.custo ?? "0",
+        custo30dias: data.campanhas?.[0]?.['30dias']?.custo ?? "0",
+        conversoes7dias: data.campanhas?.[0]?.['7dias']?.conversoes ?? 0,
+        conversoes30dias: data.campanhas?.[0]?.['30dias']?.conversoes ?? 0,
+      };
       setRelatorio({
-        resumo: data.resumo ?? {
-          totalCampanhas: 0,
-          custo7dias: "0",
-          custo30dias: "0",
-          conversoes7dias: 0,
-          conversoes30dias: 0,
-        },
+        resumo: resumoData,
         alertas: Array.isArray(data.alertas_criticos) ? data.alertas_criticos : [],
         oportunidades: Array.isArray(data.oportunidades) ? data.oportunidades : [],
         recomendacoes: Array.isArray(data.recomendacoes) ? data.recomendacoes : [],
@@ -413,7 +414,7 @@ const GestorIA = () => {
       pills.push({ icon: "✅", text: "Tracking OK", color: "green" });
     }
     // CPC pressure
-    const cpcMatch = relatorio.resumoExecutivo.match(/CPC[^.]*\+?([\d,.]+%)/i);
+    const cpcMatch = relatorio.resumoExecutivo.match(/CPC[^.]*?(\+?[\d,.]+%)/i);
     if (cpcMatch) {
       pills.push({ icon: "⚠️", text: `Pressão Competitiva CPC ${cpcMatch[1]}`, color: "yellow" });
     }
