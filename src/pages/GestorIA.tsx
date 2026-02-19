@@ -232,8 +232,8 @@ const GestorIA = () => {
     setOpenDropdown(false);
   };
 
-  const formatCurrency = (v: number) =>
-    v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const formatCurrency = (v: number | null | undefined) =>
+    (v ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   const prioridadeBadge = (p: string) => {
     switch (p) {
