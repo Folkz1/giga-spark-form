@@ -54,6 +54,7 @@ interface Recomendacao {
   acao: string;
   motivo: string;
   impacto_esperado: string;
+  como_executar?: string | null;
   grupo?: string | null;
   keywords_afetadas?: string[];
 }
@@ -96,6 +97,31 @@ const KeywordChip = ({ keyword, variant = "keyword" }: { keyword: string; varian
         keyword
       )}
     </button>
+  );
+};
+
+const ComoExecutarBox = ({ texto }: { texto: string }) => {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(texto);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+  return (
+    <div className="pt-1">
+      <div className="rounded-md border border-muted bg-muted/30 p-2.5 space-y-1.5 relative">
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-muted-foreground font-medium">⚙ Como executar:</p>
+          <button
+            onClick={handleCopy}
+            className="text-[10px] px-2 py-0.5 rounded border border-muted-foreground/30 text-muted-foreground hover:text-foreground hover:border-muted-foreground/50 transition-colors"
+          >
+            {copied ? "✓ Copiado!" : "Copiar passos"}
+          </button>
+        </div>
+        <p className="text-xs text-foreground/90 whitespace-pre-line leading-relaxed">{texto}</p>
+      </div>
+    </div>
   );
 };
 
@@ -855,6 +881,7 @@ const GestorIA = () => {
                           <p className="text-xs text-blue-400 font-medium">
                             <span className="text-muted-foreground font-normal">Impacto:</span> {rec.impacto_esperado}
                           </p>
+                          {rec.como_executar && <ComoExecutarBox texto={rec.como_executar} />}
                           {rec.grupo && (
                             <div className="pt-1 space-y-1">
                               <p className="text-xs text-muted-foreground font-medium">Grupo afetado:</p>
