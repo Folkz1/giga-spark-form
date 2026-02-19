@@ -934,27 +934,24 @@ const OtimizarCampanha = () => {
                         onClick={() => {
                           if (f === "todos") {
                             if (globalFilter === null) {
-                              // Already showing all — toggle: collapse all
                               setOpenAccounts(new Set());
                             } else {
-                              // Switch to all: expand all accounts
                               setGlobalFilter(null);
                               setOpenAccounts(new Set(hierarchy.map((a) => a.customerId)));
                               setSelectedTerms(new Set(selectableTerms.map(termKey)));
                             }
                           } else if (globalFilter === f) {
-                            // Toggle off: collapse all
                             setGlobalFilter(null);
                             setOpenAccounts(new Set());
+                            setSelectedTerms(new Set());
                           } else {
                             setGlobalFilter(f);
-                            // Expand only accounts that have terms with this priority
                             const accountsWithPriority = new Set(
                               suggestedTerms.filter((t) => t.prioridade === f).map((t) => t.customerId)
                             );
                             setOpenAccounts(accountsWithPriority);
                             const keys = selectableTerms.filter((t) => t.prioridade === f).map(termKey);
-                            setSelectedTerms((prev) => { const next = new Set(prev); keys.forEach((k) => next.add(k)); return next; });
+                            setSelectedTerms(new Set(keys));
                           }
                         }}
                         className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all border ${styles[f]}`}
