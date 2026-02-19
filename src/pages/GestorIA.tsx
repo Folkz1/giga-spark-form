@@ -289,7 +289,6 @@ const GestorIA = () => {
 
       console.log("[GESTOR-IA] Final data to use:", JSON.stringify(data, null, 2));
 
-      const analise = data.analise ?? {};
       setRelatorio({
         resumo: data.resumo ?? {
           totalCampanhas: 0,
@@ -298,10 +297,10 @@ const GestorIA = () => {
           conversoes7dias: 0,
           conversoes30dias: 0,
         },
-        alertas: Array.isArray(analise.alertas_criticos) ? analise.alertas_criticos : [],
-        oportunidades: Array.isArray(analise.oportunidades) ? analise.oportunidades : [],
-        recomendacoes: Array.isArray(analise.recomendacoes) ? analise.recomendacoes : [],
-        resumoExecutivo: analise.resumo_executivo ?? "",
+        alertas: Array.isArray(data.alertas_criticos) ? data.alertas_criticos : [],
+        oportunidades: Array.isArray(data.oportunidades) ? data.oportunidades : [],
+        recomendacoes: Array.isArray(data.recomendacoes) ? data.recomendacoes : [],
+        resumoExecutivo: data.resumo_executivo ?? "",
       });
       setStep(3);
     } catch (err: any) {
