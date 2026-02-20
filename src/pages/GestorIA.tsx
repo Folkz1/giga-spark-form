@@ -357,6 +357,29 @@ const GestorIA = () => {
     setResumoExpanded(false);
   };
 
+  const ACAO_MAP: Record<string, string> = {
+    "Ajuste de lance por dispositivo (celular/computador/tablet)": "ajuste_lance_dispositivo",
+    "Adicionar keyword negativa em campanha": "adicionar_negativa_campanha",
+    "Adicionar keyword negativa em grupo": "adicionar_negativa_grupo",
+    "Adicionar keyword ativa": "adicionar_keyword",
+    "Alterar Target CPA": "alterar_target_cpa",
+    "Alterar orçamento": "alterar_orcamento",
+    "Pausar grupo de anúncio": "pausar_grupo",
+    "Ativar grupo de anúncio": "ativar_grupo",
+    "Pausar campanha": "pausar_campanha",
+    "Ativar campanha": "ativar_campanha",
+    "Pausar keyword": "pausar_keyword",
+    "Ativar keyword": "ativar_keyword",
+    "Alterar lance de keyword": "alterar_lance_keyword",
+    "Pausar anúncio": "pausar_anuncio",
+  };
+
+  const DEVICE_MAP: Record<string, string> = {
+    celular: "MOBILE",
+    computador: "DESKTOP",
+    tablet: "TABLET",
+  };
+
   const handleExecutar = async () => {
     const { recIndex, rec, customerId } = confirmModal;
     if (recIndex === null || !rec) return;
@@ -364,17 +387,30 @@ const GestorIA = () => {
     setConfirmModal((prev) => ({ ...prev, open: false }));
     setExecucaoStatus((prev) => ({ ...prev, [recIndex]: "loading" }));
 
+    const mappedAcao = ACAO_MAP[rec.acao] ?? rec.acaoTipo ?? rec.acao;
+
+    let parametros: Record<string, unknown> = rec.parametros ?? {};
+    if (mappedAcao === "ajuste_lance_dispositivo" && rec.parametros) {
+      const rawDevice = String(rec.parametros.device ?? "").toLowerCase();
+      parametros = {
+        device: DEVICE_MAP[rawDevice] ?? rec.parametros.device,
+        percentual: Number(rec.parametros.percentual ?? 0),
+      };
+    }
+
     const body = {
-      acao: rec.acaoTipo ?? rec.acao,
+      acao: mappedAcao,
       customerId,
-      campanhaId: rec.campanhaId ?? "",
+      campanhaId: rec.campanhaId ? String(rec.campanhaId).replace(/\D/g, "") : "",
       campanhaNome: rec.campanha ?? "",
-      grupoId: rec.grupoId ?? "",
+      grupoId: rec.grupoId ? String(rec.grupoId).replace(/\D/g, "") : "",
       grupoNome: rec.grupo ?? "",
       keywordId: rec.keywordIds?.[0] ?? "",
       anuncioId: rec.anuncioId ?? "",
-      parametros: rec.parametros ?? {},
+      parametros,
     };
+
+    console.log("[EXECUTAR] Payload:", JSON.stringify(body));
 
     try {
       const res = await fetch(
