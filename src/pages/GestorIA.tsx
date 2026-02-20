@@ -567,7 +567,15 @@ const GestorIA = () => {
               {rec.keywords_adicionar && rec.keywords_adicionar.length > 0 &&
                 /adicionar/i.test(rec.acao) && /keyword|exact match/i.test(rec.acao) && (
                 <div className="pt-1 space-y-1">
-                  <p className="text-xs text-muted-foreground font-medium">Keywords a adicionar:</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground font-medium">Keywords a adicionar:</p>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(rec.keywords_adicionar.join('\n'))}
+                      className="text-xs text-primary hover:underline flex items-center gap-1"
+                    >
+                      Copiar keywords
+                    </button>
+                  </div>
                   <div className="flex flex-wrap gap-1.5">
                     {rec.keywords_adicionar.map((kw, ki) => (
                       <KeywordChip key={ki} keyword={kw} variant="group" />
