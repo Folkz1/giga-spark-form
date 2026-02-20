@@ -292,12 +292,40 @@ const GestorIA = () => {
       console.log("[DEBUG] data.resumo:", data.resumo);
       console.log("[DEBUG] data.campanhas:", data.campanhas?.[0]);
 
-      const resumoData = data.resumo ?? data.analise?.resumo ?? {
-        totalCampanhas: 0,
-        custo7dias: data.campanhas?.[0]?.['7dias']?.custo ?? "0",
-        custo30dias: data.campanhas?.[0]?.['30dias']?.custo ?? "0",
-        conversoes7dias: data.campanhas?.[0]?.['7dias']?.conversoes ?? 0,
-        conversoes30dias: data.campanhas?.[0]?.['30dias']?.conversoes ?? 0,
+      // Normalizar resumo — cobre múltiplos formatos de chave que a API pode retornar
+      const rawResumo = data.resumo ?? data.analise?.resumo ?? data.summary ?? data.metricas ?? {};
+      const pick = (...keys: string[]): any => {
+        for (const k of keys) {
+          const v = rawResumo[k] ?? data[k];
+          if (v !== undefined && v !== null && v !== "") return v;
+        }
+        return undefined;
+      };
+      const custo7Raw = pick(
+        "custo7dias", "custo_7dias", "investido_7d", "investido7d",
+        "custo_7d", "spend_7d", "cost_7d", "gasto_7d"
+      ) ?? data.campanhas?.[0]?.['7dias']?.custo ?? "0";
+      const custo30Raw = pick(
+        "custo30dias", "custo_30dias", "investido_30d", "investido30d",
+        "custo_30d", "spend_30d", "cost_30d", "gasto_30d"
+      ) ?? data.campanhas?.[0]?.['30dias']?.custo ?? "0";
+      const conv7Raw = pick(
+        "conversoes7dias", "conversoes_7dias", "conversoes_7d", "conversions_7d",
+        "conv_7d", "conversoes7d"
+      ) ?? data.campanhas?.[0]?.['7dias']?.conversoes ?? 0;
+      const conv30Raw = pick(
+        "conversoes30dias", "conversoes_30dias", "conversoes_30d", "conversions_30d",
+        "conv_30d", "conversoes30d"
+      ) ?? data.campanhas?.[0]?.['30dias']?.conversoes ?? 0;
+
+      console.log("[GESTOR-IA] Resumo mapeado:", { custo7Raw, custo30Raw, conv7Raw, conv30Raw });
+
+      const resumoData: Resumo = {
+        totalCampanhas: pick("totalCampanhas", "total_campanhas", "totalCampaigns") ?? rawResumo.totalCampanhas ?? 0,
+        custo7dias: String(custo7Raw),
+        custo30dias: String(custo30Raw),
+        conversoes7dias: Number(conv7Raw) || 0,
+        conversoes30dias: Number(conv30Raw) || 0,
       };
       setRelatorio({
         resumo: resumoData,
