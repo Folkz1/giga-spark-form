@@ -288,9 +288,20 @@ const GestorIA = () => {
       }
  
       console.log("[GESTOR-IA] Final data to use:", JSON.stringify(data, null, 2));
-      console.log("[DEBUG] data completo:", JSON.stringify(data).substring(0, 500));
-      console.log("[DEBUG] data.resumo:", data.resumo);
-      console.log("[DEBUG] data.campanhas:", data.campanhas?.[0]);
+
+      // ── DIAGNÓSTICO DE RESUMO ──────────────────────────────────────────────
+      console.log("[GESTOR-IA][RESUMO] data.resumo RAW:", JSON.stringify(data.resumo, null, 2));
+      console.log("[GESTOR-IA][RESUMO] typeof data.resumo:", typeof data.resumo);
+      if (data.resumo && typeof data.resumo === "object") {
+        console.log("[GESTOR-IA][RESUMO] Chaves em data.resumo:", Object.keys(data.resumo));
+        console.log("[GESTOR-IA][RESUMO] custo7dias →", data.resumo.custo7dias);
+        console.log("[GESTOR-IA][RESUMO] custo30dias →", data.resumo.custo30dias);
+        console.log("[GESTOR-IA][RESUMO] conversoes7dias →", data.resumo.conversoes7dias);
+        console.log("[GESTOR-IA][RESUMO] conversoes30dias →", data.resumo.conversoes30dias);
+      } else {
+        console.warn("[GESTOR-IA][RESUMO] data.resumo não é objeto! Chaves do data raiz:", Object.keys(data));
+      }
+      // ──────────────────────────────────────────────────────────────────────
 
       // Normalizar resumo — cobre múltiplos formatos de chave que a API pode retornar
       const rawResumo = data.resumo ?? data.analise?.resumo ?? data.summary ?? data.metricas ?? {};
