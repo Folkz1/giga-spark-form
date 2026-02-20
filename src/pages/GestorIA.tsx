@@ -21,7 +21,15 @@ import {
   ChevronUp,
   ArrowUpRight,
   ArrowDownRight,
+  ListTodo,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -159,6 +167,47 @@ const GestorIA = () => {
   const [activeTab, setActiveTab] = useState<"alertas" | "oportunidades" | "recomendacoes">(savedSession?.activeTab ?? "alertas");
   const [chatOpen, setChatOpen] = useState(false);
   const [resumoExpanded, setResumoExpanded] = useState(false);
+
+  // ClickUp modal state
+  const [clickupModal, setClickupModal] = useState<{ open: boolean; rec: Recomendacao | null }>({ open: false, rec: null });
+  const [clickupObs, setClickupObs] = useState("");
+  const [clickupLoading, setClickupLoading] = useState(false);
+  const [clickupSuccess, setClickupSuccess] = useState(false);
+
+  const handleCreateClickupTask = async () => {
+    if (!clickupModal.rec) return;
+    setClickupLoading(true);
+    const accountName = selectedAccounts.map((a) => a.name).join(", ");
+    const rec = clickupModal.rec;
+    try {
+      await fetch("https://appn8o2.gigainteligencia.com.br/webhook/gestor-clickup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountName,
+          campanha: rec.campanha,
+          grupo: rec.grupo,
+          acao: rec.acao,
+          motivo: rec.motivo,
+          impacto_esperado: rec.impacto_esperado,
+          como_executar: rec.como_executar,
+          termos_negativar: rec.termos_negativar,
+          keywords_adicionar: rec.keywords_adicionar,
+          observacao: clickupObs,
+        }),
+      });
+      setClickupSuccess(true);
+      setClickupModal({ open: false, rec: null });
+      setClickupObs("");
+      setTimeout(() => setClickupSuccess(false), 3000);
+    } catch {
+      // silently fail — still close modal
+      setClickupModal({ open: false, rec: null });
+      setClickupObs("");
+    } finally {
+      setClickupLoading(false);
+    }
+  };
 
   // Structured context fields
   const [tipoNegocio, setTipoNegocio] = useState("");
@@ -607,7 +656,17 @@ const GestorIA = () => {
                     ))}
                   </div>
                 </div>
-              )}
+                )}
+              {/* ClickUp button */}
+              <div className="pt-2 flex justify-end">
+                <button
+                  onClick={() => { setClickupModal({ open: true, rec }); setClickupObs(""); }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 hover:border-violet-500/50 text-xs font-medium transition-all"
+                >
+                  <ListTodo className="w-3.5 h-3.5" />
+                  Criar tarefa no ClickUp
+                </button>
+              </div>
             </div>
           ))
         )}
@@ -1251,6 +1310,61 @@ const GestorIA = () => {
         </AnimatePresence>
       </div>
 
+      {/* ClickUp success toast */}
+      <AnimatePresence>
+        {clickupSuccess && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 40 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-900/90 border border-emerald-500/40 text-emerald-300 text-sm font-medium shadow-xl backdrop-blur-sm"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            Tarefa criada no ClickUp
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ClickUp Modal */}
+      <Dialog open={clickupModal.open} onOpenChange={(open) => { if (!open) setClickupModal({ open: false, rec: null }); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ListTodo className="w-4 h-4 text-violet-400" />
+              Criar tarefa no ClickUp
+            </DialogTitle>
+          </DialogHeader>
+          {clickupModal.rec && (
+            <div className="space-y-3">
+              <div className="rounded-lg bg-muted/40 border border-border p-3 space-y-1">
+                <p className="text-xs text-muted-foreground font-medium">{clickupModal.rec.campanha}</p>
+                <p className="text-sm text-foreground font-semibold">{clickupModal.rec.acao}</p>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Observação para a equipe</label>
+                <Textarea
+                  value={clickupObs}
+                  onChange={(e) => setClickupObs(e.target.value)}
+                  placeholder="Adicionar observação para a equipe..."
+                  className="min-h-[100px] resize-none text-sm"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setClickupModal({ open: false, rec: null })} disabled={clickupLoading}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleCreateClickupTask}
+              disabled={clickupLoading}
+              className="gradient-primary text-primary-foreground"
+            >
+              {clickupLoading ? <><Loader2 className="w-4 h-4 animate-spin mr-2" />Criando...</> : "Criar tarefa"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
