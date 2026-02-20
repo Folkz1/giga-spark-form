@@ -146,7 +146,7 @@ const ComoExecutarBox = ({ texto }: { texto: string }) => {
 
 const SESSION_KEY = "gestorIA_session";
 
-const loadSession = (): { step: number; relatorio: RelatorioData | null; selectedIds: string[]; activeTab: "alertas" | "oportunidades" | "recomendacoes" } | null => {
+const loadSession = (): { step: number; relatorio: RelatorioData | null; selectedIds: string[]; activeTab: "alertas" | "oportunidades" | "recomendacoes"; accountNamesMap?: Record<string, string> } | null => {
   try {
     const raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) return null;
@@ -188,7 +188,11 @@ const GestorIA = () => {
   const handleCreateClickupTask = async () => {
     if (!clickupModal.rec) return;
     setClickupLoading(true);
-    const accountName = selectedAccounts.map((a) => a.name).join(", ");
+    // Fallback to saved session names when accounts list isn't loaded (e.g. after tab switch)
+    const savedNamesMap = savedSession?.accountNamesMap ?? {};
+    const accountName = selectedAccounts.length > 0
+      ? selectedAccounts.map((a) => a.name).join(", ")
+      : selectedIds.map((id) => savedNamesMap[id] ?? id).join(", ");
     const rec = clickupModal.rec;
     try {
       await fetch("https://appn8o2.gigainteligencia.com.br/webhook/gestor-clickup", {
@@ -511,7 +515,9 @@ const GestorIA = () => {
   useEffect(() => {
     if (step >= 2 && relatorio) {
       try {
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ step, relatorio, selectedIds, activeTab }));
+        const accountNamesMap: Record<string, string> = {};
+        selectedAccounts.forEach((a) => { accountNamesMap[a.customerId] = a.name; });
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ step, relatorio, selectedIds, activeTab, accountNamesMap }));
       } catch {}
     }
   }, [step, relatorio, selectedIds, activeTab]);
