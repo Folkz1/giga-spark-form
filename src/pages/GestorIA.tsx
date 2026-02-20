@@ -35,6 +35,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -171,6 +178,10 @@ const GestorIA = () => {
   // ClickUp modal state
   const [clickupModal, setClickupModal] = useState<{ open: boolean; rec: Recomendacao | null }>({ open: false, rec: null });
   const [clickupObs, setClickupObs] = useState("");
+  const [clickupAssignee, setClickupAssignee] = useState("");
+  const [clickupDueDate, setClickupDueDate] = useState<Date | undefined>(undefined);
+  const [clickupPriority, setClickupPriority] = useState("");
+  const [clickupCalendarOpen, setClickupCalendarOpen] = useState(false);
   const [clickupLoading, setClickupLoading] = useState(false);
   const [clickupSuccess, setClickupSuccess] = useState(false);
 
@@ -194,16 +205,25 @@ const GestorIA = () => {
           termos_negativar: rec.termos_negativar,
           keywords_adicionar: rec.keywords_adicionar,
           observacao: clickupObs,
+          assignee: clickupAssignee || undefined,
+          due_date: clickupDueDate ? format(clickupDueDate, "yyyy-MM-dd") : undefined,
+          priority: clickupPriority || undefined,
         }),
       });
       setClickupSuccess(true);
       setClickupModal({ open: false, rec: null });
       setClickupObs("");
+      setClickupAssignee("");
+      setClickupDueDate(undefined);
+      setClickupPriority("");
       setTimeout(() => setClickupSuccess(false), 3000);
     } catch {
       // silently fail — still close modal
       setClickupModal({ open: false, rec: null });
       setClickupObs("");
+      setClickupAssignee("");
+      setClickupDueDate(undefined);
+      setClickupPriority("");
     } finally {
       setClickupLoading(false);
     }
@@ -1326,7 +1346,7 @@ const GestorIA = () => {
       </AnimatePresence>
 
       {/* ClickUp Modal */}
-      <Dialog open={clickupModal.open} onOpenChange={(open) => { if (!open) setClickupModal({ open: false, rec: null }); }}>
+      <Dialog open={clickupModal.open} onOpenChange={(open) => { if (!open) { setClickupModal({ open: false, rec: null }); setClickupCalendarOpen(false); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -1340,13 +1360,75 @@ const GestorIA = () => {
                 <p className="text-xs text-muted-foreground font-medium">{clickupModal.rec.campanha}</p>
                 <p className="text-sm text-foreground font-semibold">{clickupModal.rec.acao}</p>
               </div>
+
+              {/* Responsável */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Observação para a equipe</label>
+                <label className="text-xs font-medium text-muted-foreground">Responsável <span className="opacity-50">(opcional)</span></label>
+                <Select value={clickupAssignee} onValueChange={setClickupAssignee}>
+                  <SelectTrigger className="text-sm">
+                    <SelectValue placeholder="Selecionar responsável..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Rodrigo">Rodrigo</SelectItem>
+                    <SelectItem value="Railson">Railson</SelectItem>
+                    <SelectItem value="Vanessa">Vanessa</SelectItem>
+                    <SelectItem value="Talita">Talita</SelectItem>
+                    <SelectItem value="Alex">Alex</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Data de conclusão */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Data de conclusão <span className="opacity-50">(opcional)</span></label>
+                <Popover open={clickupCalendarOpen} onOpenChange={setClickupCalendarOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn("w-full justify-start text-left font-normal text-sm", !clickupDueDate && "text-muted-foreground")}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {clickupDueDate ? format(clickupDueDate, "dd/MM/yyyy") : "Selecionar data..."}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={clickupDueDate}
+                      onSelect={(d) => { setClickupDueDate(d); setClickupCalendarOpen(false); }}
+                      disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))}
+                      initialFocus
+                      locale={ptBR}
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Prioridade */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Prioridade <span className="opacity-50">(opcional)</span></label>
+                <Select value={clickupPriority} onValueChange={setClickupPriority}>
+                  <SelectTrigger className="text-sm">
+                    <SelectValue placeholder="Selecionar prioridade..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Urgente">🔴 Urgente</SelectItem>
+                    <SelectItem value="Alta">🟠 Alta</SelectItem>
+                    <SelectItem value="Normal">🟡 Normal</SelectItem>
+                    <SelectItem value="Baixa">🔵 Baixa</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Observação */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Observação para a equipe <span className="opacity-50">(opcional)</span></label>
                 <Textarea
                   value={clickupObs}
                   onChange={(e) => setClickupObs(e.target.value)}
                   placeholder="Adicionar observação para a equipe..."
-                  className="min-h-[100px] resize-none text-sm"
+                  className="min-h-[80px] resize-none text-sm"
                 />
               </div>
             </div>
