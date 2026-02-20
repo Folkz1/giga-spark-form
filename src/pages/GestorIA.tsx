@@ -60,7 +60,8 @@ interface Recomendacao {
   impacto_esperado: string;
   como_executar?: string | null;
   grupo?: string | null;
-  keywords_afetadas?: string[];
+  termos_negativar?: string[];
+  keywords_adicionar?: string[];
 }
 
 interface Resumo {
@@ -450,16 +451,7 @@ const GestorIA = () => {
   // Highlighted resumo text
   const renderResumoText = () => {
     if (!relatorio) return null;
-    const allKws = relatorio.recomendacoes.flatMap(r => r.keywords_afetadas ?? []);
-    if (allKws.length === 0) return relatorio.resumoExecutivo;
-    const escaped = allKws.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const regex = new RegExp(`(${escaped.join('|')})`, 'gi');
-    const parts = relatorio.resumoExecutivo.split(regex);
-    return parts.map((part, i) =>
-      allKws.some(kw => kw.toLowerCase() === part.toLowerCase())
-        ? <strong key={i} className="text-foreground font-semibold">{part}</strong>
-        : part
-    );
+    return relatorio.resumoExecutivo;
   };
 
   // Tab content renderers
@@ -475,22 +467,16 @@ const GestorIA = () => {
               <p className="text-sm font-semibold text-foreground">{alerta.campanha}</p>
               <p className="text-sm text-muted-foreground">{alerta.alerta}</p>
               <p className="text-xs text-red-400 font-medium">{alerta.dado}</p>
-              {(() => {
-                const kws = alerta.keywords_afetadas ??
-                  (alerta.alerta.toLowerCase().includes("qs") || alerta.alerta.toLowerCase().includes("quality score")
-                    ? relatorio.recomendacoes.find(r => r.campanha === alerta.campanha && r.keywords_afetadas?.length)?.keywords_afetadas
-                    : undefined);
-                return kws && kws.length > 0 ? (
-                  <div className="pt-1 space-y-1">
-                    <p className="text-xs text-muted-foreground font-medium">Keywords afetadas:</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {kws.map((kw, ki) => (
-                        <KeywordChip key={ki} keyword={kw} />
-                      ))}
-                    </div>
+              {alerta.keywords_afetadas && alerta.keywords_afetadas.length > 0 && (
+                <div className="pt-1 space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">Keywords afetadas:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {alerta.keywords_afetadas.map((kw, ki) => (
+                      <KeywordChip key={ki} keyword={kw} />
+                    ))}
                   </div>
-                ) : null;
-              })()}
+                </div>
+              )}
             </div>
           ))
         )}
@@ -546,12 +532,22 @@ const GestorIA = () => {
                   </div>
                 </div>
               )}
-              {rec.keywords_afetadas && rec.keywords_afetadas.length > 0 && (
+              {rec.termos_negativar && rec.termos_negativar.length > 0 && (
                 <div className="pt-1 space-y-1">
-                  <p className="text-xs text-muted-foreground font-medium">Keywords afetadas:</p>
+                  <p className="text-xs text-muted-foreground font-medium">Termos a negativar:</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {rec.keywords_afetadas.map((kw, ki) => (
+                    {rec.termos_negativar.map((kw, ki) => (
                       <KeywordChip key={ki} keyword={kw} />
+                    ))}
+                  </div>
+                </div>
+              )}
+              {rec.keywords_adicionar && rec.keywords_adicionar.length > 0 && (
+                <div className="pt-1 space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">Keywords a adicionar:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {rec.keywords_adicionar.map((kw, ki) => (
+                      <KeywordChip key={ki} keyword={kw} variant="group" />
                     ))}
                   </div>
                 </div>
