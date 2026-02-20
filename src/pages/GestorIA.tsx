@@ -129,20 +129,34 @@ const ComoExecutarBox = ({ texto }: { texto: string }) => {
   );
 };
 
+const SESSION_KEY = "gestorIA_session";
+
+const loadSession = (): { step: number; relatorio: RelatorioData | null; selectedIds: string[]; activeTab: "alertas" | "oportunidades" | "recomendacoes" } | null => {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+};
+
 const GestorIA = () => {
-  const [step, setStep] = useState(1);
+  const savedSession = loadSession();
+
+  const [step, setStep] = useState(savedSession?.step ?? 1);
 
   // Step 1 state
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [accountsFetched, setAccountsFetched] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>(savedSession?.selectedIds ?? []);
   const [search, setSearch] = useState("");
   const [openDropdown, setOpenDropdown] = useState(false);
 
   // Step 2/3 state
-  const [relatorio, setRelatorio] = useState<RelatorioData | null>(null);
-  const [activeTab, setActiveTab] = useState<"alertas" | "oportunidades" | "recomendacoes">("alertas");
+  const [relatorio, setRelatorio] = useState<RelatorioData | null>(savedSession?.relatorio ?? null);
+  const [activeTab, setActiveTab] = useState<"alertas" | "oportunidades" | "recomendacoes">(savedSession?.activeTab ?? "alertas");
   const [chatOpen, setChatOpen] = useState(false);
   const [resumoExpanded, setResumoExpanded] = useState(false);
 
@@ -348,6 +362,7 @@ const GestorIA = () => {
   };
 
   const handleReset = () => {
+    sessionStorage.removeItem(SESSION_KEY);
     setStep(1);
     setSelectedIds([]);
     setRelatorio(null);
@@ -422,6 +437,15 @@ const GestorIA = () => {
       setChatLoading(false);
     }
   };
+
+  // Persist analysis state to sessionStorage
+  useEffect(() => {
+    if (step >= 2 && relatorio) {
+      try {
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ step, relatorio, selectedIds, activeTab }));
+      } catch {}
+    }
+  }, [step, relatorio, selectedIds, activeTab]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
