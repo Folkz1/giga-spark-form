@@ -21,8 +21,6 @@ import {
   ChevronUp,
   ArrowUpRight,
   ArrowDownRight,
-  Play,
-  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,33 +55,12 @@ interface Oportunidade {
 interface Recomendacao {
   prioridade: "alta" | "media" | "baixa";
   campanha: string;
-  campanha_id?: string;
-  campanhaId?: string;
   acao: string;
-  acao_codigo?: string;
-  acaoTipo?: string;
   motivo: string;
   impacto_esperado: string;
   como_executar?: string | null;
   grupo?: string | null;
-  grupo_id?: string;
-  grupoId?: string;
   keywords_afetadas?: string[];
-  keywordIds?: string[];
-  anuncioId?: string;
-  parametros_execucao?: Record<string, unknown>;
-  parametros?: Record<string, unknown>;
-}
-
-interface ExecucaoStatus {
-  [index: number]: "idle" | "loading" | "success" | "error";
-}
-
-interface ConfirmModal {
-  open: boolean;
-  recIndex: number | null;
-  rec: Recomendacao | null;
-  customerId: string;
 }
 
 interface Resumo {
@@ -168,8 +145,6 @@ const GestorIA = () => {
   const [activeTab, setActiveTab] = useState<"alertas" | "oportunidades" | "recomendacoes">("alertas");
   const [chatOpen, setChatOpen] = useState(false);
   const [resumoExpanded, setResumoExpanded] = useState(false);
-  const [execucaoStatus, setExecucaoStatus] = useState<ExecucaoStatus>({});
-  const [confirmModal, setConfirmModal] = useState<ConfirmModal>({ open: false, recIndex: null, rec: null, customerId: "" });
 
   // Structured context fields
   const [tipoNegocio, setTipoNegocio] = useState("");
@@ -361,65 +336,6 @@ const GestorIA = () => {
     setResumoExpanded(false);
   };
 
-  const ACAO_MAP: Record<string, string> = {
-    "Ajuste de lance por dispositivo (celular/computador/tablet)": "ajuste_lance_dispositivo",
-    "Adicionar keyword negativa em campanha": "adicionar_negativa_campanha",
-    "Adicionar keyword negativa em grupo": "adicionar_negativa_grupo",
-    "Adicionar keyword ativa": "adicionar_keyword",
-    "Alterar Target CPA": "alterar_target_cpa",
-    "Alterar orçamento": "alterar_orcamento",
-    "Pausar grupo de anúncio": "pausar_grupo",
-    "Ativar grupo de anúncio": "ativar_grupo",
-    "Pausar campanha": "pausar_campanha",
-    "Ativar campanha": "ativar_campanha",
-    "Pausar keyword": "pausar_keyword",
-    "Ativar keyword": "ativar_keyword",
-    "Alterar lance de keyword": "alterar_lance_keyword",
-    "Pausar anúncio": "pausar_anuncio",
-  };
-
-  const DEVICE_MAP: Record<string, string> = {
-    celular: "MOBILE",
-    computador: "DESKTOP",
-    tablet: "TABLET",
-  };
-
-  const handleExecutar = async () => {
-    const { recIndex, rec, customerId } = confirmModal;
-    if (recIndex === null || !rec) return;
-
-    setConfirmModal((prev) => ({ ...prev, open: false }));
-    setExecucaoStatus((prev) => ({ ...prev, [recIndex]: "loading" }));
-
-    const body = {
-      acao: rec.acao_codigo,
-      customerId,
-      campanhaId: rec.campanha_id ?? rec.campanhaId ?? "",
-      campanhaNome: rec.campanha ?? "",
-      grupoId: rec.grupo_id ?? rec.grupoId ?? "",
-      grupoNome: rec.grupo ?? "",
-      parametros: rec.parametros_execucao ?? rec.parametros ?? {},
-    };
-
-    console.log("[EXECUTAR] Payload:", JSON.stringify(body));
-
-    try {
-      const res = await fetch(
-        "https://appn8o2.gigainteligencia.com.br/webhook/google-ads-executar",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        }
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setExecucaoStatus((prev) => ({ ...prev, [recIndex]: "success" }));
-    } catch (err) {
-      console.error("[EXECUTAR] Erro:", err);
-      setExecucaoStatus((prev) => ({ ...prev, [recIndex]: "error" }));
-    }
-  };
-
   const handleChatSend = async () => {
     const msg = chatInput.trim();
     if (!msg || chatLoading || !relatorio) return;
@@ -603,78 +519,45 @@ const GestorIA = () => {
 
   const renderRecomendacoesContent = () => {
     if (!relatorio) return null;
-    const customerId = selectedAccounts[0]?.customerId ?? "";
     return (
       <div className="space-y-4">
         {relatorio.recomendacoes.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">Nenhuma recomendação</p>
         ) : (
-          relatorio.recomendacoes.map((rec, i) => {
-            const status = execucaoStatus[i] ?? "idle";
-            return (
-              <div key={i} className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 space-y-2">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    {prioridadeBadge(rec.prioridade)}
-                    <span className="text-sm font-semibold text-foreground">{rec.campanha}</span>
-                  </div>
-                  {status === "idle" && rec.acao_codigo && rec.acao_codigo !== "manual" && (
-                    <button
-                      onClick={() => setConfirmModal({ open: true, recIndex: i, rec, customerId })}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
-                    >
-                      <Play className="w-3 h-3" />
-                      Executar
-                    </button>
-                  )}
-                  {status === "loading" && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted border border-border text-muted-foreground text-xs">
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      Executando...
-                    </span>
-                  )}
-                  {status === "success" && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
-                      <CheckCircle2 className="w-3 h-3" />
-                      ✅ Executado
-                    </span>
-                  )}
-                  {status === "error" && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
-                      <AlertCircle className="w-3 h-3" />
-                      Falha — faça manualmente
-                    </span>
-                  )}
-                </div>
-                <p className="text-sm text-foreground">{rec.acao}</p>
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-medium">Motivo:</span> {rec.motivo}
-                </p>
-                <p className="text-xs text-blue-400 font-medium">
-                  <span className="text-muted-foreground font-normal">Impacto:</span> {rec.impacto_esperado}
-                </p>
-                {rec.como_executar && <ComoExecutarBox texto={rec.como_executar} />}
-                {rec.grupo && (
-                  <div className="pt-1 space-y-1">
-                    <p className="text-xs text-muted-foreground font-medium">Grupo afetado:</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      <KeywordChip keyword={rec.grupo} variant="group" />
-                    </div>
-                  </div>
-                )}
-                {rec.keywords_afetadas && rec.keywords_afetadas.length > 0 && (
-                  <div className="pt-1 space-y-1">
-                    <p className="text-xs text-muted-foreground font-medium">Keywords afetadas:</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {rec.keywords_afetadas.map((kw, ki) => (
-                        <KeywordChip key={ki} keyword={kw} />
-                      ))}
-                    </div>
-                  </div>
-                )}
+          relatorio.recomendacoes.map((rec, i) => (
+            <div key={i} className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 space-y-2">
+              <div className="flex items-center gap-2">
+                {prioridadeBadge(rec.prioridade)}
+                <span className="text-sm font-semibold text-foreground">{rec.campanha}</span>
               </div>
-            );
-          })
+              <p className="text-sm text-foreground">{rec.acao}</p>
+              <p className="text-xs text-muted-foreground">
+                <span className="font-medium">Motivo:</span> {rec.motivo}
+              </p>
+              <p className="text-xs text-blue-400 font-medium">
+                <span className="text-muted-foreground font-normal">Impacto:</span> {rec.impacto_esperado}
+              </p>
+              {rec.como_executar && <ComoExecutarBox texto={rec.como_executar} />}
+              {rec.grupo && (
+                <div className="pt-1 space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">Grupo afetado:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <KeywordChip keyword={rec.grupo} variant="group" />
+                  </div>
+                </div>
+              )}
+              {rec.keywords_afetadas && rec.keywords_afetadas.length > 0 && (
+                <div className="pt-1 space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">Keywords afetadas:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {rec.keywords_afetadas.map((kw, ki) => (
+                      <KeywordChip key={ki} keyword={kw} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ))
         )}
       </div>
     );
@@ -1312,85 +1195,6 @@ const GestorIA = () => {
         </AnimatePresence>
       </div>
 
-      {/* Confirm Execution Modal */}
-      {confirmModal.open && confirmModal.rec && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={() => setConfirmModal((p) => ({ ...p, open: false }))}
-          />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="relative z-10 w-full max-w-md rounded-2xl bg-card border border-border shadow-2xl p-6 space-y-4"
-          >
-            <div className="flex items-start gap-3">
-              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <Play className="w-4 h-4 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-bold text-foreground text-base">Confirmar execução</h3>
-                <p className="text-sm text-muted-foreground">Revise os detalhes antes de confirmar</p>
-              </div>
-            </div>
-
-            <div className="rounded-xl bg-muted/30 border border-border p-4 space-y-2 text-sm">
-              <div className="flex gap-2">
-                <span className="text-muted-foreground w-20 shrink-0">Campanha:</span>
-                <span className="text-foreground font-medium">{confirmModal.rec.campanha}</span>
-              </div>
-              {confirmModal.rec.grupo && (
-                <div className="flex gap-2">
-                  <span className="text-muted-foreground w-20 shrink-0">Grupo:</span>
-                  <span className="text-foreground font-medium">{confirmModal.rec.grupo}</span>
-                </div>
-              )}
-              <div className="flex gap-2">
-                <span className="text-muted-foreground w-20 shrink-0">Ação:</span>
-                <span className="text-foreground font-medium">{confirmModal.rec.acao_codigo ?? confirmModal.rec.acaoTipo ?? confirmModal.rec.acao}</span>
-              </div>
-              {confirmModal.rec.keywords_afetadas && confirmModal.rec.keywords_afetadas.length > 0 && (
-                <div className="flex gap-2">
-                  <span className="text-muted-foreground w-20 shrink-0">Keywords:</span>
-                  <span className="text-foreground">{confirmModal.rec.keywords_afetadas.slice(0, 3).join(", ")}{confirmModal.rec.keywords_afetadas.length > 3 ? ` +${confirmModal.rec.keywords_afetadas.length - 3}` : ""}</span>
-                </div>
-              )}
-              {(() => {
-                const params = confirmModal.rec.parametros_execucao ?? confirmModal.rec.parametros;
-                return params && Object.keys(params).length > 0 ? (
-                  <div className="flex gap-2">
-                    <span className="text-muted-foreground w-20 shrink-0">Parâmetros:</span>
-                    <span className="text-foreground font-mono text-xs">{JSON.stringify(params)}</span>
-                  </div>
-                ) : null;
-              })()}
-              <div className="flex gap-2">
-                <span className="text-muted-foreground w-20 shrink-0">Conta:</span>
-                <span className="text-foreground font-mono text-xs">{confirmModal.customerId}</span>
-              </div>
-            </div>
-
-            <p className="text-xs text-muted-foreground">
-              Esta ação será executada diretamente na conta Google Ads via API. Verifique os detalhes antes de confirmar.
-            </p>
-
-            <div className="flex gap-3 pt-1">
-              <button
-                onClick={() => setConfirmModal((p) => ({ ...p, open: false }))}
-                className="flex-1 py-2.5 rounded-lg border border-border text-muted-foreground text-sm font-medium hover:bg-muted transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleExecutar}
-                className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
-              >
-                Confirmar e Executar
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
     </div>
   );
 };
