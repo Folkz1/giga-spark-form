@@ -43,7 +43,6 @@ interface Alerta {
   campanha: string;
   alerta: string;
   dado: string;
-  keywords_afetadas?: string[];
 }
 
 interface Oportunidade {
@@ -467,16 +466,6 @@ const GestorIA = () => {
               <p className="text-sm font-semibold text-foreground">{alerta.campanha}</p>
               <p className="text-sm text-muted-foreground">{alerta.alerta}</p>
               <p className="text-xs text-red-400 font-medium">{alerta.dado}</p>
-              {alerta.keywords_afetadas && alerta.keywords_afetadas.length > 0 && (
-                <div className="pt-1 space-y-1">
-                  <p className="text-xs text-muted-foreground font-medium">Keywords afetadas:</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {alerta.keywords_afetadas.map((kw, ki) => (
-                      <KeywordChip key={ki} keyword={kw} />
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           ))
         )}
