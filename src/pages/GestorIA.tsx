@@ -181,6 +181,7 @@ const GestorIA = () => {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLInputElement>(null);
 
   const filteredAccounts = useMemo(
     () =>
@@ -1125,7 +1126,10 @@ const GestorIA = () => {
                       <h3 className="text-base font-bold text-foreground">Chat com Gestor IA</h3>
                     </div>
                     <Button
-                      onClick={() => setChatOpen(true)}
+                      onClick={() => {
+                        setChatOpen(true);
+                        setTimeout(() => chatInputRef.current?.focus(), 50);
+                      }}
                       size="sm"
                       className="gradient-primary text-primary-foreground font-semibold px-4"
                     >
@@ -1185,6 +1189,7 @@ const GestorIA = () => {
                       </div>
                       <div className="flex gap-2">
                         <input
+                          ref={chatInputRef}
                           type="text"
                           value={chatInput}
                           onChange={(e) => setChatInput(e.target.value)}
