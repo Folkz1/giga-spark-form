@@ -184,6 +184,23 @@ const GestorIA = () => {
   const [clickupCalendarOpen, setClickupCalendarOpen] = useState(false);
   const [clickupLoading, setClickupLoading] = useState(false);
   const [clickupSuccess, setClickupSuccess] = useState(false);
+  const [clickupListas, setClickupListas] = useState<{ id: string; name: string }[]>([]);
+  const [clickupListasLoading, setClickupListasLoading] = useState(false);
+  const [clickupListId, setClickupListId] = useState("");
+
+  const fetchClickupListas = async () => {
+    setClickupListasLoading(true);
+    try {
+      const res = await fetch("https://appn8o2.gigainteligencia.com.br/webhook/gestor-clickup-listas");
+      const data = await res.json();
+      const listas = Array.isArray(data?.listas) ? data.listas : Array.isArray(data) ? data : [];
+      setClickupListas(listas);
+    } catch {
+      setClickupListas([]);
+    } finally {
+      setClickupListasLoading(false);
+    }
+  };
 
   const handleCreateClickupTask = async () => {
     if (!clickupModal.rec) return;
@@ -194,6 +211,14 @@ const GestorIA = () => {
       ? selectedAccounts.map((a) => a.name).join(", ")
       : selectedIds.map((id) => savedNamesMap[id] ?? id).join(", ");
     const rec = clickupModal.rec;
+    const resetModal = () => {
+      setClickupModal({ open: false, rec: null });
+      setClickupObs("");
+      setClickupAssignee("");
+      setClickupDueDate(undefined);
+      setClickupPriority("");
+      setClickupListId("");
+    };
     try {
       await fetch("https://appn8o2.gigainteligencia.com.br/webhook/gestor-clickup", {
         method: "POST",
@@ -212,22 +237,14 @@ const GestorIA = () => {
           assignee: clickupAssignee || undefined,
           due_date: clickupDueDate ? format(clickupDueDate, "yyyy-MM-dd") : undefined,
           priority: clickupPriority || undefined,
+          listId: clickupListId || undefined,
         }),
       });
       setClickupSuccess(true);
-      setClickupModal({ open: false, rec: null });
-      setClickupObs("");
-      setClickupAssignee("");
-      setClickupDueDate(undefined);
-      setClickupPriority("");
+      resetModal();
       setTimeout(() => setClickupSuccess(false), 3000);
     } catch {
-      // silently fail — still close modal
-      setClickupModal({ open: false, rec: null });
-      setClickupObs("");
-      setClickupAssignee("");
-      setClickupDueDate(undefined);
-      setClickupPriority("");
+      resetModal();
     } finally {
       setClickupLoading(false);
     }
@@ -686,7 +703,7 @@ const GestorIA = () => {
               {/* ClickUp button */}
               <div className="pt-2 flex justify-end">
                 <button
-                  onClick={() => { setClickupModal({ open: true, rec }); setClickupObs(""); }}
+                  onClick={() => { setClickupModal({ open: true, rec }); setClickupObs(""); setClickupListId(""); fetchClickupListas(); }}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 hover:border-violet-500/50 text-xs font-medium transition-all"
                 >
                   <ListTodo className="w-3.5 h-3.5" />
@@ -1365,6 +1382,27 @@ const GestorIA = () => {
               <div className="rounded-lg bg-muted/40 border border-border p-3 space-y-1">
                 <p className="text-xs text-muted-foreground font-medium">{clickupModal.rec.campanha}</p>
                 <p className="text-sm text-foreground font-semibold">{clickupModal.rec.acao}</p>
+              </div>
+
+              {/* Lista */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Lista <span className="opacity-50">(opcional)</span></label>
+                <Select value={clickupListId} onValueChange={setClickupListId} disabled={clickupListasLoading}>
+                  <SelectTrigger className="text-sm">
+                    {clickupListasLoading ? (
+                      <span className="flex items-center gap-1.5 text-muted-foreground">
+                        <Loader2 className="w-3 h-3 animate-spin" /> Carregando listas...
+                      </span>
+                    ) : (
+                      <SelectValue placeholder="Selecionar lista..." />
+                    )}
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clickupListas.map((lista) => (
+                      <SelectItem key={lista.id} value={lista.id}>{lista.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Responsável */}
