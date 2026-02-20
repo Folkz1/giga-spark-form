@@ -289,25 +289,18 @@ const GestorIA = () => {
  
       console.log("[GESTOR-IA] Final data to use:", JSON.stringify(data, null, 2));
 
-      // ── DIAGNÓSTICO DE RESUMO ──────────────────────────────────────────────
-      console.log("[GESTOR-IA][RESUMO] data.resumo RAW:", JSON.stringify(data.resumo, null, 2));
-      console.log("[GESTOR-IA][RESUMO] typeof data.resumo:", typeof data.resumo);
-      if (data.resumo && typeof data.resumo === "object") {
-        console.log("[GESTOR-IA][RESUMO] Chaves em data.resumo:", Object.keys(data.resumo));
-        console.log("[GESTOR-IA][RESUMO] custo7dias →", data.resumo.custo7dias);
-        console.log("[GESTOR-IA][RESUMO] custo30dias →", data.resumo.custo30dias);
-        console.log("[GESTOR-IA][RESUMO] conversoes7dias →", data.resumo.conversoes7dias);
-        console.log("[GESTOR-IA][RESUMO] conversoes30dias →", data.resumo.conversoes30dias);
-      } else {
-        console.warn("[GESTOR-IA][RESUMO] data.resumo não é objeto! Chaves do data raiz:", Object.keys(data));
-      }
-      // ──────────────────────────────────────────────────────────────────────
+      // Ler métricas direto da raiz do objeto (API não retorna campo resumo)
+      console.log("[GESTOR-IA][RESUMO] Chaves raiz do data:", Object.keys(data));
+      console.log("[GESTOR-IA][RESUMO] custo7dias →", data.custo7dias);
+      console.log("[GESTOR-IA][RESUMO] custo30dias →", data.custo30dias);
+      console.log("[GESTOR-IA][RESUMO] conversoes7dias →", data.conversoes7dias);
+      console.log("[GESTOR-IA][RESUMO] conversoes30dias →", data.conversoes30dias);
 
-      // Normalizar resumo — cobre múltiplos formatos de chave que a API pode retornar
-      const rawResumo = data.resumo ?? data.analise?.resumo ?? data.summary ?? data.metricas ?? {};
+      // pick: busca na raiz do data, com fallback em data.resumo (legado)
+      const rawResumo = typeof data.resumo === "object" && data.resumo !== null ? data.resumo : {};
       const pick = (...keys: string[]): any => {
         for (const k of keys) {
-          const v = rawResumo[k] ?? data[k];
+          const v = data[k] ?? rawResumo[k];
           if (v !== undefined && v !== null && v !== "") return v;
         }
         return undefined;
