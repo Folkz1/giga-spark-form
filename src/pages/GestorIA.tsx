@@ -57,17 +57,21 @@ interface Oportunidade {
 interface Recomendacao {
   prioridade: "alta" | "media" | "baixa";
   campanha: string;
+  campanha_id?: string;
   campanhaId?: string;
   acao: string;
+  acao_codigo?: string;
   acaoTipo?: string;
   motivo: string;
   impacto_esperado: string;
   como_executar?: string | null;
   grupo?: string | null;
+  grupo_id?: string;
   grupoId?: string;
   keywords_afetadas?: string[];
   keywordIds?: string[];
   anuncioId?: string;
+  parametros_execucao?: Record<string, unknown>;
   parametros?: Record<string, unknown>;
 }
 
@@ -387,27 +391,14 @@ const GestorIA = () => {
     setConfirmModal((prev) => ({ ...prev, open: false }));
     setExecucaoStatus((prev) => ({ ...prev, [recIndex]: "loading" }));
 
-    const mappedAcao = ACAO_MAP[rec.acao] ?? rec.acaoTipo ?? rec.acao;
-
-    let parametros: Record<string, unknown> = rec.parametros ?? {};
-    if (mappedAcao === "ajuste_lance_dispositivo" && rec.parametros) {
-      const rawDevice = String(rec.parametros.device ?? "").toLowerCase();
-      parametros = {
-        device: DEVICE_MAP[rawDevice] ?? rec.parametros.device,
-        percentual: Number(rec.parametros.percentual ?? 0),
-      };
-    }
-
     const body = {
-      acao: mappedAcao,
+      acao: rec.acao_codigo,
       customerId,
-      campanhaId: rec.campanhaId ? String(rec.campanhaId).replace(/\D/g, "") : "",
+      campanhaId: rec.campanha_id ?? rec.campanhaId ?? "",
       campanhaNome: rec.campanha ?? "",
-      grupoId: rec.grupoId ? String(rec.grupoId).replace(/\D/g, "") : "",
+      grupoId: rec.grupo_id ?? rec.grupoId ?? "",
       grupoNome: rec.grupo ?? "",
-      keywordId: rec.keywordIds?.[0] ?? "",
-      anuncioId: rec.anuncioId ?? "",
-      parametros,
+      parametros: rec.parametros_execucao ?? rec.parametros ?? {},
     };
 
     console.log("[EXECUTAR] Payload:", JSON.stringify(body));
@@ -627,7 +618,7 @@ const GestorIA = () => {
                     {prioridadeBadge(rec.prioridade)}
                     <span className="text-sm font-semibold text-foreground">{rec.campanha}</span>
                   </div>
-                  {status === "idle" && (
+                  {status === "idle" && rec.acao_codigo && rec.acao_codigo !== "manual" && (
                     <button
                       onClick={() => setConfirmModal({ open: true, recIndex: i, rec, customerId })}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/30 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
@@ -1356,7 +1347,7 @@ const GestorIA = () => {
               )}
               <div className="flex gap-2">
                 <span className="text-muted-foreground w-20 shrink-0">Ação:</span>
-                <span className="text-foreground font-medium">{confirmModal.rec.acaoTipo ?? confirmModal.rec.acao}</span>
+                <span className="text-foreground font-medium">{confirmModal.rec.acao_codigo ?? confirmModal.rec.acaoTipo ?? confirmModal.rec.acao}</span>
               </div>
               {confirmModal.rec.keywords_afetadas && confirmModal.rec.keywords_afetadas.length > 0 && (
                 <div className="flex gap-2">
@@ -1364,12 +1355,15 @@ const GestorIA = () => {
                   <span className="text-foreground">{confirmModal.rec.keywords_afetadas.slice(0, 3).join(", ")}{confirmModal.rec.keywords_afetadas.length > 3 ? ` +${confirmModal.rec.keywords_afetadas.length - 3}` : ""}</span>
                 </div>
               )}
-              {confirmModal.rec.parametros && Object.keys(confirmModal.rec.parametros).length > 0 && (
-                <div className="flex gap-2">
-                  <span className="text-muted-foreground w-20 shrink-0">Parâmetros:</span>
-                  <span className="text-foreground font-mono text-xs">{JSON.stringify(confirmModal.rec.parametros)}</span>
-                </div>
-              )}
+              {(() => {
+                const params = confirmModal.rec.parametros_execucao ?? confirmModal.rec.parametros;
+                return params && Object.keys(params).length > 0 ? (
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground w-20 shrink-0">Parâmetros:</span>
+                    <span className="text-foreground font-mono text-xs">{JSON.stringify(params)}</span>
+                  </div>
+                ) : null;
+              })()}
               <div className="flex gap-2">
                 <span className="text-muted-foreground w-20 shrink-0">Conta:</span>
                 <span className="text-foreground font-mono text-xs">{confirmModal.customerId}</span>
