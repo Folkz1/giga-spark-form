@@ -670,8 +670,7 @@ const GestorIA = () => {
                   </div>
                 </div>
               )}
-              {rec.termos_negativar && rec.termos_negativar.length > 0 &&
-                /negativ/i.test(rec.acao) && (
+              {rec.termos_negativar && rec.termos_negativar.length > 0 && (
                 <div className="pt-1 space-y-1">
                   <p className="text-xs text-muted-foreground font-medium">Termos a negativar:</p>
                   <div className="flex flex-wrap gap-1.5">
