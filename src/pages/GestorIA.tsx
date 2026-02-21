@@ -86,12 +86,19 @@ interface Resumo {
   conversoes30dias: number;
 }
 
+interface AdGroup {
+  id: string;
+  nome: string;
+  campanha: string;
+}
+
 interface RelatorioData {
   resumo: Resumo;
   alertas: Alerta[];
   oportunidades: Oportunidade[];
   recomendacoes: Recomendacao[];
   resumoExecutivo: string;
+  adGroups: AdGroup[];
 }
 
 const KeywordChip = ({ keyword, variant = "keyword" }: { keyword: string; variant?: "keyword" | "group" }) => {
@@ -174,6 +181,11 @@ const GestorIA = () => {
   const [activeTab, setActiveTab] = useState<"alertas" | "oportunidades" | "recomendacoes">(savedSession?.activeTab ?? "alertas");
   const [chatOpen, setChatOpen] = useState(false);
   const [resumoExpanded, setResumoExpanded] = useState(false);
+
+  const [selectedTermos, setSelectedTermos] = useState<Record<number, Set<string>>>({});
+  const [negativarLoading, setNegativarLoading] = useState<number | null>(null);
+  const [negativarSuccess, setNegativarSuccess] = useState<number | null>(null);
+  const [negativarError, setNegativarError] = useState<number | null>(null);
 
   // ClickUp modal state
   const [clickupModal, setClickupModal] = useState<{ open: boolean; rec: Recomendacao | null }>({ open: false, rec: null });
@@ -442,6 +454,7 @@ const GestorIA = () => {
         oportunidades: Array.isArray(data.oportunidades) ? data.oportunidades : [],
         recomendacoes: Array.isArray(data.recomendacoes) ? data.recomendacoes : [],
         resumoExecutivo: data.resumo_executivo ?? "",
+        adGroups: Array.isArray(data.adGroups) ? data.adGroups : [],
       });
       setStep(3);
     } catch (err: any) {
@@ -526,6 +539,60 @@ const GestorIA = () => {
     } finally {
       setChatLoading(false);
     }
+  };
+
+  const handleNegativar = async (recIndex: number, rec: Recomendacao) => {
+    const termos = Array.from(selectedTermos[recIndex] ?? new Set());
+    if (termos.length === 0) return;
+    const adGroups = relatorio?.adGroups ?? [];
+    const grupo = adGroups.find(
+      (ag) =>
+        ag.nome.toLowerCase().trim() === (rec.grupo ?? "").toLowerCase().trim() &&
+        ag.campanha === rec.campanha
+    );
+    if (!grupo) {
+      setNegativarError(recIndex);
+      setTimeout(() => setNegativarError(null), 3000);
+      return;
+    }
+    setNegativarLoading(recIndex);
+    try {
+      const res = await fetch(
+        "https://appn8o2.gigainteligencia.com.br/webhook/gestor-negativar",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customerId: selectedIds[0],
+            adGroupId: grupo.id,
+            termos,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (data.sucesso) {
+        setNegativarSuccess(recIndex);
+        setSelectedTermos((prev) => ({ ...prev, [recIndex]: new Set() }));
+        setTimeout(() => setNegativarSuccess(null), 3000);
+      } else {
+        setNegativarError(recIndex);
+        setTimeout(() => setNegativarError(null), 3000);
+      }
+    } catch {
+      setNegativarError(recIndex);
+      setTimeout(() => setNegativarError(null), 3000);
+    } finally {
+      setNegativarLoading(null);
+    }
+  };
+
+  const toggleTermo = (recIndex: number, termo: string) => {
+    setSelectedTermos((prev) => {
+      const set = new Set(prev[recIndex] ?? []);
+      if (set.has(termo)) set.delete(termo);
+      else set.add(termo);
+      return { ...prev, [recIndex]: set };
+    });
   };
 
   // Persist analysis state to sessionStorage
@@ -671,13 +738,54 @@ const GestorIA = () => {
                 </div>
               )}
               {rec.termos_negativar && rec.termos_negativar.length > 0 && (
-                <div className="pt-1 space-y-1">
+                <div className="pt-1 space-y-2">
                   <p className="text-xs text-muted-foreground font-medium">Termos a negativar:</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {rec.termos_negativar.map((kw, ki) => (
-                      <KeywordChip key={ki} keyword={kw} />
-                    ))}
+                    {rec.termos_negativar.map((kw, ki) => {
+                      const isSelected = selectedTermos[i]?.has(kw) ?? false;
+                      return (
+                        <button
+                          key={ki}
+                          onClick={() => toggleTermo(i, kw)}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-mono transition-all cursor-pointer ${
+                            isSelected
+                              ? "border-red-500/70 bg-red-900/40 text-red-300"
+                              : "border-yellow-500/40 bg-secondary hover:border-yellow-400 hover:bg-secondary/80 text-foreground"
+                          }`}
+                        >
+                          <span className={`w-3 h-3 rounded-sm border flex items-center justify-center shrink-0 ${isSelected ? "border-red-400 bg-red-500/30" : "border-muted-foreground/40"}`}>
+                            {isSelected && <span className="text-[8px] text-red-300">✓</span>}
+                          </span>
+                          {kw}
+                        </button>
+                      );
+                    })}
                   </div>
+                  {(selectedTermos[i]?.size ?? 0) > 0 && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        onClick={() => handleNegativar(i, rec)}
+                        disabled={negativarLoading === i}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/60 text-xs font-medium transition-all disabled:opacity-50"
+                      >
+                        {negativarLoading === i ? (
+                          <><Loader2 className="w-3 h-3 animate-spin" /> Negativando...</>
+                        ) : (
+                          <><X className="w-3 h-3" /> Negativar {selectedTermos[i]?.size} selecionado{(selectedTermos[i]?.size ?? 0) > 1 ? "s" : ""}</>
+                        )}
+                      </button>
+                      {negativarSuccess === i && (
+                        <span className="text-xs text-emerald-400 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> Aplicado!
+                        </span>
+                      )}
+                      {negativarError === i && (
+                        <span className="text-xs text-red-400 flex items-center gap-1">
+                          <AlertTriangle className="w-3 h-3" /> Erro ao negativar
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
               {rec.keywords_adicionar && rec.keywords_adicionar.length > 0 &&
