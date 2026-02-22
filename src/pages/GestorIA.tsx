@@ -58,6 +58,11 @@ interface Alerta {
   campanha: string;
   alerta: string;
   dado: string;
+  causa_provavel?: string;
+  como_executar?: string;
+  termos_negativar?: string[];
+  keywords_adicionar?: string[];
+  adGroupId?: string;
 }
 
 interface Oportunidade {
@@ -199,6 +204,7 @@ const GestorIA = () => {
   const [negativarLoading, setNegativarLoading] = useState<number | null>(null);
   const [negativarSuccess, setNegativarSuccess] = useState<{ index: number; count: number } | null>(null);
   const [negativarError, setNegativarError] = useState<{ index: number; msg: string } | null>(null);
+  const [expandedAlertas, setExpandedAlertas] = useState<Set<number>>(new Set());
 
   // ClickUp modal state
   const [clickupModal, setClickupModal] = useState<{ open: boolean; rec: Recomendacao | null }>({ open: false, rec: null });
@@ -711,6 +717,70 @@ const GestorIA = () => {
   };
 
   // Tab content renderers
+  const toggleAlertaExpand = (index: number) => {
+    setExpandedAlertas((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
+
+  // Helper to handle negation for alertas (reuses same logic as recomendacoes, offset index to avoid collision)
+  const alertaRecIndex = (alertaIndex: number) => 10000 + alertaIndex;
+
+  const handleNegativarAlerta = async (alertaIndex: number, alerta: Alerta) => {
+    const idx = alertaRecIndex(alertaIndex);
+    const termos: string[] = Array.from(selectedTermos[idx] ?? new Set<string>());
+    if (termos.length === 0) return;
+    const adGroupId = alerta.adGroupId;
+    if (!adGroupId) {
+      const msg = `adGroupId não encontrado neste alerta ("${alerta.campanha}")`;
+      setNegativarError({ index: idx, msg });
+      setTimeout(() => setNegativarError(null), 5000);
+      return;
+    }
+    const customerId = selectedIds[0]?.replace(/-/g, "");
+    const payload = { customerId, adGroupId, termos };
+    setNegativarLoading(idx);
+    try {
+      const res = await fetch("https://appn8o2.gigainteligencia.com.br/webhook/gestor-negativar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        setNegativarError({ index: idx, msg: `HTTP ${res.status}: ${errText}` });
+        setTimeout(() => setNegativarError(null), 5000);
+        return;
+      }
+      const data = await res.json();
+      if (data.sucesso) {
+        setNegativados((prev) => {
+          const existing = new Set(prev[idx] ?? []);
+          termos.forEach((t) => existing.add(t));
+          const next = { ...prev, [idx]: existing };
+          const serializable: Record<string, string[]> = {};
+          for (const k of Object.keys(next)) serializable[k] = Array.from(next[Number(k)]);
+          sessionStorage.setItem("gestorIA_negativados", JSON.stringify(serializable));
+          return next;
+        });
+        setNegativarSuccess({ index: idx, count: termos.length });
+        setSelectedTermos((prev) => ({ ...prev, [idx]: new Set() }));
+        setTimeout(() => setNegativarSuccess(null), 4000);
+      } else {
+        setNegativarError({ index: idx, msg: `Resposta sem sucesso: ${JSON.stringify(data)}` });
+        setTimeout(() => setNegativarError(null), 5000);
+      }
+    } catch (err: any) {
+      setNegativarError({ index: idx, msg: `Erro de rede: ${err?.message || String(err)}` });
+      setTimeout(() => setNegativarError(null), 5000);
+    } finally {
+      setNegativarLoading(null);
+    }
+  };
+
   const renderAlertasContent = () => {
     if (!relatorio) return null;
     return (
@@ -718,13 +788,137 @@ const GestorIA = () => {
         {relatorio.alertas.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">Nenhum alerta crítico identificado</p>
         ) : (
-          relatorio.alertas.map((alerta, i) => (
-            <div key={i} className="p-4 rounded-xl bg-red-500/5 border border-red-500/10 space-y-2">
-              <p className="text-sm font-semibold text-foreground">{alerta.campanha}</p>
-              <p className="text-sm text-muted-foreground">{alerta.alerta}</p>
-              <p className="text-xs text-red-400 font-medium">{alerta.dado}</p>
-            </div>
-          ))
+          relatorio.alertas.map((alerta, i) => {
+            const isExpanded = expandedAlertas.has(i);
+            const hasDetails = alerta.causa_provavel || alerta.como_executar || (alerta.termos_negativar && alerta.termos_negativar.length > 0) || (alerta.keywords_adicionar && alerta.keywords_adicionar.length > 0);
+            const idx = alertaRecIndex(i);
+            return (
+              <div key={i} className="rounded-xl bg-red-500/5 border border-red-500/10 overflow-hidden">
+                <button
+                  onClick={() => toggleAlertaExpand(i)}
+                  className="w-full p-4 text-left space-y-2 hover:bg-red-500/10 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-foreground">{alerta.campanha}</p>
+                    <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`} />
+                  </div>
+                  <p className="text-sm text-muted-foreground">{alerta.alerta}</p>
+                  <p className="text-xs text-red-400 font-medium">{alerta.dado}</p>
+                </button>
+                <AnimatePresence>
+                  {isExpanded && hasDetails && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-4 pb-4 space-y-3 border-t border-red-500/10 pt-3">
+                        {/* Dado em destaque */}
+                        {alerta.dado && (
+                          <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3">
+                            <p className="text-xs text-muted-foreground font-medium mb-1">📊 Métrica</p>
+                            <p className="text-sm font-semibold text-red-300">{alerta.dado}</p>
+                          </div>
+                        )}
+                        {/* Causa provável */}
+                        {alerta.causa_provavel && (
+                          <div>
+                            <p className="text-xs text-muted-foreground font-medium mb-1">🔍 Causa provável</p>
+                            <p className="text-sm text-foreground/90">{alerta.causa_provavel}</p>
+                          </div>
+                        )}
+                        {/* Como executar */}
+                        {alerta.como_executar && (
+                          <ComoExecutarBox texto={alerta.como_executar} />
+                        )}
+                        {/* Termos a negativar */}
+                        {alerta.termos_negativar && alerta.termos_negativar.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-xs text-muted-foreground font-medium">Termos a negativar:</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {alerta.termos_negativar.map((kw, ki) => {
+                                const isNegativado = negativados[idx]?.has(kw) ?? false;
+                                const isSelected = !isNegativado && (selectedTermos[idx]?.has(kw) ?? false);
+                                return (
+                                  <button
+                                    key={ki}
+                                    onClick={() => !isNegativado && toggleTermo(idx, kw)}
+                                    disabled={isNegativado}
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-mono transition-all ${
+                                      isNegativado
+                                        ? "border-muted/50 bg-muted/20 text-muted-foreground/50 cursor-default line-through"
+                                        : isSelected
+                                        ? "border-red-500/70 bg-red-900/40 text-red-300 cursor-pointer"
+                                        : "border-yellow-500/40 bg-secondary hover:border-yellow-400 hover:bg-secondary/80 text-foreground cursor-pointer"
+                                    }`}
+                                  >
+                                    {isNegativado ? (
+                                      <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                                    ) : (
+                                      <span className={`w-3 h-3 rounded-sm border flex items-center justify-center shrink-0 ${isSelected ? "border-red-400 bg-red-500/30" : "border-muted-foreground/40"}`}>
+                                        {isSelected && <span className="text-[8px] text-red-300">✓</span>}
+                                      </span>
+                                    )}
+                                    {kw}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {(selectedTermos[idx]?.size ?? 0) > 0 && (
+                              <div className="flex items-center gap-2 pt-1">
+                                <button
+                                  onClick={() => handleNegativarAlerta(i, alerta)}
+                                  disabled={negativarLoading === idx}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/60 text-xs font-medium transition-all disabled:opacity-50"
+                                >
+                                  {negativarLoading === idx ? (
+                                    <><Loader2 className="w-3 h-3 animate-spin" /> Negativando...</>
+                                  ) : (
+                                    <><X className="w-3 h-3" /> Negativar {selectedTermos[idx]?.size} selecionado{(selectedTermos[idx]?.size ?? 0) > 1 ? "s" : ""}</>
+                                  )}
+                                </button>
+                                {negativarSuccess?.index === idx && (
+                                  <span className="text-xs text-emerald-400 flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3" /> {negativarSuccess.count} termo{negativarSuccess.count > 1 ? "s" : ""} negativado{negativarSuccess.count > 1 ? "s" : ""} com sucesso
+                                  </span>
+                                )}
+                                {negativarError?.index === idx && (
+                                  <span className="text-xs text-red-400 flex items-center gap-1 max-w-md break-all">
+                                    <AlertTriangle className="w-3 h-3 shrink-0" /> {negativarError.msg}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {/* Keywords a adicionar */}
+                        {alerta.keywords_adicionar && alerta.keywords_adicionar.length > 0 && (
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-muted-foreground font-medium">Keywords a adicionar:</p>
+                              <button
+                                onClick={() => navigator.clipboard.writeText(alerta.keywords_adicionar!.join('\n'))}
+                                className="text-xs text-primary hover:underline flex items-center gap-1"
+                              >
+                                Copiar keywords
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {alerta.keywords_adicionar.map((kw, ki) => (
+                                <KeywordChip key={ki} keyword={kw} variant="group" />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })
         )}
       </div>
     );
