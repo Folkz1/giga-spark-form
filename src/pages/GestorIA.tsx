@@ -1496,7 +1496,8 @@ const GestorIA = () => {
                       )}
                     </div>
 
-                    {/* Context form */}
+                    {/* Context form — only show when accounts selected */}
+                    {selectedIds.length > 0 && (
                     <div className="relative z-0">
                        {/* Structured context form */}
                       <div className="mb-6 space-y-4">
@@ -1517,11 +1518,11 @@ const GestorIA = () => {
                           </AnimatePresence>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
                           {/* Tipo de negócio */}
                           <div>
-                            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                              Tipo de negócio <span className="text-red-400">*</span>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1.5 min-h-[32px] flex items-end">
+                              <span>Tipo de negócio <span className="text-red-400">*</span></span>
                             </label>
                             <select
                               value={tipoNegocio}
@@ -1545,8 +1546,8 @@ const GestorIA = () => {
 
                           {/* Conversão rastreada */}
                           <div>
-                            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                              O que você rastreia como conversão? <span className="text-red-400">*</span>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1.5 min-h-[32px] flex items-end">
+                              <span>O que você rastreia como conversão? <span className="text-red-400">*</span></span>
                             </label>
                             <select
                               value={conversaoRastreada}
@@ -1564,8 +1565,8 @@ const GestorIA = () => {
 
                           {/* Suas conversões são */}
                           <div>
-                            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                              Suas conversões são: <span className="text-red-400">*</span>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1.5 min-h-[32px] flex items-end">
+                              <span>Suas conversões são: <span className="text-red-400">*</span></span>
                             </label>
                             <select
                               value={tipoConversao}
@@ -1595,8 +1596,8 @@ const GestorIA = () => {
 
                           {/* Meta CPA */}
                           <div>
-                            <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                              Meta de CPA (R$) <span className="text-red-400">*</span>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1.5 min-h-[32px] flex items-end">
+                              <span>Meta de CPA (R$) <span className="text-red-400">*</span></span>
                             </label>
                             <input
                               type="number"
@@ -1695,17 +1696,18 @@ const GestorIA = () => {
                             </div>
                           </motion.div>
                         )}
-                      </div>
-
-                      <Button
-                        onClick={handleAnalyze}
-                        disabled={selectedIds.length === 0 || !tipoNegocio || !conversaoRastreada || !tipoConversao || !metaCPA}
-                        className="gradient-primary text-primary-foreground font-semibold px-8 glow-primary"
-                      >
-                        <Brain className="w-4 h-4 mr-2" />
-                        Analisar com IA
-                      </Button>
+                       </div>
                     </div>
+                    )}
+
+                    <Button
+                      onClick={handleAnalyze}
+                      disabled={selectedIds.length === 0 || !tipoNegocio || !conversaoRastreada || !tipoConversao || !metaCPA}
+                      className="gradient-primary text-primary-foreground font-semibold px-8 glow-primary"
+                    >
+                      <Brain className="w-4 h-4 mr-2" />
+                      Analisar com IA
+                    </Button>
                   </>
                 )}
               </div>
