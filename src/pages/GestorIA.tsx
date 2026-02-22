@@ -316,6 +316,46 @@ const GestorIA = () => {
   const [margemLucro, setMargemLucro] = useState("");
   const [valorMedioCliente, setValorMedioCliente] = useState("");
   const [ltvEstimado, setLtvEstimado] = useState("");
+  const [autoFilled, setAutoFilled] = useState(false);
+
+  const CONTEXT_STORAGE_KEY = "gestorIA_context";
+
+  // Save context to localStorage when fields change
+  useEffect(() => {
+    if (selectedIds.length !== 1 || !tipoNegocio) return;
+    const cid = selectedIds[0];
+    try {
+      const stored = JSON.parse(localStorage.getItem(CONTEXT_STORAGE_KEY) || "{}");
+      stored[cid] = { tipoNegocio, conversaoRastreada, tipoConversao, metaCPA, ticketMedio, taxaFechamento, margemLucro, valorMedioCliente, ltvEstimado };
+      localStorage.setItem(CONTEXT_STORAGE_KEY, JSON.stringify(stored));
+    } catch {}
+  }, [selectedIds, tipoNegocio, conversaoRastreada, tipoConversao, metaCPA, ticketMedio, taxaFechamento, margemLucro, valorMedioCliente, ltvEstimado]);
+
+  // Auto-fill context from localStorage when a single account is selected
+  useEffect(() => {
+    if (selectedIds.length !== 1) {
+      setAutoFilled(false);
+      return;
+    }
+    const cid = selectedIds[0];
+    try {
+      const stored = JSON.parse(localStorage.getItem(CONTEXT_STORAGE_KEY) || "{}");
+      const saved = stored[cid];
+      if (saved && saved.tipoNegocio) {
+        setTipoNegocio(saved.tipoNegocio);
+        setConversaoRastreada(saved.conversaoRastreada || "");
+        setTipoConversao(saved.tipoConversao || "");
+        setMetaCPA(saved.metaCPA || "");
+        setTicketMedio(saved.ticketMedio || "");
+        setTaxaFechamento(saved.taxaFechamento || "");
+        setMargemLucro(saved.margemLucro || "");
+        setValorMedioCliente(saved.valorMedioCliente || "");
+        setLtvEstimado(saved.ltvEstimado || "");
+        setAutoFilled(true);
+        setTimeout(() => setAutoFilled(false), 4000);
+      }
+    } catch {}
+  }, [selectedIds]);
 
   const buildContexto = () => {
     const parts: string[] = [];
@@ -1349,15 +1389,29 @@ const GestorIA = () => {
                     <div className="relative z-30 mb-6">
                       <button
                         onClick={() => setOpenDropdown(!openDropdown)}
-                        className="w-full flex items-center justify-between px-4 py-4 rounded-xl bg-secondary border border-border hover:border-primary/40 transition-all text-left"
+                        className="w-full flex items-center gap-2 flex-wrap px-4 py-3 rounded-xl bg-secondary border border-border hover:border-primary/40 transition-all text-left min-h-[52px]"
                       >
-                        <span className="text-foreground font-medium">
-                          {selectedIds.length === 0
-                            ? "Selecione contas..."
-                            : `${selectedIds.length} conta${selectedIds.length > 1 ? "s" : ""} selecionada${selectedIds.length > 1 ? "s" : ""}`}
-                        </span>
+                        {selectedAccounts.length === 0 ? (
+                          <span className="text-muted-foreground font-medium">Selecione contas...</span>
+                        ) : (
+                          selectedAccounts.map((a) => (
+                            <span
+                              key={a.customerId}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-primary/10 text-primary text-xs font-medium border border-primary/20"
+                            >
+                              {a.name}
+                              <span
+                                role="button"
+                                onClick={(e) => { e.stopPropagation(); toggleAccount(a.customerId); }}
+                                className="hover:text-primary/70 cursor-pointer"
+                              >
+                                <X className="w-3 h-3" />
+                              </span>
+                            </span>
+                          ))
+                        )}
                         <ChevronDown
-                          className={`w-5 h-5 text-muted-foreground transition-transform ${openDropdown ? "rotate-180" : ""}`}
+                          className={`w-5 h-5 text-muted-foreground transition-transform ml-auto shrink-0 ${openDropdown ? "rotate-180" : ""}`}
                         />
                       </button>
 
@@ -1427,27 +1481,26 @@ const GestorIA = () => {
                       )}
                     </div>
 
-                    {/* Selected chips */}
+                    {/* Context form */}
                     <div className="relative z-0">
-                      {selectedAccounts.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-6">
-                          {selectedAccounts.map((a) => (
-                            <span
-                              key={a.customerId}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-sm font-medium border border-primary/20"
-                            >
-                              {a.name}
-                              <button onClick={() => toggleAccount(a.customerId)} className="hover:text-primary/70">
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-
                        {/* Structured context form */}
                       <div className="mb-6 space-y-4">
-                        <h3 className="text-sm font-semibold text-foreground">Contexto do cliente</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-semibold text-foreground">Contexto do cliente</h3>
+                          <AnimatePresence>
+                            {autoFilled && (
+                              <motion.span
+                                initial={{ opacity: 0, x: -8 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0 }}
+                                className="inline-flex items-center gap-1 text-xs text-emerald-400 font-medium"
+                              >
+                                <CheckCircle2 className="w-3 h-3" />
+                                dados salvos
+                              </motion.span>
+                            )}
+                          </AnimatePresence>
+                        </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                           {/* Tipo de negócio */}
