@@ -993,13 +993,31 @@ const GestorIA = () => {
                         )}
                         {/* Ação recomendada — link para recomendação correspondente */}
                         {matchingRec && (
-                          <button
-                            onClick={() => { setActiveTab("recomendacoes"); }}
-                            className="w-full mt-1 px-3 py-2 rounded-lg border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10 hover:border-blue-500/30 transition-colors text-left"
-                          >
-                            <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-0.5">Ação recomendada</p>
-                            <p className="text-sm text-blue-400 font-medium">{matchingRec.acao}</p>
-                          </button>
+                          <div className="mt-1 space-y-2">
+                            <button
+                              onClick={() => { setActiveTab("recomendacoes"); }}
+                              className="w-full px-3 py-2 rounded-lg border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10 hover:border-blue-500/30 transition-colors text-left"
+                            >
+                              <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-0.5">Ação recomendada</p>
+                              <p className="text-sm text-blue-400 font-medium">{matchingRec.acao}</p>
+                            </button>
+                            {/* Keywords afetadas por Quality Score */}
+                            {matchingRec.acao && /quality\s*score/i.test(matchingRec.acao) && matchingRec.como_executar && (() => {
+                              const lines = matchingRec.como_executar!.split(/\n/).filter(l => l.trim());
+                              const kwLines = lines.filter(l => /—\s*QS\s*\d/i.test(l) || /quality\s*score\s*\d/i.test(l) || /\bQS\s*\d/i.test(l));
+                              if (kwLines.length === 0) return null;
+                              return (
+                                <div className="px-3 py-2 rounded-lg border border-blue-500/10 bg-blue-500/5">
+                                  <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-1.5">Keywords afetadas</p>
+                                  <ul className="space-y-0.5">
+                                    {kwLines.map((line, li) => (
+                                      <li key={li} className="text-xs text-foreground/85">{line.replace(/^\d+[\.\)]\s*/, '').trim()}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              );
+                            })()}
+                          </div>
                         )}
                       </div>
                     </motion.div>
