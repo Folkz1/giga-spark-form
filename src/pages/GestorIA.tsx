@@ -184,6 +184,18 @@ const GestorIA = () => {
   const [resumoExpanded, setResumoExpanded] = useState(false);
 
   const [selectedTermos, setSelectedTermos] = useState<Record<number, Set<string>>>({});
+  const [negativados, setNegativados] = useState<Record<number, Set<string>>>(() => {
+    try {
+      const raw = sessionStorage.getItem("gestorIA_negativados");
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      const result: Record<number, Set<string>> = {};
+      for (const [k, v] of Object.entries(parsed)) {
+        result[Number(k)] = new Set(v as string[]);
+      }
+      return result;
+    } catch { return {}; }
+  });
   const [negativarLoading, setNegativarLoading] = useState<number | null>(null);
   const [negativarSuccess, setNegativarSuccess] = useState<{ index: number; count: number } | null>(null);
   const [negativarError, setNegativarError] = useState<{ index: number; msg: string } | null>(null);
@@ -486,6 +498,8 @@ const GestorIA = () => {
     setActiveTab("alertas");
     setChatOpen(false);
     setResumoExpanded(false);
+    setNegativados({});
+    sessionStorage.removeItem("gestorIA_negativados");
   };
 
   const handleChatSend = async () => {
@@ -543,7 +557,7 @@ const GestorIA = () => {
   };
 
   const handleNegativar = async (recIndex: number, rec: Recomendacao) => {
-    const termos = Array.from(selectedTermos[recIndex] ?? new Set());
+    const termos: string[] = Array.from(selectedTermos[recIndex] ?? new Set<string>());
     if (termos.length === 0) return;
 
     const adGroupId = rec.adGroupId;
@@ -583,6 +597,17 @@ const GestorIA = () => {
       console.log("[NEGATIVAR] Resposta:", JSON.stringify(data, null, 2));
 
       if (data.sucesso) {
+        setNegativados((prev) => {
+          const existing = new Set(prev[recIndex] ?? []);
+          termos.forEach((t) => existing.add(t));
+          const next = { ...prev, [recIndex]: existing };
+          const serializable: Record<string, string[]> = {};
+          for (const k of Object.keys(next)) {
+            serializable[k] = Array.from(next[Number(k)]);
+          }
+          sessionStorage.setItem("gestorIA_negativados", JSON.stringify(serializable));
+          return next;
+        });
         setNegativarSuccess({ index: recIndex, count: termos.length });
         setSelectedTermos((prev) => ({ ...prev, [recIndex]: new Set() }));
         setTimeout(() => setNegativarSuccess(null), 4000);
@@ -758,20 +783,28 @@ const GestorIA = () => {
                   <p className="text-xs text-muted-foreground font-medium">Termos a negativar:</p>
                   <div className="flex flex-wrap gap-1.5">
                     {rec.termos_negativar.map((kw, ki) => {
-                      const isSelected = selectedTermos[i]?.has(kw) ?? false;
+                      const isNegativado = negativados[i]?.has(kw) ?? false;
+                      const isSelected = !isNegativado && (selectedTermos[i]?.has(kw) ?? false);
                       return (
                         <button
                           key={ki}
-                          onClick={() => toggleTermo(i, kw)}
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-mono transition-all cursor-pointer ${
-                            isSelected
-                              ? "border-red-500/70 bg-red-900/40 text-red-300"
-                              : "border-yellow-500/40 bg-secondary hover:border-yellow-400 hover:bg-secondary/80 text-foreground"
+                          onClick={() => !isNegativado && toggleTermo(i, kw)}
+                          disabled={isNegativado}
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-mono transition-all ${
+                            isNegativado
+                              ? "border-muted/50 bg-muted/20 text-muted-foreground/50 cursor-default line-through"
+                              : isSelected
+                              ? "border-red-500/70 bg-red-900/40 text-red-300 cursor-pointer"
+                              : "border-yellow-500/40 bg-secondary hover:border-yellow-400 hover:bg-secondary/80 text-foreground cursor-pointer"
                           }`}
                         >
-                          <span className={`w-3 h-3 rounded-sm border flex items-center justify-center shrink-0 ${isSelected ? "border-red-400 bg-red-500/30" : "border-muted-foreground/40"}`}>
-                            {isSelected && <span className="text-[8px] text-red-300">✓</span>}
-                          </span>
+                          {isNegativado ? (
+                            <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                          ) : (
+                            <span className={`w-3 h-3 rounded-sm border flex items-center justify-center shrink-0 ${isSelected ? "border-red-400 bg-red-500/30" : "border-muted-foreground/40"}`}>
+                              {isSelected && <span className="text-[8px] text-red-300">✓</span>}
+                            </span>
+                          )}
                           {kw}
                         </button>
                       );
