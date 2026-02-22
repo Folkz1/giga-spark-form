@@ -557,6 +557,7 @@ const GestorIA = () => {
       return;
     }
     const payload = { customerId: selectedIds[0], adGroupId: grupo.id, termos };
+    alert(JSON.stringify(payload, null, 2));
     console.log("[NEGATIVAR] Payload enviado:", JSON.stringify(payload, null, 2));
     setNegativarLoading(recIndex);
     try {
