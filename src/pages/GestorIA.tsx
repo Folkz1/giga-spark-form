@@ -940,31 +940,36 @@ const GestorIA = () => {
                                 );
                               })}
                             </div>
-                            {(selectedTermos[idx]?.size ?? 0) > 0 && (
-                              <div className="flex items-center gap-2 pt-1">
-                                <button
-                                  onClick={() => handleNegativarAlerta(i, alerta)}
-                                  disabled={negativarLoading === idx}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/60 text-xs font-medium transition-all disabled:opacity-50"
-                                >
-                                  {negativarLoading === idx ? (
-                                    <><Loader2 className="w-3 h-3 animate-spin" /> Negativando...</>
-                                  ) : (
-                                    <><X className="w-3 h-3" /> Negativar {selectedTermos[idx]?.size} selecionado{(selectedTermos[idx]?.size ?? 0) > 1 ? "s" : ""}</>
-                                  )}
-                                </button>
-                                {negativarSuccess?.index === idx && (
-                                  <span className="text-xs text-emerald-400 flex items-center gap-1">
-                                    <CheckCircle2 className="w-3 h-3" /> {negativarSuccess.count} termo{negativarSuccess.count > 1 ? "s" : ""} negativado{negativarSuccess.count > 1 ? "s" : ""} com sucesso
-                                  </span>
+                            <p className="text-[10px] text-muted-foreground/60 italic">Selecione os termos que deseja negativar</p>
+                            <div className="flex items-center gap-2 pt-1">
+                              <button
+                                onClick={() => handleNegativarAlerta(i, alerta)}
+                                disabled={negativarLoading === idx || (selectedTermos[idx]?.size ?? 0) === 0}
+                                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                                  (selectedTermos[idx]?.size ?? 0) > 0
+                                    ? "border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/60"
+                                    : "border-border bg-muted/30 text-muted-foreground"
+                                }`}
+                              >
+                                {negativarLoading === idx ? (
+                                  <><Loader2 className="w-3 h-3 animate-spin" /> Negativando...</>
+                                ) : (selectedTermos[idx]?.size ?? 0) > 0 ? (
+                                  <><X className="w-3 h-3" /> Negativar {selectedTermos[idx]?.size} selecionado{(selectedTermos[idx]?.size ?? 0) > 1 ? "s" : ""}</>
+                                ) : (
+                                  <><X className="w-3 h-3" /> Negativar selecionados</>
                                 )}
-                                {negativarError?.index === idx && (
-                                  <span className="text-xs text-red-400 flex items-center gap-1 max-w-md break-all">
-                                    <AlertTriangle className="w-3 h-3 shrink-0" /> {negativarError.msg}
-                                  </span>
-                                )}
-                              </div>
-                            )}
+                              </button>
+                              {negativarSuccess?.index === idx && (
+                                <span className="text-xs text-emerald-400 flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3" /> {negativarSuccess.count} termo{negativarSuccess.count > 1 ? "s" : ""} negativado{negativarSuccess.count > 1 ? "s" : ""} com sucesso
+                                </span>
+                              )}
+                              {negativarError?.index === idx && (
+                                <span className="text-xs text-red-400 flex items-center gap-1 max-w-md break-all">
+                                  <AlertTriangle className="w-3 h-3 shrink-0" /> {negativarError.msg}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         )}
                         {/* Keywords a adicionar */}
@@ -1162,31 +1167,36 @@ const GestorIA = () => {
                                     );
                                   })}
                                 </div>
-                                {(selectedTermos[idx]?.size ?? 0) > 0 && (
-                                  <div className="flex items-center gap-2 pt-1">
-                                    <button
-                                      onClick={() => handleNegativarOportunidade(i, { ...op, termos_negativar: matchingRec.termos_negativar, adGroupId: matchingRec.adGroupId ?? op.adGroupId } as Oportunidade)}
-                                      disabled={negativarLoading === idx}
-                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/60 text-xs font-medium transition-all disabled:opacity-50"
-                                    >
-                                      {negativarLoading === idx ? (
-                                        <><Loader2 className="w-3 h-3 animate-spin" /> Negativando...</>
-                                      ) : (
-                                        <><X className="w-3 h-3" /> Negativar {selectedTermos[idx]?.size} selecionado{(selectedTermos[idx]?.size ?? 0) > 1 ? "s" : ""}</>
-                                      )}
-                                    </button>
-                                    {negativarSuccess?.index === idx && (
-                                      <span className="text-xs text-emerald-400 flex items-center gap-1">
-                                        <CheckCircle2 className="w-3 h-3" /> {negativarSuccess.count} termo{negativarSuccess.count > 1 ? "s" : ""} negativado{negativarSuccess.count > 1 ? "s" : ""} com sucesso
-                                      </span>
+                                <p className="text-[10px] text-muted-foreground/60 italic">Selecione os termos que deseja negativar</p>
+                                <div className="flex items-center gap-2 pt-1">
+                                  <button
+                                    onClick={() => handleNegativarOportunidade(i, { ...op, termos_negativar: matchingRec.termos_negativar, adGroupId: matchingRec.adGroupId ?? op.adGroupId } as Oportunidade)}
+                                    disabled={negativarLoading === idx || (selectedTermos[idx]?.size ?? 0) === 0}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                                      (selectedTermos[idx]?.size ?? 0) > 0
+                                        ? "border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/60"
+                                        : "border-border bg-muted/30 text-muted-foreground"
+                                    }`}
+                                  >
+                                    {negativarLoading === idx ? (
+                                      <><Loader2 className="w-3 h-3 animate-spin" /> Negativando...</>
+                                    ) : (selectedTermos[idx]?.size ?? 0) > 0 ? (
+                                      <><X className="w-3 h-3" /> Negativar {selectedTermos[idx]?.size} selecionado{(selectedTermos[idx]?.size ?? 0) > 1 ? "s" : ""}</>
+                                    ) : (
+                                      <><X className="w-3 h-3" /> Negativar selecionados</>
                                     )}
-                                    {negativarError?.index === idx && (
-                                      <span className="text-xs text-red-400 flex items-center gap-1 max-w-md break-all">
-                                        <AlertTriangle className="w-3 h-3 shrink-0" /> {negativarError.msg}
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
+                                  </button>
+                                  {negativarSuccess?.index === idx && (
+                                    <span className="text-xs text-emerald-400 flex items-center gap-1">
+                                      <CheckCircle2 className="w-3 h-3" /> {negativarSuccess.count} termo{negativarSuccess.count > 1 ? "s" : ""} negativado{negativarSuccess.count > 1 ? "s" : ""} com sucesso
+                                    </span>
+                                  )}
+                                  {negativarError?.index === idx && (
+                                    <span className="text-xs text-red-400 flex items-center gap-1 max-w-md break-all">
+                                      <AlertTriangle className="w-3 h-3 shrink-0" /> {negativarError.msg}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             )}
                           </div>
@@ -1264,31 +1274,36 @@ const GestorIA = () => {
                       );
                     })}
                   </div>
-                  {(selectedTermos[i]?.size ?? 0) > 0 && (
-                    <div className="flex items-center gap-2 pt-1">
-                      <button
-                        onClick={() => handleNegativar(i, rec)}
-                        disabled={negativarLoading === i}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/60 text-xs font-medium transition-all disabled:opacity-50"
-                      >
-                        {negativarLoading === i ? (
-                          <><Loader2 className="w-3 h-3 animate-spin" /> Negativando...</>
-                        ) : (
-                          <><X className="w-3 h-3" /> Negativar {selectedTermos[i]?.size} selecionado{(selectedTermos[i]?.size ?? 0) > 1 ? "s" : ""}</>
-                        )}
-                      </button>
-                      {negativarSuccess?.index === i && (
-                        <span className="text-xs text-emerald-400 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" /> {negativarSuccess.count} termo{negativarSuccess.count > 1 ? "s" : ""} negativado{negativarSuccess.count > 1 ? "s" : ""} com sucesso
-                        </span>
+                  <p className="text-[10px] text-muted-foreground/60 italic">Selecione os termos que deseja negativar</p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      onClick={() => handleNegativar(i, rec)}
+                      disabled={negativarLoading === i || (selectedTermos[i]?.size ?? 0) === 0}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                        (selectedTermos[i]?.size ?? 0) > 0
+                          ? "border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/60"
+                          : "border-border bg-muted/30 text-muted-foreground"
+                      }`}
+                    >
+                      {negativarLoading === i ? (
+                        <><Loader2 className="w-3 h-3 animate-spin" /> Negativando...</>
+                      ) : (selectedTermos[i]?.size ?? 0) > 0 ? (
+                        <><X className="w-3 h-3" /> Negativar {selectedTermos[i]?.size} selecionado{(selectedTermos[i]?.size ?? 0) > 1 ? "s" : ""}</>
+                      ) : (
+                        <><X className="w-3 h-3" /> Negativar selecionados</>
                       )}
-                      {negativarError?.index === i && (
-                        <span className="text-xs text-red-400 flex items-center gap-1 max-w-md break-all">
-                          <AlertTriangle className="w-3 h-3 shrink-0" /> {negativarError.msg}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                    </button>
+                    {negativarSuccess?.index === i && (
+                      <span className="text-xs text-emerald-400 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> {negativarSuccess.count} termo{negativarSuccess.count > 1 ? "s" : ""} negativado{negativarSuccess.count > 1 ? "s" : ""} com sucesso
+                      </span>
+                    )}
+                    {negativarError?.index === i && (
+                      <span className="text-xs text-red-400 flex items-center gap-1 max-w-md break-all">
+                        <AlertTriangle className="w-3 h-3 shrink-0" /> {negativarError.msg}
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
               {rec.keywords_adicionar && rec.keywords_adicionar.length > 0 &&
