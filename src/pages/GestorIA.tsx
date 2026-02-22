@@ -1474,7 +1474,7 @@ const GestorIA = () => {
                               filteredAccounts.map((account) => (
                                 <button
                                   key={account.customerId}
-                                  onClick={() => toggleAccount(account.customerId)}
+                                  onClick={() => { toggleAccount(account.customerId); setOpenDropdown(false); setSearch(""); }}
                                   className="w-full flex items-center gap-3 px-4 py-3 hover:bg-secondary transition-colors text-left"
                                 >
                                   <Checkbox
