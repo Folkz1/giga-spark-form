@@ -69,6 +69,7 @@ interface Oportunidade {
   campanha: string;
   oportunidade: string;
   dado: string;
+  grupo?: string | null;
   causa_provavel?: string;
   como_executar?: string;
   termos_negativar?: string[];
@@ -1024,7 +1025,7 @@ const GestorIA = () => {
             const isExpanded = expandedOportunidades.has(i);
             const hasDetails = op.dado || op.causa_provavel || op.como_executar || (op.termos_negativar && op.termos_negativar.length > 0) || (op.keywords_adicionar && op.keywords_adicionar.length > 0);
             const idx = opRecIndex(i);
-            const matchingRec = relatorio.recomendacoes.find((r) => r.campanha === op.campanha);
+            const matchingRec = relatorio.recomendacoes.find((r) => r.campanha === op.campanha && r.grupo === op.grupo);
             return (
               <div key={i} className="rounded-xl bg-emerald-500/5 border border-emerald-500/10 overflow-hidden">
                 <button
@@ -1048,10 +1049,7 @@ const GestorIA = () => {
                     >
                       <div className="px-4 pb-4 space-y-3 border-t border-emerald-500/10 pt-3">
                         {op.dado && (
-                          <div>
-                            <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-0.5">Impacto estimado</p>
-                            <p className="text-base font-semibold text-orange-400">{op.dado}</p>
-                          </div>
+                          <p className="text-base font-semibold text-emerald-400">{op.dado}</p>
                         )}
                         {op.causa_provavel && (
                           <p className="text-sm text-foreground/80">{op.causa_provavel}</p>
