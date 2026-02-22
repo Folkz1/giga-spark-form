@@ -139,6 +139,17 @@ const KeywordChip = ({ keyword, variant = "keyword" }: { keyword: string; varian
   );
 };
 
+/** Parse como_executar text into individual steps.
+ *  Handles "1) ... 2) ..." and "1. ... 2. ..." inline or newline-separated. */
+const parseSteps = (texto: string): string[] => {
+  // Split on patterns like "1)" "2." "1-" at word boundaries, keeping content
+  const parts = texto.split(/(?:^|\n)\s*\d+[\.\)\-]\s*|(?<=\S)\s+\d+[\.\)\-]\s+/);
+  const steps = parts.map((s) => s.trim()).filter(Boolean);
+  if (steps.length > 1) return steps;
+  // Fallback: split by newlines
+  return texto.split(/\n/).map((s) => s.replace(/^\d+[\.\)\-]\s*/, "").trim()).filter(Boolean);
+};
+
 const ComoExecutarBox = ({ texto }: { texto: string }) => {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
@@ -158,7 +169,14 @@ const ComoExecutarBox = ({ texto }: { texto: string }) => {
             {copied ? "✓ Copiado!" : "Copiar passos"}
           </button>
         </div>
-        <p className="text-xs text-foreground/90 whitespace-pre-line leading-relaxed">{texto}</p>
+        <ol className="space-y-1 pl-0">
+          {parseSteps(texto).map((step, si) => (
+            <li key={si} className="text-xs text-foreground/90 flex gap-2 leading-relaxed">
+              <span className="text-muted-foreground font-medium shrink-0">{si + 1}.</span>
+              <span>{step}</span>
+            </li>
+          ))}
+        </ol>
       </div>
     </div>
   );
@@ -840,16 +858,12 @@ const GestorIA = () => {
                           <div>
                             <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-1">Como resolver</p>
                             <ol className="space-y-1 pl-0">
-                              {alerta.como_executar.split(/\n/).filter(Boolean).map((line, li) => {
-                                const cleaned = line.replace(/^\d+[\.\)\-]\s*/, "").trim();
-                                if (!cleaned) return null;
-                                return (
-                                  <li key={li} className="text-xs text-foreground/85 flex gap-2">
-                                    <span className="text-muted-foreground font-medium shrink-0">{li + 1}.</span>
-                                    <span>{cleaned}</span>
-                                  </li>
-                                );
-                              })}
+                              {parseSteps(alerta.como_executar).map((step, li) => (
+                                <li key={li} className="text-xs text-foreground/85 flex gap-2">
+                                  <span className="text-muted-foreground font-medium shrink-0">{li + 1}.</span>
+                                  <span>{step}</span>
+                                </li>
+                              ))}
                             </ol>
                           </div>
                         )}
@@ -1067,16 +1081,12 @@ const GestorIA = () => {
                             <p className="text-sm font-medium text-foreground">{matchingRec.acao}</p>
                             {matchingRec.como_executar && (
                               <ol className="space-y-1 pl-0">
-                                {matchingRec.como_executar.split(/\n/).filter(Boolean).map((line, li) => {
-                                  const cleaned = line.replace(/^\d+[\.\)\-]\s*/, "").trim();
-                                  if (!cleaned) return null;
-                                  return (
-                                    <li key={li} className="text-xs text-foreground/85 flex gap-2">
-                                      <span className="text-muted-foreground font-medium shrink-0">{li + 1}.</span>
-                                      <span>{cleaned}</span>
-                                    </li>
-                                  );
-                                })}
+                                {parseSteps(matchingRec.como_executar).map((step, li) => (
+                                  <li key={li} className="text-xs text-foreground/85 flex gap-2">
+                                    <span className="text-muted-foreground font-medium shrink-0">{li + 1}.</span>
+                                    <span>{step}</span>
+                                  </li>
+                                ))}
                               </ol>
                             )}
                             {/* Termos a negativar da recomendação */}
