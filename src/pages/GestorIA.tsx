@@ -1004,7 +1004,7 @@ const GestorIA = () => {
                               className="w-full px-3 py-2 rounded-lg border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10 hover:border-blue-500/30 transition-colors text-left"
                             >
                               <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-0.5">Ação recomendada</p>
-                              <p className="text-sm text-blue-400 font-medium">{matchingRec.acao}</p>
+                              <p className="text-sm text-blue-400 font-medium">{matchingRec?.acao}</p>
                             </button>
                             {/* Keywords afetadas por Quality Score */}
                             {matchingRec.acao && /quality\s*score/i.test(matchingRec.acao) && matchingRec.como_executar && (() => {
@@ -1148,13 +1148,13 @@ const GestorIA = () => {
                           </div>
                         )}
                         {/* O que fazer — da recomendação correspondente */}
-                        {matchingRec && (
+                        {((op as any).acao || matchingRec) && (
                           <div className="space-y-2">
                             <p className="text-[11px] text-muted-foreground uppercase tracking-wide">O que fazer</p>
-                            <p className="text-sm font-medium text-foreground">{matchingRec.acao}</p>
-                            {matchingRec.como_executar && (
+                            <p className="text-sm font-medium text-foreground">{(op as any).acao ?? matchingRec?.acao}</p>
+                            {((op as any).como_executar ?? matchingRec?.como_executar) && (
                               <ol className="space-y-1 pl-0">
-                                {parseSteps(matchingRec.como_executar).map((step, li) => (
+                                {parseSteps((op as any).como_executar ?? matchingRec?.como_executar ?? "").map((step, li) => (
                                   <li key={li} className="text-xs text-foreground/85 flex gap-2">
                                     <span className="text-muted-foreground font-medium shrink-0">{li + 1}.</span>
                                     <span>{step}</span>
