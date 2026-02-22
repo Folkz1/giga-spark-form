@@ -70,6 +70,7 @@ interface Oportunidade {
   oportunidade: string;
   dado: string;
   grupo?: string | null;
+  potencial_estimado?: string;
   causa_provavel?: string;
   como_executar?: string;
   termos_negativar?: string[];
@@ -1025,7 +1026,7 @@ const GestorIA = () => {
             const isExpanded = expandedOportunidades.has(i);
             const hasDetails = op.dado || op.causa_provavel || op.como_executar || (op.termos_negativar && op.termos_negativar.length > 0) || (op.keywords_adicionar && op.keywords_adicionar.length > 0);
             const idx = opRecIndex(i);
-            const matchingRec = relatorio.recomendacoes.find((r) => r.campanha === op.campanha && r.grupo === op.grupo);
+            const matchingRec = relatorio.recomendacoes.find((r) => r.campanha === op.campanha);
             return (
               <div key={i} className="rounded-xl bg-emerald-500/5 border border-emerald-500/10 overflow-hidden">
                 <button
@@ -1048,114 +1049,97 @@ const GestorIA = () => {
                       className="overflow-hidden"
                     >
                       <div className="px-4 pb-4 space-y-3 border-t border-emerald-500/10 pt-3">
+                        {/* Dado em destaque verde */}
                         {op.dado && (
                           <p className="text-base font-semibold text-emerald-400">{op.dado}</p>
                         )}
-                        {op.causa_provavel && (
-                          <p className="text-sm text-foreground/80">{op.causa_provavel}</p>
-                        )}
-                        {op.como_executar && (
+                        {/* Potencial estimado */}
+                        {op.potencial_estimado && (
                           <div>
-                            <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-1">Como resolver</p>
-                            <ol className="space-y-1 pl-0">
-                              {op.como_executar.split(/\n/).filter(Boolean).map((line, li) => {
-                                const cleaned = line.replace(/^\d+[\.\)\-]\s*/, "").trim();
-                                if (!cleaned) return null;
-                                return (
-                                  <li key={li} className="text-xs text-foreground/85 flex gap-2">
-                                    <span className="text-muted-foreground font-medium shrink-0">{li + 1}.</span>
-                                    <span>{cleaned}</span>
-                                  </li>
-                                );
-                              })}
-                            </ol>
+                            <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-0.5">Potencial estimado</p>
+                            <p className="text-sm font-semibold text-emerald-300">{op.potencial_estimado}</p>
                           </div>
                         )}
-                        {op.termos_negativar && op.termos_negativar.length > 0 && (
+                        {/* O que fazer — da recomendação correspondente */}
+                        {matchingRec && (
                           <div className="space-y-2">
-                            <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Termos a negativar</p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {op.termos_negativar.map((kw, ki) => {
-                                const isNegativado = negativados[idx]?.has(kw) ?? false;
-                                const isSelected = !isNegativado && (selectedTermos[idx]?.has(kw) ?? false);
-                                return (
-                                  <button
-                                    key={ki}
-                                    onClick={() => !isNegativado && toggleTermo(idx, kw)}
-                                    disabled={isNegativado}
-                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-mono transition-all ${
-                                      isNegativado
-                                        ? "border-muted/50 bg-muted/20 text-muted-foreground/50 cursor-default line-through"
-                                        : isSelected
-                                        ? "border-red-500/70 bg-red-900/40 text-red-300 cursor-pointer"
-                                        : "border-yellow-500/40 bg-secondary hover:border-yellow-400 hover:bg-secondary/80 text-foreground cursor-pointer"
-                                    }`}
-                                  >
-                                    {isNegativado ? (
-                                      <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
-                                    ) : (
-                                      <span className={`w-3 h-3 rounded-sm border flex items-center justify-center shrink-0 ${isSelected ? "border-red-400 bg-red-500/30" : "border-muted-foreground/40"}`}>
-                                        {isSelected && <span className="text-[8px] text-red-300">✓</span>}
+                            <p className="text-[11px] text-muted-foreground uppercase tracking-wide">O que fazer</p>
+                            <p className="text-sm font-medium text-foreground">{matchingRec.acao}</p>
+                            {matchingRec.como_executar && (
+                              <ol className="space-y-1 pl-0">
+                                {matchingRec.como_executar.split(/\n/).filter(Boolean).map((line, li) => {
+                                  const cleaned = line.replace(/^\d+[\.\)\-]\s*/, "").trim();
+                                  if (!cleaned) return null;
+                                  return (
+                                    <li key={li} className="text-xs text-foreground/85 flex gap-2">
+                                      <span className="text-muted-foreground font-medium shrink-0">{li + 1}.</span>
+                                      <span>{cleaned}</span>
+                                    </li>
+                                  );
+                                })}
+                              </ol>
+                            )}
+                            {/* Termos a negativar da recomendação */}
+                            {matchingRec.termos_negativar && matchingRec.termos_negativar.length > 0 && (
+                              <div className="space-y-2 pt-1">
+                                <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Termos a negativar</p>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {matchingRec.termos_negativar.map((kw, ki) => {
+                                    const isNegativado = negativados[idx]?.has(kw) ?? false;
+                                    const isSelected = !isNegativado && (selectedTermos[idx]?.has(kw) ?? false);
+                                    return (
+                                      <button
+                                        key={ki}
+                                        onClick={() => !isNegativado && toggleTermo(idx, kw)}
+                                        disabled={isNegativado}
+                                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-xs font-mono transition-all ${
+                                          isNegativado
+                                            ? "border-muted/50 bg-muted/20 text-muted-foreground/50 cursor-default line-through"
+                                            : isSelected
+                                            ? "border-red-500/70 bg-red-900/40 text-red-300 cursor-pointer"
+                                            : "border-yellow-500/40 bg-secondary hover:border-yellow-400 hover:bg-secondary/80 text-foreground cursor-pointer"
+                                        }`}
+                                      >
+                                        {isNegativado ? (
+                                          <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                                        ) : (
+                                          <span className={`w-3 h-3 rounded-sm border flex items-center justify-center shrink-0 ${isSelected ? "border-red-400 bg-red-500/30" : "border-muted-foreground/40"}`}>
+                                            {isSelected && <span className="text-[8px] text-red-300">✓</span>}
+                                          </span>
+                                        )}
+                                        {kw}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                                {(selectedTermos[idx]?.size ?? 0) > 0 && (
+                                  <div className="flex items-center gap-2 pt-1">
+                                    <button
+                                      onClick={() => handleNegativarOportunidade(i, { ...op, termos_negativar: matchingRec.termos_negativar, adGroupId: matchingRec.adGroupId ?? op.adGroupId } as Oportunidade)}
+                                      disabled={negativarLoading === idx}
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/60 text-xs font-medium transition-all disabled:opacity-50"
+                                    >
+                                      {negativarLoading === idx ? (
+                                        <><Loader2 className="w-3 h-3 animate-spin" /> Negativando...</>
+                                      ) : (
+                                        <><X className="w-3 h-3" /> Negativar {selectedTermos[idx]?.size} selecionado{(selectedTermos[idx]?.size ?? 0) > 1 ? "s" : ""}</>
+                                      )}
+                                    </button>
+                                    {negativarSuccess?.index === idx && (
+                                      <span className="text-xs text-emerald-400 flex items-center gap-1">
+                                        <CheckCircle2 className="w-3 h-3" /> {negativarSuccess.count} termo{negativarSuccess.count > 1 ? "s" : ""} negativado{negativarSuccess.count > 1 ? "s" : ""} com sucesso
                                       </span>
                                     )}
-                                    {kw}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                            {(selectedTermos[idx]?.size ?? 0) > 0 && (
-                              <div className="flex items-center gap-2 pt-1">
-                                <button
-                                  onClick={() => handleNegativarOportunidade(i, op)}
-                                  disabled={negativarLoading === idx}
-                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:border-red-500/60 text-xs font-medium transition-all disabled:opacity-50"
-                                >
-                                  {negativarLoading === idx ? (
-                                    <><Loader2 className="w-3 h-3 animate-spin" /> Negativando...</>
-                                  ) : (
-                                    <><X className="w-3 h-3" /> Negativar {selectedTermos[idx]?.size} selecionado{(selectedTermos[idx]?.size ?? 0) > 1 ? "s" : ""}</>
-                                  )}
-                                </button>
-                                {negativarSuccess?.index === idx && (
-                                  <span className="text-xs text-emerald-400 flex items-center gap-1">
-                                    <CheckCircle2 className="w-3 h-3" /> {negativarSuccess.count} termo{negativarSuccess.count > 1 ? "s" : ""} negativado{negativarSuccess.count > 1 ? "s" : ""} com sucesso
-                                  </span>
-                                )}
-                                {negativarError?.index === idx && (
-                                  <span className="text-xs text-red-400 flex items-center gap-1 max-w-md break-all">
-                                    <AlertTriangle className="w-3 h-3 shrink-0" /> {negativarError.msg}
-                                  </span>
+                                    {negativarError?.index === idx && (
+                                      <span className="text-xs text-red-400 flex items-center gap-1 max-w-md break-all">
+                                        <AlertTriangle className="w-3 h-3 shrink-0" /> {negativarError.msg}
+                                      </span>
+                                    )}
+                                  </div>
                                 )}
                               </div>
                             )}
                           </div>
-                        )}
-                        {op.keywords_adicionar && op.keywords_adicionar.length > 0 && (
-                          <div className="space-y-1">
-                            <div className="flex items-center justify-between">
-                              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Keywords a adicionar</p>
-                              <button
-                                onClick={() => navigator.clipboard.writeText(op.keywords_adicionar!.join('\n'))}
-                                className="text-xs text-primary hover:underline"
-                              >
-                                Copiar
-                              </button>
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {op.keywords_adicionar.map((kw, ki) => (
-                                <KeywordChip key={ki} keyword={kw} variant="group" />
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {matchingRec && (
-                          <button
-                            onClick={() => { setActiveTab("recomendacoes"); }}
-                            className="w-full mt-1 px-3 py-2 rounded-lg border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10 hover:border-blue-500/30 transition-colors text-left"
-                          >
-                            <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-0.5">Ação recomendada</p>
-                            <p className="text-sm text-blue-400 font-medium">{matchingRec.acao}</p>
-                          </button>
                         )}
                       </div>
                     </motion.div>
