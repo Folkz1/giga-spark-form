@@ -318,16 +318,14 @@ const GestorIA = () => {
   const [ltvEstimado, setLtvEstimado] = useState("");
   const [autoFilled, setAutoFilled] = useState(false);
 
-  const CONTEXT_STORAGE_KEY = "gestorIA_context";
+  const contextKey = (cid: string) => `gestor_contexto_${cid}`;
 
-  // Save context to localStorage when fields change
+  // Save context to localStorage per customerId
   useEffect(() => {
     if (selectedIds.length !== 1 || !tipoNegocio) return;
     const cid = selectedIds[0];
     try {
-      const stored = JSON.parse(localStorage.getItem(CONTEXT_STORAGE_KEY) || "{}");
-      stored[cid] = { tipoNegocio, conversaoRastreada, tipoConversao, metaCPA, ticketMedio, taxaFechamento, margemLucro, valorMedioCliente, ltvEstimado };
-      localStorage.setItem(CONTEXT_STORAGE_KEY, JSON.stringify(stored));
+      localStorage.setItem(contextKey(cid), JSON.stringify({ tipoNegocio, conversaoRastreada, tipoConversao, metaCPA, ticketMedio, taxaFechamento, margemLucro, valorMedioCliente, ltvEstimado }));
     } catch {}
   }, [selectedIds, tipoNegocio, conversaoRastreada, tipoConversao, metaCPA, ticketMedio, taxaFechamento, margemLucro, valorMedioCliente, ltvEstimado]);
 
@@ -338,9 +336,11 @@ const GestorIA = () => {
       return;
     }
     const cid = selectedIds[0];
+    // Reset fields first to avoid leaking data between accounts
+    setTipoNegocio(""); setConversaoRastreada(""); setTipoConversao(""); setMetaCPA("");
+    setTicketMedio(""); setTaxaFechamento(""); setMargemLucro(""); setValorMedioCliente(""); setLtvEstimado("");
     try {
-      const stored = JSON.parse(localStorage.getItem(CONTEXT_STORAGE_KEY) || "{}");
-      const saved = stored[cid];
+      const saved = JSON.parse(localStorage.getItem(contextKey(cid)) || "null");
       if (saved && saved.tipoNegocio) {
         setTipoNegocio(saved.tipoNegocio);
         setConversaoRastreada(saved.conversaoRastreada || "");
