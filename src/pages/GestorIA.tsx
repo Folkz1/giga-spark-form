@@ -551,10 +551,13 @@ const GestorIA = () => {
         ag.campanha === rec.campanha
     );
     if (!grupo) {
+      console.error("[NEGATIVAR] AdGroup não encontrado!", { recGrupo: rec.grupo, recCampanha: rec.campanha, adGroupsDisponiveis: adGroups });
       setNegativarError(recIndex);
       setTimeout(() => setNegativarError(null), 3000);
       return;
     }
+    const payload = { customerId: selectedIds[0], adGroupId: grupo.id, termos };
+    console.log("[NEGATIVAR] Payload enviado:", JSON.stringify(payload, null, 2));
     setNegativarLoading(recIndex);
     try {
       const res = await fetch(
@@ -562,23 +565,22 @@ const GestorIA = () => {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            customerId: selectedIds[0],
-            adGroupId: grupo.id,
-            termos,
-          }),
+          body: JSON.stringify(payload),
         }
       );
       const data = await res.json();
+      console.log("[NEGATIVAR] Resposta:", JSON.stringify(data, null, 2));
       if (data.sucesso) {
         setNegativarSuccess(recIndex);
         setSelectedTermos((prev) => ({ ...prev, [recIndex]: new Set() }));
         setTimeout(() => setNegativarSuccess(null), 3000);
       } else {
+        console.warn("[NEGATIVAR] Resposta sem sucesso:", data);
         setNegativarError(recIndex);
         setTimeout(() => setNegativarError(null), 3000);
       }
-    } catch {
+    } catch (err) {
+      console.error("[NEGATIVAR] Erro na requisição:", err);
       setNegativarError(recIndex);
       setTimeout(() => setNegativarError(null), 3000);
     } finally {
