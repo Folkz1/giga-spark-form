@@ -1,3 +1,4 @@
+// GestorIA v2.9.1 - fix parseSteps numeração duplicada
 import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
