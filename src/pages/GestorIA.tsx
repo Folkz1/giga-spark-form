@@ -790,8 +790,11 @@ const GestorIA = () => {
         ) : (
           relatorio.alertas.map((alerta, i) => {
             const isExpanded = expandedAlertas.has(i);
-            const hasDetails = alerta.causa_provavel || alerta.como_executar || (alerta.termos_negativar && alerta.termos_negativar.length > 0) || (alerta.keywords_adicionar && alerta.keywords_adicionar.length > 0);
+            const hasDetails = alerta.dado || alerta.causa_provavel || alerta.como_executar || (alerta.termos_negativar && alerta.termos_negativar.length > 0) || (alerta.keywords_adicionar && alerta.keywords_adicionar.length > 0);
             const idx = alertaRecIndex(i);
+            // Find matching recommendation for this campaign
+            const matchingRec = relatorio.recomendacoes.find((r) => r.campanha === alerta.campanha);
+            const matchingRecIndex = matchingRec ? relatorio.recomendacoes.indexOf(matchingRec) : -1;
             return (
               <div key={i} className="rounded-xl bg-red-500/5 border border-red-500/10 overflow-hidden">
                 <button
@@ -803,7 +806,6 @@ const GestorIA = () => {
                     <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isExpanded ? "rotate-180" : ""}`} />
                   </div>
                   <p className="text-sm text-muted-foreground">{alerta.alerta}</p>
-                  <p className="text-xs text-red-400 font-medium">{alerta.dado}</p>
                 </button>
                 <AnimatePresence>
                   {isExpanded && hasDetails && (
@@ -815,28 +817,39 @@ const GestorIA = () => {
                       className="overflow-hidden"
                     >
                       <div className="px-4 pb-4 space-y-3 border-t border-red-500/10 pt-3">
-                        {/* Dado em destaque */}
+                        {/* Impacto estimado */}
                         {alerta.dado && (
-                          <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3">
-                            <p className="text-xs text-muted-foreground font-medium mb-1">📊 Métrica</p>
-                            <p className="text-sm font-semibold text-red-300">{alerta.dado}</p>
-                          </div>
-                        )}
-                        {/* Causa provável */}
-                        {alerta.causa_provavel && (
                           <div>
-                            <p className="text-xs text-muted-foreground font-medium mb-1">🔍 Causa provável</p>
-                            <p className="text-sm text-foreground/90">{alerta.causa_provavel}</p>
+                            <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-0.5">Impacto estimado</p>
+                            <p className="text-base font-semibold text-orange-400">{alerta.dado}</p>
                           </div>
                         )}
-                        {/* Como executar */}
+                        {/* Causa */}
+                        {alerta.causa_provavel && (
+                          <p className="text-sm text-foreground/80">{alerta.causa_provavel}</p>
+                        )}
+                        {/* Como resolver — steps numerados */}
                         {alerta.como_executar && (
-                          <ComoExecutarBox texto={alerta.como_executar} />
+                          <div>
+                            <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-1">Como resolver</p>
+                            <ol className="space-y-1 pl-0">
+                              {alerta.como_executar.split(/\n/).filter(Boolean).map((line, li) => {
+                                const cleaned = line.replace(/^\d+[\.\)\-]\s*/, "").trim();
+                                if (!cleaned) return null;
+                                return (
+                                  <li key={li} className="text-xs text-foreground/85 flex gap-2">
+                                    <span className="text-muted-foreground font-medium shrink-0">{li + 1}.</span>
+                                    <span>{cleaned}</span>
+                                  </li>
+                                );
+                              })}
+                            </ol>
+                          </div>
                         )}
                         {/* Termos a negativar */}
                         {alerta.termos_negativar && alerta.termos_negativar.length > 0 && (
                           <div className="space-y-2">
-                            <p className="text-xs text-muted-foreground font-medium">Termos a negativar:</p>
+                            <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Termos a negativar</p>
                             <div className="flex flex-wrap gap-1.5">
                               {alerta.termos_negativar.map((kw, ki) => {
                                 const isNegativado = negativados[idx]?.has(kw) ?? false;
@@ -897,12 +910,12 @@ const GestorIA = () => {
                         {alerta.keywords_adicionar && alerta.keywords_adicionar.length > 0 && (
                           <div className="space-y-1">
                             <div className="flex items-center justify-between">
-                              <p className="text-xs text-muted-foreground font-medium">Keywords a adicionar:</p>
+                              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Keywords a adicionar</p>
                               <button
                                 onClick={() => navigator.clipboard.writeText(alerta.keywords_adicionar!.join('\n'))}
-                                className="text-xs text-primary hover:underline flex items-center gap-1"
+                                className="text-xs text-primary hover:underline"
                               >
-                                Copiar keywords
+                                Copiar
                               </button>
                             </div>
                             <div className="flex flex-wrap gap-1.5">
@@ -911,6 +924,16 @@ const GestorIA = () => {
                               ))}
                             </div>
                           </div>
+                        )}
+                        {/* Ação recomendada — link para recomendação correspondente */}
+                        {matchingRec && (
+                          <button
+                            onClick={() => { setActiveTab("recomendacoes"); }}
+                            className="w-full mt-1 px-3 py-2 rounded-lg border border-blue-500/20 bg-blue-500/5 hover:bg-blue-500/10 hover:border-blue-500/30 transition-colors text-left"
+                          >
+                            <p className="text-[11px] text-muted-foreground uppercase tracking-wide mb-0.5">Ação recomendada</p>
+                            <p className="text-sm text-blue-400 font-medium">{matchingRec.acao}</p>
+                          </button>
                         )}
                       </div>
                     </motion.div>
