@@ -857,8 +857,12 @@ const GestorIA = () => {
             const isExpanded = expandedAlertas.has(i);
             const hasDetails = alerta.dado || alerta.causa_provavel || alerta.como_executar || (alerta.termos_negativar && alerta.termos_negativar.length > 0) || (alerta.keywords_adicionar && alerta.keywords_adicionar.length > 0);
             const idx = alertaRecIndex(i);
-            // Find matching recommendation for this campaign
-            const matchingRec = relatorio.recomendacoes.find((r) => r.campanha === alerta.campanha);
+            // Lookup por rec_index injetado pelo backend (exato), fallback por campanha+grupo
+            const recIdx = (alerta as any).rec_index;
+            const matchingRec = recIdx !== undefined
+              ? relatorio.recomendacoes[recIdx]
+              : relatorio.recomendacoes.find((r) => r.campanha === alerta.campanha && (r.grupo ?? null) === ((alerta as any).grupo ?? null))
+                ?? relatorio.recomendacoes.find((r) => r.campanha === alerta.campanha);
             const matchingRecIndex = matchingRec ? relatorio.recomendacoes.indexOf(matchingRec) : -1;
             return (
               <div key={i} className="rounded-xl bg-red-500/5 border border-red-500/10 overflow-hidden">
@@ -1103,7 +1107,12 @@ const GestorIA = () => {
             const isExpanded = expandedOportunidades.has(i);
             const hasDetails = op.dado || op.causa_provavel || op.como_executar || (op.termos_negativar && op.termos_negativar.length > 0) || (op.keywords_adicionar && op.keywords_adicionar.length > 0);
             const idx = opRecIndex(i);
-            const matchingRec = relatorio.recomendacoes.find((r) => r.campanha === op.campanha);
+            // Lookup por rec_index injetado pelo backend (exato), fallback por campanha+grupo
+            const recIdx = (op as any).rec_index;
+            const matchingRec = recIdx !== undefined
+              ? relatorio.recomendacoes[recIdx]
+              : relatorio.recomendacoes.find((r) => r.campanha === op.campanha && (r.grupo ?? null) === (op.grupo ?? null))
+                ?? relatorio.recomendacoes.find((r) => r.campanha === op.campanha);
             return (
               <div key={i} className="rounded-xl bg-emerald-500/5 border border-emerald-500/10 overflow-hidden">
                 <button
