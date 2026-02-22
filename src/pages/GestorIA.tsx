@@ -184,8 +184,8 @@ const GestorIA = () => {
 
   const [selectedTermos, setSelectedTermos] = useState<Record<number, Set<string>>>({});
   const [negativarLoading, setNegativarLoading] = useState<number | null>(null);
-  const [negativarSuccess, setNegativarSuccess] = useState<number | null>(null);
-  const [negativarError, setNegativarError] = useState<number | null>(null);
+  const [negativarSuccess, setNegativarSuccess] = useState<{ index: number; count: number } | null>(null);
+  const [negativarError, setNegativarError] = useState<{ index: number; msg: string } | null>(null);
 
   // ClickUp modal state
   const [clickupModal, setClickupModal] = useState<{ open: boolean; rec: Recomendacao | null }>({ open: false, rec: null });
@@ -544,21 +544,28 @@ const GestorIA = () => {
   const handleNegativar = async (recIndex: number, rec: Recomendacao) => {
     const termos = Array.from(selectedTermos[recIndex] ?? new Set());
     if (termos.length === 0) return;
+
+    // Buscar adGroupId
     const adGroups = relatorio?.adGroups ?? [];
     const grupo = adGroups.find(
       (ag) =>
         ag.nome.toLowerCase().trim() === (rec.grupo ?? "").toLowerCase().trim() &&
         ag.campanha === rec.campanha
     );
-    if (!grupo) {
-      console.error("[NEGATIVAR] AdGroup não encontrado!", { recGrupo: rec.grupo, recCampanha: rec.campanha, adGroupsDisponiveis: adGroups });
-      setNegativarError(recIndex);
-      setTimeout(() => setNegativarError(null), 3000);
+
+    const adGroupId = grupo?.id;
+    if (!adGroupId) {
+      const msg = `adGroupId não encontrado para este grupo ("${rec.grupo}" / "${rec.campanha}"). adGroups disponíveis: ${adGroups.map(ag => ag.nome).join(", ") || "nenhum"}`;
+      console.error("[NEGATIVAR]", msg);
+      setNegativarError({ index: recIndex, msg });
+      setTimeout(() => setNegativarError(null), 5000);
       return;
     }
-    const payload = { customerId: selectedIds[0], adGroupId: grupo.id, termos };
-    alert(JSON.stringify(payload, null, 2));
+
+    const customerId = selectedIds[0]?.replace(/-/g, "");
+    const payload = { customerId, adGroupId, termos };
     console.log("[NEGATIVAR] Payload enviado:", JSON.stringify(payload, null, 2));
+
     setNegativarLoading(recIndex);
     try {
       const res = await fetch(
@@ -569,21 +576,34 @@ const GestorIA = () => {
           body: JSON.stringify(payload),
         }
       );
+
+      if (!res.ok) {
+        const errText = await res.text();
+        const msg = `HTTP ${res.status}: ${errText}`;
+        console.error("[NEGATIVAR] Erro HTTP:", msg);
+        setNegativarError({ index: recIndex, msg });
+        setTimeout(() => setNegativarError(null), 5000);
+        return;
+      }
+
       const data = await res.json();
       console.log("[NEGATIVAR] Resposta:", JSON.stringify(data, null, 2));
+
       if (data.sucesso) {
-        setNegativarSuccess(recIndex);
+        setNegativarSuccess({ index: recIndex, count: termos.length });
         setSelectedTermos((prev) => ({ ...prev, [recIndex]: new Set() }));
-        setTimeout(() => setNegativarSuccess(null), 3000);
+        setTimeout(() => setNegativarSuccess(null), 4000);
       } else {
-        console.warn("[NEGATIVAR] Resposta sem sucesso:", data);
-        setNegativarError(recIndex);
-        setTimeout(() => setNegativarError(null), 3000);
+        const msg = `Resposta sem sucesso: ${JSON.stringify(data)}`;
+        console.warn("[NEGATIVAR]", msg);
+        setNegativarError({ index: recIndex, msg });
+        setTimeout(() => setNegativarError(null), 5000);
       }
-    } catch (err) {
-      console.error("[NEGATIVAR] Erro na requisição:", err);
-      setNegativarError(recIndex);
-      setTimeout(() => setNegativarError(null), 3000);
+    } catch (err: any) {
+      const msg = `Erro de rede: ${err?.message || String(err)}`;
+      console.error("[NEGATIVAR]", msg);
+      setNegativarError({ index: recIndex, msg });
+      setTimeout(() => setNegativarError(null), 5000);
     } finally {
       setNegativarLoading(null);
     }
@@ -777,14 +797,14 @@ const GestorIA = () => {
                           <><X className="w-3 h-3" /> Negativar {selectedTermos[i]?.size} selecionado{(selectedTermos[i]?.size ?? 0) > 1 ? "s" : ""}</>
                         )}
                       </button>
-                      {negativarSuccess === i && (
+                      {negativarSuccess?.index === i && (
                         <span className="text-xs text-emerald-400 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" /> Aplicado!
+                          <CheckCircle2 className="w-3 h-3" /> {negativarSuccess.count} termo{negativarSuccess.count > 1 ? "s" : ""} negativado{negativarSuccess.count > 1 ? "s" : ""} com sucesso
                         </span>
                       )}
-                      {negativarError === i && (
-                        <span className="text-xs text-red-400 flex items-center gap-1">
-                          <AlertTriangle className="w-3 h-3" /> Erro ao negativar
+                      {negativarError?.index === i && (
+                        <span className="text-xs text-red-400 flex items-center gap-1 max-w-md break-all">
+                          <AlertTriangle className="w-3 h-3 shrink-0" /> {negativarError.msg}
                         </span>
                       )}
                     </div>
