@@ -1215,9 +1215,28 @@ const GestorIA = () => {
                                     </span>
                                   )}
                                 </div>
-                              </div>
-                            )}
                           </div>
+                        )}
+                        {/* Keywords a adicionar da recomendação */}
+                        {matchingRec.keywords_adicionar && matchingRec.keywords_adicionar.length > 0 && (
+                          <div className="space-y-1 pt-1">
+                            <div className="flex items-center justify-between">
+                              <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Keywords a adicionar</p>
+                              <button
+                                onClick={() => navigator.clipboard.writeText(matchingRec.keywords_adicionar!.join('\n'))}
+                                className="text-xs text-primary hover:underline"
+                              >
+                                Copiar
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {matchingRec.keywords_adicionar.map((kw, ki) => (
+                                <KeywordChip key={ki} keyword={kw} variant="group" />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                         )}
                       </div>
                     </motion.div>
@@ -1260,9 +1279,25 @@ const GestorIA = () => {
                   </div>
                 </div>
               )}
-              {rec.keywords_adicionar && rec.keywords_adicionar.length > 0 &&
-                /adicionar/i.test(rec.acao) && /keyword|exact match/i.test(rec.acao) &&
-                (rec as any).match_type_label && (
+              {(rec as any).keywords_qs && (rec as any).keywords_qs.length > 0 && (
+                <div className="pt-1 space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium">Keywords com QS baixo:</p>
+                  <div className="flex flex-col gap-1.5">
+                    {(rec as any).keywords_qs.map((kq: any, ki: number) => (
+                      <div key={ki} className="flex items-center gap-2 flex-wrap">
+                        <KeywordChip keyword={kq.keyword} />
+                        <span className="text-[10px] font-mono text-yellow-400 border border-yellow-500/30 bg-yellow-900/20 px-1.5 py-0.5 rounded">
+                          QS {kq.qs}
+                        </span>
+                        <span className="text-[10px] text-red-400/80 border border-red-500/20 bg-red-900/10 px-1.5 py-0.5 rounded">
+                          {kq.componente_critico}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {(rec as any).match_type_label && (
                 <div className="pt-1 space-y-1">
                   <p className="text-xs text-muted-foreground font-medium">Tipo de correspondência:</p>
                   <div className="flex flex-wrap gap-1.5">
@@ -1337,13 +1372,12 @@ const GestorIA = () => {
                   </div>
                 </div>
               )}
-              {rec.keywords_adicionar && rec.keywords_adicionar.length > 0 &&
-                /adicionar/i.test(rec.acao) && /keyword|exact match/i.test(rec.acao) && (
+              {rec.keywords_adicionar && rec.keywords_adicionar.length > 0 && (
                 <div className="pt-1 space-y-1">
                   <div className="flex items-center justify-between">
                     <p className="text-xs text-muted-foreground font-medium">Keywords a adicionar:</p>
                     <button
-                      onClick={() => navigator.clipboard.writeText(rec.keywords_adicionar.join('\n'))}
+                      onClick={() => navigator.clipboard.writeText(rec.keywords_adicionar!.join('\n'))}
                       className="text-xs text-primary hover:underline flex items-center gap-1"
                     >
                       Copiar keywords
@@ -1355,7 +1389,7 @@ const GestorIA = () => {
                     ))}
                   </div>
                 </div>
-                )}
+              )}
               {/* ClickUp button */}
               <div className="pt-2 flex justify-end">
                 <button
@@ -1785,13 +1819,13 @@ const GestorIA = () => {
                   const custo30 = parseFloat(relatorio.resumo.custo30dias ?? "0");
                   const conv7 = relatorio.resumo.conversoes7dias ?? 0;
                   const conv30 = relatorio.resumo.conversoes30dias ?? 0;
-                  const cpa = conv7 > 0 ? custo7 / conv7 : 0;
+                  const cpa30 = conv30 > 0 ? custo30 / conv30 : 0;
                   return [
                     { label: "Investido 7d", value: formatCurrency(custo7), icon: DollarSign },
                     { label: "Investido 30d", value: formatCurrency(custo30), icon: DollarSign },
                     { label: "Conversões 7d", value: conv7.toString(), icon: Target },
                     { label: "Conversões 30d", value: conv30.toString(), icon: Target },
-                    { label: "CPA Médio", value: formatCurrency(cpa), icon: TrendingUp },
+                    { label: "CPA Médio 30d", value: formatCurrency(cpa30), icon: TrendingUp },
                   ];
                 })().map((card) => {
                   const Icon = card.icon;
