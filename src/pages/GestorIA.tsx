@@ -1163,11 +1163,11 @@ const GestorIA = () => {
                               </ol>
                             )}
                             {/* Termos a negativar da recomendação */}
-                            {matchingRec.termos_negativar && matchingRec.termos_negativar.length > 0 && (
+                            {op.termos_negativar && op.termos_negativar.length > 0 && (
                               <div className="space-y-2 pt-1">
                                 <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Termos a negativar</p>
                                 <div className="flex flex-wrap gap-1.5">
-                                  {matchingRec.termos_negativar.map((kw, ki) => {
+                                  {(op.termos_negativar ?? []).map((kw, ki) => {
                                     const isNegativado = negativados[idx]?.has(kw) ?? false;
                                     const isSelected = !isNegativado && (selectedTermos[idx]?.has(kw) ?? false);
                                     return (
@@ -1198,7 +1198,7 @@ const GestorIA = () => {
                                 <p className="text-[10px] text-muted-foreground/60 italic">Selecione os termos que deseja negativar</p>
                                 <div className="flex items-center gap-2 pt-1">
                                   <button
-                                    onClick={() => handleNegativarOportunidade(i, { ...op, termos_negativar: matchingRec.termos_negativar, adGroupId: matchingRec.adGroupId ?? op.adGroupId } as Oportunidade)}
+                                    onClick={() => handleNegativarOportunidade(i, { ...op, termos_negativar: op.termos_negativar, adGroupId: op.adGroupId ?? matchingRec?.adGroupId } as Oportunidade)}
                                     disabled={negativarLoading === idx || (selectedTermos[idx]?.size ?? 0) === 0}
                                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                                       (selectedTermos[idx]?.size ?? 0) > 0
