@@ -76,6 +76,7 @@ interface Recomendacao {
   grupo?: string | null;
   termos_negativar?: string[];
   keywords_adicionar?: string[];
+  adGroupId?: string;
 }
 
 interface Resumo {
@@ -545,17 +546,9 @@ const GestorIA = () => {
     const termos = Array.from(selectedTermos[recIndex] ?? new Set());
     if (termos.length === 0) return;
 
-    // Buscar adGroupId
-    const adGroups = relatorio?.adGroups ?? [];
-    const grupo = adGroups.find(
-      (ag) =>
-        ag.nome.toLowerCase().trim() === (rec.grupo ?? "").toLowerCase().trim() &&
-        ag.campanha === rec.campanha
-    );
-
-    const adGroupId = grupo?.id;
+    const adGroupId = rec.adGroupId;
     if (!adGroupId) {
-      const msg = `adGroupId não encontrado para este grupo ("${rec.grupo}" / "${rec.campanha}"). adGroups disponíveis: ${adGroups.map(ag => ag.nome).join(", ") || "nenhum"}`;
+      const msg = `adGroupId não encontrado nesta recomendação ("${rec.grupo}" / "${rec.campanha}")`;
       console.error("[NEGATIVAR]", msg);
       setNegativarError({ index: recIndex, msg });
       setTimeout(() => setNegativarError(null), 5000);
