@@ -1260,6 +1260,19 @@ const GestorIA = () => {
                   </div>
                 </div>
               )}
+              {rec.keywords_adicionar && rec.keywords_adicionar.length > 0 &&
+                /adicionar/i.test(rec.acao) && /keyword|exact match/i.test(rec.acao) &&
+                (rec as any).match_type_label && (
+                <div className="pt-1 space-y-1">
+                  <p className="text-xs text-muted-foreground font-medium">Tipo de correspondência:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <KeywordChip keyword={(rec as any).match_type_label} variant="group" />
+                  </div>
+                  {(rec as any).match_type_motivo && (
+                    <p className="text-[11px] text-muted-foreground/70">{(rec as any).match_type_motivo}</p>
+                  )}
+                </div>
+              )}
               {rec.termos_negativar && rec.termos_negativar.length > 0 && (
                 <div className="pt-1 space-y-2">
                   <p className="text-xs text-muted-foreground font-medium">Termos a negativar:</p>
@@ -1343,19 +1356,6 @@ const GestorIA = () => {
                   </div>
                 </div>
                 )}
-              {rec.keywords_adicionar && rec.keywords_adicionar.length > 0 &&
-                /adicionar/i.test(rec.acao) && /keyword|exact match/i.test(rec.acao) &&
-                (rec as any).match_type_label && (
-                <div className="pt-1 space-y-1">
-                  <p className="text-xs text-muted-foreground font-medium">Tipo de correspondência:</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    <KeywordChip keyword={(rec as any).match_type_label} variant="group" />
-                  </div>
-                  {(rec as any).match_type_motivo && (
-                    <p className="text-[11px] text-muted-foreground/70">{(rec as any).match_type_motivo}</p>
-                  )}
-                </div>
-              )}
               {/* ClickUp button */}
               <div className="pt-2 flex justify-end">
                 <button
