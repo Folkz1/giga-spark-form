@@ -144,7 +144,7 @@ const KeywordChip = ({ keyword, variant = "keyword" }: { keyword: string; varian
 const parseSteps = (texto: string): string[] => {
   // Split on patterns like "1)" "2." "1-" at word boundaries, keeping content
   const parts = texto.split(/(?:^|\n)\s*\d+[\.\)\-]\s*|(?<=\S)\s+\d+[\.\)\-]\s+/);
-  const steps = parts.map((s) => s.trim()).filter(Boolean);
+  const steps = parts.map((s) => s.replace(/^\d+[\.\)\-]\s*/, "").trim()).filter(Boolean);
   if (steps.length > 1) return steps;
   // Fallback: split by newlines
   return texto.split(/\n/).map((s) => s.replace(/^\d+[\.\)\-]\s*/, "").trim()).filter(Boolean);
@@ -861,7 +861,7 @@ const GestorIA = () => {
             const recIdx = (alerta as any).rec_index;
             const matchingRec = recIdx !== undefined
               ? relatorio.recomendacoes[recIdx]
-              : relatorio.recomendacoes.find((r) => r.campanha === alerta.campanha && (r.grupo ?? null) === ((alerta as any).grupo ?? null))
+              : (relatorio.recomendacoes.find((r) => r.campanha === alerta.campanha && (r.grupo ?? null) === ((alerta as any).grupo ?? null)))
                 ?? relatorio.recomendacoes.find((r) => r.campanha === alerta.campanha);
             const matchingRecIndex = matchingRec ? relatorio.recomendacoes.indexOf(matchingRec) : -1;
             return (
