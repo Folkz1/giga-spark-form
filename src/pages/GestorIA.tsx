@@ -491,7 +491,17 @@ const GestorIA = () => {
           data = JSON.parse(parsed);
         } else if (Array.isArray(parsed) && parsed.length > 0) {
           console.log("[GESTOR-IA] Response is array, using first element");
-          data = parsed[0];
+          const firstEl = parsed[0];
+          // n8n MCP format: [{ content: [{ type: "text", text: "```json\n{...}\n```" }] }]
+          if (firstEl?.content && Array.isArray(firstEl.content) && firstEl.content[0]?.text) {
+            let innerText = firstEl.content[0].text;
+            // Strip markdown code fences if present
+            innerText = innerText.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+            console.log("[GESTOR-IA] Extracted inner text from content[0].text:", innerText.substring(0, 200));
+            data = JSON.parse(innerText);
+          } else {
+            data = firstEl;
+          }
         } else {
           data = parsed;
         }
