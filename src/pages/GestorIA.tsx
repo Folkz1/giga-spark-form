@@ -544,8 +544,11 @@ const GestorIA = () => {
         conversoes7dias: Number(conv7Raw) || 0,
         conversoes30dias: Number(conv30Raw) || 0,
       };
+      console.log("[GESTOR-IA] data bruto da API:", JSON.stringify(data, null, 2));
       // resumo_cards: structured 4-card data (may not exist in old analyses)
       const rawCards = data.resumo_cards;
+      console.log("[GESTOR-IA] data.resumo_cards:", rawCards);
+      console.log("[GESTOR-IA] data.resumo_executivo:", data.resumo_executivo);
       const cardsObj: ResumoCards | null = typeof rawCards === "object" && rawCards !== null ? rawCards : null;
       // resumo_executivo: full text string for "Ver análise completa"
       const rawExec = data.resumo_executivo;
