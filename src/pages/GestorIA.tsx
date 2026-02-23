@@ -543,12 +543,20 @@ const GestorIA = () => {
         conversoes7dias: Number(conv7Raw) || 0,
         conversoes30dias: Number(conv30Raw) || 0,
       };
+      const rawExec = data.resumo_executivo;
+      const execObj: ResumoExecutivo = typeof rawExec === "object" && rawExec !== null
+        ? rawExec
+        : {};
+      const execTexto = typeof rawExec === "string"
+        ? rawExec
+        : [execObj.visao_geral, execObj.problema_principal, execObj.destaques, execObj.oportunidade_principal].filter(Boolean).join("\n\n");
       setRelatorio({
         resumo: resumoData,
         alertas: Array.isArray(data.alertas_criticos) ? data.alertas_criticos : [],
         oportunidades: Array.isArray(data.oportunidades) ? data.oportunidades : [],
         recomendacoes: Array.isArray(data.recomendacoes) ? data.recomendacoes : [],
-        resumoExecutivo: data.resumo_executivo ?? "",
+        resumoExecutivo: execObj,
+        resumoExecutivoTexto: execTexto,
         adGroups: Array.isArray(data.adGroups) ? data.adGroups : [],
       });
       setStep(3);
@@ -747,95 +755,18 @@ const GestorIA = () => {
     }
   };
 
-  // Resumo executivo pills generation
-  const resumoPills = useMemo(() => {
-    if (!relatorio) return [];
-    const pills: { icon: string; text: string; color: "green" | "yellow" | "red" | "blue" }[] = [];
-    // Tracking
-    if (relatorio.resumoExecutivo.toLowerCase().includes("tracking") && relatorio.resumoExecutivo.toLowerCase().includes("correto")) {
-      pills.push({ icon: "✅", text: "Tracking OK", color: "green" });
-    }
-    // CPC pressure
-    const cpcMatch = relatorio.resumoExecutivo.match(/CPC[^.]*?(\+?[\d,.]+%)/i);
-    if (cpcMatch) {
-      pills.push({ icon: "⚠️", text: `Pressão Competitiva CPC ${cpcMatch[1]}`, color: "yellow" });
-    }
-    // Breakeven
-    const beMatch = relatorio.resumoExecutivo.match(/breakeven[^.]*?([\d,.]+)\s*vendas/i);
-    if (beMatch) {
-      pills.push({ icon: "💰", text: `Breakeven ${beMatch[1]} vendas`, color: "blue" });
-    }
-    // Campanhas em queda
-    const quedaMatch = relatorio.resumoExecutivo.match(/(\d+)\s*campanhas?\s*em\s*queda/i);
-    if (quedaMatch) {
-      pills.push({ icon: "📉", text: `${quedaMatch[1]} campanhas em queda`, color: "red" });
-    }
-    // Alertas count
-    if (relatorio.alertas.length > 0 && pills.length < 5) {
-      pills.push({ icon: "🚨", text: `${relatorio.alertas.length} alertas críticos`, color: "red" });
-    }
-    return pills;
-  }, [relatorio]);
-
-  const pillColorClasses = (color: "green" | "yellow" | "red" | "blue") => {
-    switch (color) {
-      case "green": return "bg-emerald-900/30 border-emerald-500/40 text-emerald-300";
-      case "yellow": return "bg-yellow-900/30 border-yellow-500/40 text-yellow-300";
-      case "red": return "bg-red-900/30 border-red-500/40 text-red-300";
-      case "blue": return "bg-blue-900/30 border-blue-500/40 text-blue-300";
-    }
-  };
-
-  // Parse resumo executivo into 4 structured cards
+  // Resumo executivo: read structured fields directly
   const resumoCards = useMemo(() => {
-    if (!relatorio?.resumoExecutivo) return null;
-    const txt = relatorio.resumoExecutivo;
-    const sentences = txt.split(/(?<=[.!])\s+/).filter(Boolean);
-
-    // Helper: find sentences matching patterns, return max 2
-    const extract = (patterns: RegExp[], exclude?: string[]): string => {
-      const found = sentences.filter(s => {
-        const lower = s.toLowerCase();
-        if (exclude?.some(e => lower.includes(e))) return false;
-        return patterns.some(p => p.test(lower));
-      });
-      return found.slice(0, 2).join(" ") || "";
-    };
-
-    const visaoGeral = extract([
-      /convers[õo]|cpa\s*m[ée]dio|investimento|custo\s*total|breakeven|total\s*de/i,
-    ]);
-
-    const problema = extract([
-      /problema|press[ãa]o|queda|alto|cr[ií]tico|negativ|piora|aten[çc][ãa]o|risco/i,
-    ]);
-
-    const destaques = extract([
-      /destaque|positiv|melhor|eficiente|baixo\s*cpa|boa|bom|sucesso|forte/i,
-    ], ["problema", "queda", "risco"]);
-
-    const oportunidade = extract([
-      /oportunidade|potencial|recomend|otimiz|escal|aument|melhorar|a[çc][ãa]o/i,
-    ]);
-
-    // Fallback: split text into 4 roughly equal parts
-    if (!visaoGeral && !problema && !destaques && !oportunidade) {
-      const quarter = Math.ceil(sentences.length / 4);
-      return {
-        visaoGeral: sentences.slice(0, quarter).join(" "),
-        problema: sentences.slice(quarter, quarter * 2).join(" "),
-        destaques: sentences.slice(quarter * 2, quarter * 3).join(" "),
-        oportunidade: sentences.slice(quarter * 3).join(" "),
-        fullText: txt,
-      };
-    }
-
+    if (!relatorio) return null;
+    const exec = relatorio.resumoExecutivo;
+    const hasAny = exec.visao_geral || exec.problema_principal || exec.destaques || exec.oportunidade_principal;
+    if (!hasAny) return null;
     return {
-      visaoGeral: visaoGeral || "Dados gerais disponíveis na análise completa.",
-      problema: problema || "Nenhum problema crítico identificado.",
-      destaques: destaques || "Consulte a análise completa para destaques.",
-      oportunidade: oportunidade || "Veja as recomendações para oportunidades.",
-      fullText: txt,
+      visaoGeral: exec.visao_geral || "",
+      problema: exec.problema_principal || "",
+      destaques: exec.destaques || "",
+      oportunidade: exec.oportunidade_principal || "",
+      fullText: relatorio.resumoExecutivoTexto,
     };
   }, [relatorio]);
 
@@ -1925,41 +1856,42 @@ const GestorIA = () => {
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {/* Card 1 — Visão Geral */}
-                    <div className="glass-card rounded-xl p-4 border border-border">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg">📊</span>
-                        <span className="text-sm font-bold text-foreground">Visão Geral</span>
+                    {resumoCards.visaoGeral && (
+                      <div className="glass-card rounded-xl p-4 border border-border">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-lg">📊</span>
+                          <span className="text-sm font-bold text-foreground">Visão Geral</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{resumoCards.visaoGeral}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{resumoCards.visaoGeral}</p>
-                    </div>
-
-                    {/* Card 2 — Problema Principal */}
-                    <div className="glass-card rounded-xl p-4 border border-destructive/40">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg">🔴</span>
-                        <span className="text-sm font-bold text-foreground">Problema Principal</span>
+                    )}
+                    {resumoCards.problema && (
+                      <div className="glass-card rounded-xl p-4 border border-destructive/40">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-lg">🔴</span>
+                          <span className="text-sm font-bold text-foreground">Problema Principal</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{resumoCards.problema}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{resumoCards.problema}</p>
-                    </div>
-
-                    {/* Card 3 — Destaques */}
-                    <div className="glass-card rounded-xl p-4 border border-emerald-500/40">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg">🟢</span>
-                        <span className="text-sm font-bold text-foreground">Destaques</span>
+                    )}
+                    {resumoCards.destaques && (
+                      <div className="glass-card rounded-xl p-4 border border-emerald-500/40">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-lg">🟢</span>
+                          <span className="text-sm font-bold text-foreground">Destaques</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{resumoCards.destaques}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{resumoCards.destaques}</p>
-                    </div>
-
-                    {/* Card 4 — Maior Oportunidade */}
-                    <div className="glass-card rounded-xl p-4 border border-warning/40">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg">⚡</span>
-                        <span className="text-sm font-bold text-foreground">Maior Oportunidade Agora</span>
+                    )}
+                    {resumoCards.oportunidade && (
+                      <div className="glass-card rounded-xl p-4 border border-warning/40">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-lg">⚡</span>
+                          <span className="text-sm font-bold text-foreground">Maior Oportunidade Agora</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{resumoCards.oportunidade}</p>
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{resumoCards.oportunidade}</p>
-                    </div>
+                    )}
                   </div>
 
                   {/* Expandable full text */}
