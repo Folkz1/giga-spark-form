@@ -543,10 +543,15 @@ const GestorIA = () => {
         conversoes7dias: Number(conv7Raw) || 0,
         conversoes30dias: Number(conv30Raw) || 0,
       };
+      // New field resumo_cards has structured data; fall back to resumo_executivo for old analyses
+      const rawCards = data.resumo_cards;
       const rawExec = data.resumo_executivo;
-      const execObj: ResumoExecutivo = typeof rawExec === "object" && rawExec !== null
-        ? rawExec
-        : {};
+      const execObj: ResumoExecutivo = typeof rawCards === "object" && rawCards !== null
+        ? rawCards
+        : typeof rawExec === "object" && rawExec !== null
+          ? rawExec
+          : {};
+      // Full text for "Ver análise completa": prefer resumo_executivo string, else join card fields
       const execTexto = typeof rawExec === "string"
         ? rawExec
         : [execObj.visao_geral, execObj.problema_principal, execObj.destaques, execObj.oportunidade_principal].filter(Boolean).join("\n\n");
@@ -755,13 +760,13 @@ const GestorIA = () => {
     }
   };
 
-  // Resumo executivo: read structured fields directly
+  // Resumo executivo: use resumo_cards fields; fallback to plain text for old analyses
   const resumoCards = useMemo(() => {
     if (!relatorio) return null;
     const exec = relatorio.resumoExecutivo;
-    const hasAny = exec.visao_geral || exec.problema_principal || exec.destaques || exec.oportunidade_principal;
-    if (!hasAny) return null;
+    const hasCards = exec.visao_geral || exec.problema_principal || exec.destaques || exec.oportunidade_principal;
     return {
+      hasCards: !!hasCards,
       visaoGeral: exec.visao_geral || "",
       problema: exec.problema_principal || "",
       destaques: exec.destaques || "",
@@ -1847,52 +1852,61 @@ const GestorIA = () => {
                 })}
               </div>
 
-              {/* Resumo Executivo — 4 cards + expandable full text */}
-              {resumoCards && (
+              {/* Resumo Executivo — 4 cards or plain text fallback */}
+              {resumoCards && (resumoCards.hasCards || resumoCards.fullText) && (
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-5 h-5 text-primary" />
                     <h3 className="text-base font-bold text-foreground">Resumo Executivo</h3>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {resumoCards.visaoGeral && (
-                      <div className="glass-card rounded-xl p-4 border border-border">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-lg">📊</span>
-                          <span className="text-sm font-bold text-foreground">Visão Geral</span>
+                  {resumoCards.hasCards ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {resumoCards.visaoGeral && (
+                        <div className="glass-card rounded-xl p-4 border border-border">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-lg">📊</span>
+                            <span className="text-sm font-bold text-foreground">Visão Geral</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">{resumoCards.visaoGeral}</p>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">{resumoCards.visaoGeral}</p>
-                      </div>
-                    )}
-                    {resumoCards.problema && (
-                      <div className="glass-card rounded-xl p-4 border border-destructive/40">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-lg">🔴</span>
-                          <span className="text-sm font-bold text-foreground">Problema Principal</span>
+                      )}
+                      {resumoCards.problema && (
+                        <div className="glass-card rounded-xl p-4 border border-destructive/40">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-lg">🔴</span>
+                            <span className="text-sm font-bold text-foreground">Problema Principal</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">{resumoCards.problema}</p>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">{resumoCards.problema}</p>
-                      </div>
-                    )}
-                    {resumoCards.destaques && (
-                      <div className="glass-card rounded-xl p-4 border border-emerald-500/40">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-lg">🟢</span>
-                          <span className="text-sm font-bold text-foreground">Destaques</span>
+                      )}
+                      {resumoCards.destaques && (
+                        <div className="glass-card rounded-xl p-4 border border-emerald-500/40">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-lg">🟢</span>
+                            <span className="text-sm font-bold text-foreground">Destaques</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">{resumoCards.destaques}</p>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">{resumoCards.destaques}</p>
-                      </div>
-                    )}
-                    {resumoCards.oportunidade && (
-                      <div className="glass-card rounded-xl p-4 border border-warning/40">
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-lg">⚡</span>
-                          <span className="text-sm font-bold text-foreground">Maior Oportunidade Agora</span>
+                      )}
+                      {resumoCards.oportunidade && (
+                        <div className="glass-card rounded-xl p-4 border border-warning/40">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="text-lg">⚡</span>
+                            <span className="text-sm font-bold text-foreground">Maior Oportunidade Agora</span>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-relaxed">{resumoCards.oportunidade}</p>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">{resumoCards.oportunidade}</p>
-                      </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* Fallback for old analyses without resumo_cards */
+                    <div className="glass-card rounded-xl p-4 border border-border">
+                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                        {resumoCards.fullText}
+                      </p>
+                    </div>
+                  )}
 
                   {/* Expandable full text */}
                   <AnimatePresence>
