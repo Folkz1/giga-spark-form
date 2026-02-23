@@ -106,12 +106,20 @@ interface AdGroup {
   campanha: string;
 }
 
+interface ResumoExecutivo {
+  visao_geral?: string;
+  problema_principal?: string;
+  destaques?: string;
+  oportunidade_principal?: string;
+}
+
 interface RelatorioData {
   resumo: Resumo;
   alertas: Alerta[];
   oportunidades: Oportunidade[];
   recomendacoes: Recomendacao[];
-  resumoExecutivo: string;
+  resumoExecutivo: ResumoExecutivo;
+  resumoExecutivoTexto: string;
   adGroups: AdGroup[];
 }
 
