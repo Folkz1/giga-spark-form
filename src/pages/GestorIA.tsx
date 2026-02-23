@@ -326,15 +326,13 @@ const GestorIA = () => {
       return;
     }
     const cid = selectedIds[0];
-    // Reset fields first to avoid leaking data between accounts
     setTipoNegocio(""); setConversaoRastreada(""); setTipoConversao(""); setMetaCPA("");
     setTicketMedio(""); setTaxaFechamento(""); setMargemLucro(""); setValorMedioCliente(""); setLtvEstimado("");
-    (async () => {
-      try {
-        const res = await fetch(`https://appn8o2.gigainteligencia.com.br/webhook/gestor-contexto-buscar?customerId=${cid}`);
-        const data = await res.json();
-        if (data && data.encontrado) {
-          setTipoNegocio(data.tipoNegocio || "");
+    fetch(`https://appn8o2.gigainteligencia.com.br/webhook/gestor-contexto-buscar?customerId=${cid}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.encontrado && data.tipoNegocio) {
+          setTipoNegocio(data.tipoNegocio);
           setConversaoRastreada(data.conversaoRastreada || "");
           setTipoConversao(data.tipoConversao || "");
           setMetaCPA(data.metaCPA || "");
@@ -346,10 +344,8 @@ const GestorIA = () => {
           setAutoFilled(true);
           setTimeout(() => setAutoFilled(false), 4000);
         }
-      } catch (err) {
-        console.error("[GESTOR-IA] Erro ao buscar contexto:", err);
-      }
-    })();
+      })
+      .catch(() => {});
   }, [selectedIds]);
 
   const buildContexto = () => {
@@ -423,6 +419,18 @@ const GestorIA = () => {
 
   const handleAnalyze = async () => {
     setStep(2);
+    // Save context to Google Sheets before analyzing
+    if (selectedIds.length === 1) {
+      fetch("https://appn8o2.gigainteligencia.com.br/webhook/gestor-contexto-salvar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customerId: selectedIds[0],
+          tipoNegocio, conversaoRastreada, tipoConversao, metaCPA,
+          ticketMedio, taxaFechamento, margemLucro, valorMedioCliente, ltvEstimado
+        })
+      }).catch(() => {});
+    }
     const accountNames: Record<string, string> = {};
     selectedAccounts.forEach((a) => {
       accountNames[a.customerId] = a.name;
@@ -1775,25 +1783,7 @@ const GestorIA = () => {
                     )}
 
                     <Button
-                      onClick={async () => {
-                        // Save context to Google Sheets before analyzing
-                        if (selectedIds.length === 1) {
-                          try {
-                            await fetch("https://appn8o2.gigainteligencia.com.br/webhook/gestor-contexto-salvar", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({
-                                customerId: selectedIds[0],
-                                tipoNegocio, conversaoRastreada, tipoConversao, metaCPA,
-                                ticketMedio, taxaFechamento, margemLucro, valorMedioCliente, ltvEstimado,
-                              }),
-                            });
-                          } catch (err) {
-                            console.error("[GESTOR-IA] Erro ao salvar contexto:", err);
-                          }
-                        }
-                        handleAnalyze();
-                      }}
+                      onClick={handleAnalyze}
                       disabled={selectedIds.length === 0 || !tipoNegocio || !conversaoRastreada || !tipoConversao || !metaCPA}
                       className="gradient-primary text-primary-foreground font-semibold px-8 glow-primary"
                     >
