@@ -118,8 +118,8 @@ interface RelatorioData {
   alertas: Alerta[];
   oportunidades: Oportunidade[];
   recomendacoes: Recomendacao[];
-  resumoCards: ResumoCards | null;
-  resumoExecutivoTexto: string;
+  resumo_cards: ResumoCards | null;
+  resumo_executivo: string;
   adGroups: AdGroup[];
 }
 
@@ -221,6 +221,7 @@ const GestorIA = () => {
   const [activeTab, setActiveTab] = useState<"alertas" | "oportunidades" | "recomendacoes">(savedSession?.activeTab ?? "alertas");
   const [chatOpen, setChatOpen] = useState(false);
   const [resumoExpanded, setResumoExpanded] = useState(false);
+  const [showFullAnalysis, setShowFullAnalysis] = useState(false);
 
   const [selectedTermos, setSelectedTermos] = useState<Record<number, Set<string>>>({});
   const [negativados, setNegativados] = useState<Record<number, Set<string>>>(() => {
@@ -558,8 +559,8 @@ const GestorIA = () => {
         alertas: Array.isArray(data.alertas_criticos) ? data.alertas_criticos : [],
         oportunidades: Array.isArray(data.oportunidades) ? data.oportunidades : [],
         recomendacoes: Array.isArray(data.recomendacoes) ? data.recomendacoes : [],
-        resumoCards: cardsObj,
-        resumoExecutivoTexto: execTexto,
+        resumo_cards: cardsObj,
+        resumo_executivo: execTexto,
         adGroups: Array.isArray(data.adGroups) ? data.adGroups : [],
       });
       setStep(3);
@@ -591,6 +592,7 @@ const GestorIA = () => {
     setActiveTab("alertas");
     setChatOpen(false);
     setResumoExpanded(false);
+    setShowFullAnalysis(false);
     setNegativados({});
     sessionStorage.removeItem("gestorIA_negativados");
   };
@@ -759,9 +761,7 @@ const GestorIA = () => {
   };
 
   // Resumo cards: direct access to relatorio.resumoCards
-  const cards = relatorio?.resumoCards;
-  const hasCards = !!(cards?.visao_geral || cards?.problema_principal || cards?.destaques || cards?.oportunidade_principal);
-  const resumoFullText = relatorio?.resumoExecutivoTexto || "";
+  // (resumo cards/text accessed directly via relatorio.resumo_cards / relatorio.resumo_executivo)
 
   // Tab content renderers
   const toggleAlertaExpand = (index: number) => {
@@ -1840,88 +1840,38 @@ const GestorIA = () => {
                 })}
               </div>
 
-              {/* Resumo Executivo — 4 cards from resumo_cards + collapsible resumo_executivo */}
-              {(hasCards || resumoFullText) && (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-5 h-5 text-primary" />
-                    <h3 className="text-base font-bold text-foreground">Resumo Executivo</h3>
+              {/* Resumo Executivo */}
+              {relatorio.resumo_cards ? (
+                <div>
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
+                      <div className="font-bold text-white mb-2">📊 Visão Geral</div>
+                      <div className="text-gray-300 text-sm">{relatorio.resumo_cards.visao_geral}</div>
+                    </div>
+                    <div className="bg-gray-800 border border-red-800 rounded-lg p-4">
+                      <div className="font-bold text-white mb-2">🔴 Problema Principal</div>
+                      <div className="text-gray-300 text-sm">{relatorio.resumo_cards.problema_principal}</div>
+                    </div>
+                    <div className="bg-gray-800 border border-green-800 rounded-lg p-4">
+                      <div className="font-bold text-white mb-2">🟢 Destaques</div>
+                      <div className="text-gray-300 text-sm">{relatorio.resumo_cards.destaques}</div>
+                    </div>
+                    <div className="bg-gray-800 border border-yellow-700 rounded-lg p-4">
+                      <div className="font-bold text-white mb-2">⚡ Maior Oportunidade</div>
+                      <div className="text-gray-300 text-sm">{relatorio.resumo_cards.oportunidade_principal}</div>
+                    </div>
                   </div>
-
-                  {hasCards && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {cards!.visao_geral && (
-                        <div className="glass-card rounded-xl p-4 border border-border">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-lg">📊</span>
-                            <span className="text-sm font-bold text-foreground">Visão Geral</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed">{cards!.visao_geral}</p>
-                        </div>
-                      )}
-                      {cards!.problema_principal && (
-                        <div className="glass-card rounded-xl p-4 border border-destructive/40">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-lg">🔴</span>
-                            <span className="text-sm font-bold text-foreground">Problema Principal</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed">{cards!.problema_principal}</p>
-                        </div>
-                      )}
-                      {cards!.destaques && (
-                        <div className="glass-card rounded-xl p-4 border border-emerald-500/40">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-lg">🟢</span>
-                            <span className="text-sm font-bold text-foreground">Destaques</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed">{cards!.destaques}</p>
-                        </div>
-                      )}
-                      {cards!.oportunidade_principal && (
-                        <div className="glass-card rounded-xl p-4 border border-warning/40">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-lg">⚡</span>
-                            <span className="text-sm font-bold text-foreground">Maior Oportunidade</span>
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-relaxed">{cards!.oportunidade_principal}</p>
-                        </div>
-                      )}
+                  <button onClick={() => setShowFullAnalysis(!showFullAnalysis)} className="text-teal-400 text-sm">
+                    {showFullAnalysis ? 'Ocultar análise ↑' : 'Ver análise completa ↓'}
+                  </button>
+                  {showFullAnalysis && (
+                    <div className="mt-3 text-gray-300 text-sm bg-gray-800 rounded-lg p-4">
+                      {relatorio.resumo_executivo}
                     </div>
                   )}
-
-                  {/* Collapsible full analysis text from resumo_executivo */}
-                  {resumoFullText && (
-                    <>
-                      <AnimatePresence>
-                        {resumoExpanded && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: "auto", opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className="overflow-hidden"
-                          >
-                            <div className="glass-card rounded-xl p-4 border border-border">
-                              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
-                                {resumoFullText}
-                              </p>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                      <button
-                        onClick={() => setResumoExpanded(!resumoExpanded)}
-                        className="text-xs text-primary hover:text-primary/80 font-medium transition-colors flex items-center gap-1"
-                      >
-                        {resumoExpanded ? (
-                          <>Ocultar análise <ChevronUp className="w-3 h-3" /></>
-                        ) : (
-                          <>Ver análise completa <ChevronDown className="w-3 h-3" /></>
-                        )}
-                      </button>
-                    </>
-                  )}
                 </div>
+              ) : (
+                <div className="text-gray-300 text-sm">{relatorio.resumo_executivo}</div>
               )}
 
               {/* Horizontal tabs */}
