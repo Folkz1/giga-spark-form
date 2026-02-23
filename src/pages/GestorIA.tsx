@@ -1858,38 +1858,20 @@ const GestorIA = () => {
               </div>
 
               {/* Resumo Executivo */}
-              {relatorio.resumo_cards ? (
-                <div>
-                  <div className="grid grid-cols-2 gap-3 mb-3">
-                    <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
-                      <div className="font-bold text-white mb-2">📊 Visão Geral</div>
-                      <div className="text-gray-300 text-sm">{relatorio.resumo_cards.visao_geral}</div>
-                    </div>
-                    <div className="bg-gray-800 border border-red-800 rounded-lg p-4">
-                      <div className="font-bold text-white mb-2">🔴 Problema Principal</div>
-                      <div className="text-gray-300 text-sm">{relatorio.resumo_cards.problema_principal}</div>
-                    </div>
-                    <div className="bg-gray-800 border border-green-800 rounded-lg p-4">
-                      <div className="font-bold text-white mb-2">🟢 Destaques</div>
-                      <div className="text-gray-300 text-sm">{relatorio.resumo_cards.destaques}</div>
-                    </div>
-                    <div className="bg-gray-800 border border-yellow-700 rounded-lg p-4">
-                      <div className="font-bold text-white mb-2">⚡ Maior Oportunidade</div>
-                      <div className="text-gray-300 text-sm">{relatorio.resumo_cards.oportunidade_principal}</div>
-                    </div>
+              <div>
+                <button
+                  onClick={() => setResumoExpanded(!resumoExpanded)}
+                  className="flex items-center gap-2 text-teal-400 text-sm font-medium hover:text-teal-300 transition-colors"
+                >
+                  <ChevronDown className={`h-4 w-4 transition-transform ${resumoExpanded ? "rotate-180" : ""}`} />
+                  {resumoExpanded ? "Ocultar Resumo Executivo" : "Ver Resumo Executivo"}
+                </button>
+                {resumoExpanded && relatorio.resumo_executivo && (
+                  <div className="mt-3 text-gray-300 text-sm bg-gray-800 rounded-lg p-4 whitespace-pre-line">
+                    {relatorio.resumo_executivo}
                   </div>
-                  <button onClick={() => setShowFullAnalysis(!showFullAnalysis)} className="text-teal-400 text-sm">
-                    {showFullAnalysis ? 'Ocultar análise ↑' : 'Ver análise completa ↓'}
-                  </button>
-                  {showFullAnalysis && (
-                    <div className="mt-3 text-gray-300 text-sm bg-gray-800 rounded-lg p-4">
-                      {relatorio.resumo_executivo}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-gray-300 text-sm">{relatorio.resumo_executivo}</div>
-              )}
+                )}
+              </div>
 
               {/* Horizontal tabs */}
               <div className="space-y-0">
