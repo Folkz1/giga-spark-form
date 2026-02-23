@@ -319,18 +319,7 @@ const GestorIA = () => {
   const [ltvEstimado, setLtvEstimado] = useState("");
   const [autoFilled, setAutoFilled] = useState(false);
 
-  const contextKey = (cid: string) => `gestor_contexto_${cid}`;
-
-  // Save context to localStorage per customerId
-  useEffect(() => {
-    if (selectedIds.length !== 1 || !tipoNegocio) return;
-    const cid = selectedIds[0];
-    try {
-      localStorage.setItem(contextKey(cid), JSON.stringify({ tipoNegocio, conversaoRastreada, tipoConversao, metaCPA, ticketMedio, taxaFechamento, margemLucro, valorMedioCliente, ltvEstimado }));
-    } catch {}
-  }, [selectedIds, tipoNegocio, conversaoRastreada, tipoConversao, metaCPA, ticketMedio, taxaFechamento, margemLucro, valorMedioCliente, ltvEstimado]);
-
-  // Auto-fill context from localStorage when a single account is selected
+  // Auto-fill context from Google Sheets when a single account is selected
   useEffect(() => {
     if (selectedIds.length !== 1) {
       setAutoFilled(false);
@@ -340,22 +329,27 @@ const GestorIA = () => {
     // Reset fields first to avoid leaking data between accounts
     setTipoNegocio(""); setConversaoRastreada(""); setTipoConversao(""); setMetaCPA("");
     setTicketMedio(""); setTaxaFechamento(""); setMargemLucro(""); setValorMedioCliente(""); setLtvEstimado("");
-    try {
-      const saved = JSON.parse(localStorage.getItem(contextKey(cid)) || "null");
-      if (saved && saved.tipoNegocio) {
-        setTipoNegocio(saved.tipoNegocio);
-        setConversaoRastreada(saved.conversaoRastreada || "");
-        setTipoConversao(saved.tipoConversao || "");
-        setMetaCPA(saved.metaCPA || "");
-        setTicketMedio(saved.ticketMedio || "");
-        setTaxaFechamento(saved.taxaFechamento || "");
-        setMargemLucro(saved.margemLucro || "");
-        setValorMedioCliente(saved.valorMedioCliente || "");
-        setLtvEstimado(saved.ltvEstimado || "");
-        setAutoFilled(true);
-        setTimeout(() => setAutoFilled(false), 4000);
+    (async () => {
+      try {
+        const res = await fetch(`https://appn8o2.gigainteligencia.com.br/webhook/gestor-contexto-buscar?customerId=${cid}`);
+        const data = await res.json();
+        if (data && data.encontrado) {
+          setTipoNegocio(data.tipoNegocio || "");
+          setConversaoRastreada(data.conversaoRastreada || "");
+          setTipoConversao(data.tipoConversao || "");
+          setMetaCPA(data.metaCPA || "");
+          setTicketMedio(data.ticketMedio || "");
+          setTaxaFechamento(data.taxaFechamento || "");
+          setMargemLucro(data.margemLucro || "");
+          setValorMedioCliente(data.valorMedioCliente || "");
+          setLtvEstimado(data.ltvEstimado || "");
+          setAutoFilled(true);
+          setTimeout(() => setAutoFilled(false), 4000);
+        }
+      } catch (err) {
+        console.error("[GESTOR-IA] Erro ao buscar contexto:", err);
       }
-    } catch {}
+    })();
   }, [selectedIds]);
 
   const buildContexto = () => {
@@ -1781,7 +1775,25 @@ const GestorIA = () => {
                     )}
 
                     <Button
-                      onClick={handleAnalyze}
+                      onClick={async () => {
+                        // Save context to Google Sheets before analyzing
+                        if (selectedIds.length === 1) {
+                          try {
+                            await fetch("https://appn8o2.gigainteligencia.com.br/webhook/gestor-contexto-salvar", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                customerId: selectedIds[0],
+                                tipoNegocio, conversaoRastreada, tipoConversao, metaCPA,
+                                ticketMedio, taxaFechamento, margemLucro, valorMedioCliente, ltvEstimado,
+                              }),
+                            });
+                          } catch (err) {
+                            console.error("[GESTOR-IA] Erro ao salvar contexto:", err);
+                          }
+                        }
+                        handleAnalyze();
+                      }}
                       disabled={selectedIds.length === 0 || !tipoNegocio || !conversaoRastreada || !tipoConversao || !metaCPA}
                       className="gradient-primary text-primary-foreground font-semibold px-8 glow-primary"
                     >
