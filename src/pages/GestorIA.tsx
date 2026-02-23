@@ -1269,7 +1269,9 @@ const GestorIA = () => {
         {relatorio.recomendacoes.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">Nenhuma recomendação</p>
         ) : (
-          relatorio.recomendacoes.map((rec, i) => (
+          relatorio.recomendacoes.map((rec, i) => {
+            if (!rec) return null;
+            return (
             <div key={i} className="p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 space-y-2">
               <div className="flex items-center gap-2">
                 {prioridadeBadge(rec.prioridade)}
@@ -1413,7 +1415,8 @@ const GestorIA = () => {
                 </button>
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
     );
