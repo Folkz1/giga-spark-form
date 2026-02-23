@@ -778,11 +778,58 @@ const GestorIA = () => {
     }
   };
 
-  // Highlighted resumo text
-  const renderResumoText = () => {
-    if (!relatorio) return null;
-    return relatorio.resumoExecutivo;
-  };
+  // Parse resumo executivo into 4 structured cards
+  const resumoCards = useMemo(() => {
+    if (!relatorio?.resumoExecutivo) return null;
+    const txt = relatorio.resumoExecutivo;
+    const sentences = txt.split(/(?<=[.!])\s+/).filter(Boolean);
+
+    // Helper: find sentences matching patterns, return max 2
+    const extract = (patterns: RegExp[], exclude?: string[]): string => {
+      const found = sentences.filter(s => {
+        const lower = s.toLowerCase();
+        if (exclude?.some(e => lower.includes(e))) return false;
+        return patterns.some(p => p.test(lower));
+      });
+      return found.slice(0, 2).join(" ") || "";
+    };
+
+    const visaoGeral = extract([
+      /convers[õo]|cpa\s*m[ée]dio|investimento|custo\s*total|breakeven|total\s*de/i,
+    ]);
+
+    const problema = extract([
+      /problema|press[ãa]o|queda|alto|cr[ií]tico|negativ|piora|aten[çc][ãa]o|risco/i,
+    ]);
+
+    const destaques = extract([
+      /destaque|positiv|melhor|eficiente|baixo\s*cpa|boa|bom|sucesso|forte/i,
+    ], ["problema", "queda", "risco"]);
+
+    const oportunidade = extract([
+      /oportunidade|potencial|recomend|otimiz|escal|aument|melhorar|a[çc][ãa]o/i,
+    ]);
+
+    // Fallback: split text into 4 roughly equal parts
+    if (!visaoGeral && !problema && !destaques && !oportunidade) {
+      const quarter = Math.ceil(sentences.length / 4);
+      return {
+        visaoGeral: sentences.slice(0, quarter).join(" "),
+        problema: sentences.slice(quarter, quarter * 2).join(" "),
+        destaques: sentences.slice(quarter * 2, quarter * 3).join(" "),
+        oportunidade: sentences.slice(quarter * 3).join(" "),
+        fullText: txt,
+      };
+    }
+
+    return {
+      visaoGeral: visaoGeral || "Dados gerais disponíveis na análise completa.",
+      problema: problema || "Nenhum problema crítico identificado.",
+      destaques: destaques || "Consulte a análise completa para destaques.",
+      oportunidade: oportunidade || "Veja as recomendações para oportunidades.",
+      fullText: txt,
+    };
+  }, [relatorio]);
 
   // Tab content renderers
   const toggleAlertaExpand = (index: number) => {
@@ -1861,30 +1908,53 @@ const GestorIA = () => {
                 })}
               </div>
 
-              {/* Resumo Executivo — pills + expandable */}
-              {relatorio.resumoExecutivo && (
-                <div className="glass-card rounded-2xl p-5 border-primary/20">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-5 h-5 text-primary" />
-                      <h3 className="text-base font-bold text-foreground">Resumo Executivo</h3>
+              {/* Resumo Executivo — 4 cards + expandable full text */}
+              {resumoCards && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5 text-primary" />
+                    <h3 className="text-base font-bold text-foreground">Resumo Executivo</h3>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Card 1 — Visão Geral */}
+                    <div className="glass-card rounded-xl p-4 border border-border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">📊</span>
+                        <span className="text-sm font-bold text-foreground">Visão Geral</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{resumoCards.visaoGeral}</p>
+                    </div>
+
+                    {/* Card 2 — Problema Principal */}
+                    <div className="glass-card rounded-xl p-4 border border-destructive/40">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">🔴</span>
+                        <span className="text-sm font-bold text-foreground">Problema Principal</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{resumoCards.problema}</p>
+                    </div>
+
+                    {/* Card 3 — Destaques */}
+                    <div className="glass-card rounded-xl p-4 border border-emerald-500/40">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">🟢</span>
+                        <span className="text-sm font-bold text-foreground">Destaques</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{resumoCards.destaques}</p>
+                    </div>
+
+                    {/* Card 4 — Maior Oportunidade */}
+                    <div className="glass-card rounded-xl p-4 border border-warning/40">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">⚡</span>
+                        <span className="text-sm font-bold text-foreground">Maior Oportunidade Agora</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">{resumoCards.oportunidade}</p>
                     </div>
                   </div>
-                  {/* Pills */}
-                  {resumoPills.length > 0 && (
-                    <div className="flex flex-wrap gap-[8px] mb-3">
-                      {resumoPills.map((pill, i) => (
-                        <span
-                          key={i}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium whitespace-nowrap shrink-0 ${pillColorClasses(pill.color)}`}
-                        >
-                          <span>{pill.icon}</span>
-                          {pill.text}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {/* Expandable text */}
+
+                  {/* Expandable full text */}
                   <AnimatePresence>
                     {resumoExpanded && (
                       <motion.div
@@ -1894,15 +1964,17 @@ const GestorIA = () => {
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                       >
-                        <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line pt-2 border-t border-border">
-                          {renderResumoText()}
-                        </p>
+                        <div className="glass-card rounded-xl p-4 border border-border">
+                          <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
+                            {resumoCards.fullText}
+                          </p>
+                        </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
                   <button
                     onClick={() => setResumoExpanded(!resumoExpanded)}
-                    className="mt-2 text-xs text-primary hover:text-primary/80 font-medium transition-colors flex items-center gap-1"
+                    className="text-xs text-primary hover:text-primary/80 font-medium transition-colors flex items-center gap-1"
                   >
                     {resumoExpanded ? (
                       <>Ocultar análise <ChevronUp className="w-3 h-3" /></>
