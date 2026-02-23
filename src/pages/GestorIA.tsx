@@ -505,6 +505,10 @@ const GestorIA = () => {
         } else {
           data = parsed;
         }
+        console.log('[CARDS-DEBUG] Tipo de data:', typeof data);
+        console.log('[CARDS-DEBUG] Chaves de data:', Object.keys(data));
+        console.log('[CARDS-DEBUG] resumo_cards raw:', JSON.stringify(data.resumo_cards));
+        console.log('[CARDS-DEBUG] typeof resumo_cards:', typeof data.resumo_cards);
       } catch (parseErr) {
         console.error("[GESTOR-IA] Failed to parse JSON. Raw text was:", JSON.stringify(rawText));
         throw new Error(`Resposta inválida do servidor. Raw: ${rawText.substring(0, 300)}`);
