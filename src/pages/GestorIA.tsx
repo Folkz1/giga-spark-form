@@ -861,7 +861,7 @@ const GestorIA = () => {
             // Lookup por rec_index injetado pelo backend (exato), fallback por campanha+grupo
             const recIdx = (alerta as any).rec_index;
             const matchingRec = recIdx !== undefined
-              ? relatorio.recomendacoes[recIdx]
+              ? (relatorio.recomendacoes[recIdx] ?? undefined)
               : (relatorio.recomendacoes.find((r) => r.campanha === alerta.campanha && (r.grupo ?? null) === ((alerta as any).grupo ?? null)))
                 ?? relatorio.recomendacoes.find((r) => r.campanha === alerta.campanha);
             const matchingRecIndex = matchingRec ? relatorio.recomendacoes.indexOf(matchingRec) : -1;
@@ -1105,13 +1105,14 @@ const GestorIA = () => {
           <p className="text-sm text-muted-foreground text-center py-8">Nenhuma oportunidade identificada</p>
         ) : (
           relatorio.oportunidades.map((op, i) => {
+            if (!op) return null;
             const isExpanded = expandedOportunidades.has(i);
             const hasDetails = op.dado || op.causa_provavel || op.como_executar || (op.termos_negativar && op.termos_negativar.length > 0) || (op.keywords_adicionar && op.keywords_adicionar.length > 0);
             const idx = opRecIndex(i);
             // Lookup por rec_index injetado pelo backend (exato), fallback por campanha+grupo
             const recIdx = (op as any).rec_index;
             const matchingRec = recIdx !== undefined
-              ? relatorio.recomendacoes[recIdx]
+              ? (relatorio.recomendacoes[recIdx] ?? undefined)
               : relatorio.recomendacoes.find((r) => r.campanha === op.campanha && (r.grupo ?? null) === (op.grupo ?? null))
                 ?? relatorio.recomendacoes.find((r) => r.campanha === op.campanha);
             return (
