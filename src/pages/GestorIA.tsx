@@ -1228,7 +1228,7 @@ const GestorIA = () => {
                           </div>
                         )}
                         {/* Keywords a adicionar da recomendação */}
-                        {matchingRec.keywords_adicionar && matchingRec.keywords_adicionar.length > 0 && (
+                        {matchingRec?.keywords_adicionar && matchingRec.keywords_adicionar.length > 0 && (
                           <div className="space-y-1 pt-1">
                             <div className="flex items-center justify-between">
                               <p className="text-[11px] text-muted-foreground uppercase tracking-wide">Keywords a adicionar</p>
