@@ -855,6 +855,7 @@ const GestorIA = () => {
           <p className="text-sm text-muted-foreground text-center py-8">Nenhum alerta crítico identificado</p>
         ) : (
           relatorio.alertas.map((alerta, i) => {
+            if (!alerta) return null;
             const isExpanded = expandedAlertas.has(i);
             const hasDetails = alerta.dado || alerta.causa_provavel || alerta.como_executar || (alerta.termos_negativar && alerta.termos_negativar.length > 0) || (alerta.keywords_adicionar && alerta.keywords_adicionar.length > 0);
             const idx = alertaRecIndex(i);
