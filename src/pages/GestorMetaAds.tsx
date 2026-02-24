@@ -518,9 +518,9 @@ const GestorMetaAds = () => {
                             <span className="font-semibold text-red-400">Alertas Críticos</span>
                           </div>
                           <ul className="space-y-1.5">
-                            {(data.analise?.alertas_criticos || data.alertas || []).map((a: string, i: number) => (
+                            {(data.analise?.alertas_criticos || data.alertas || []).map((a: any, i: number) => (
                               <li key={i} className="text-sm text-red-300/80 flex gap-2">
-                                <span>⚠️</span><span>{a}</span>
+                                <span>⚠️</span><span>{typeof a === "string" ? a : a?.msg || a?.texto || JSON.stringify(a)}</span>
                               </li>
                             ))}
                           </ul>
@@ -544,9 +544,9 @@ const GestorMetaAds = () => {
                         <CardContent className="p-4">
                           <h3 className="font-semibold text-green-400 mb-2">Oportunidades detectadas</h3>
                           <ul className="space-y-1.5">
-                            {data.analise.oportunidades.map((o: string, i: number) => (
+                            {data.analise.oportunidades.map((o: any, i: number) => (
                               <li key={i} className="text-sm text-green-300/80 flex gap-2">
-                                <span>💡</span><span>{o}</span>
+                                <span>💡</span><span>{typeof o === "string" ? o : o?.msg || o?.texto || JSON.stringify(o)}</span>
                               </li>
                             ))}
                           </ul>
@@ -657,8 +657,8 @@ const GestorMetaAds = () => {
                                       <div className="bg-red-500/5 rounded p-3">
                                         <span className="text-xs font-semibold text-red-400">Alertas</span>
                                         <ul className="mt-1 space-y-0.5">
-                                          {camp.alertas.map((a, i) => (
-                                            <li key={i} className="text-xs text-red-300/80">⚠️ {a}</li>
+                                          {camp.alertas.map((a: any, i) => (
+                                            <li key={i} className="text-xs text-red-300/80">⚠️ {typeof a === "string" ? a : a?.msg || a?.texto || JSON.stringify(a)}</li>
                                           ))}
                                         </ul>
                                       </div>
