@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { getClientesMeta, type ClienteMeta } from "./ClientesMeta";
 
@@ -73,6 +74,101 @@ interface MetaData {
   tarefas_sugeridas: MetaTarefa[];
 }
 
+/* ─── Translation Maps ─── */
+const PERIODO_LABELS: Record<string, string> = {
+  today: "Hoje", yesterday: "Ontem", last_7d: "Últimos 7 dias",
+  last_14d: "Últimos 14 dias", last_28d: "Últimos 28 dias",
+  last_30d: "Últimos 30 dias", last_90d: "Últimos 90 dias",
+  this_month: "Este mês", last_month: "Mês passado",
+};
+
+const PRIORIDADE_LABELS: Record<string, string> = {
+  urgent: "URGENTE", high: "ALTA", normal: "NORMAL", low: "BAIXA",
+};
+
+const TIPO_LABELS: Record<string, string> = {
+  CRIATIVO: "🎨 CRIATIVO", TRACKING: "📡 RASTREAMENTO", ESTRUTURA: "🏗️ ESTRUTURA",
+  OTIMIZACAO: "⚡ OTIMIZAÇÃO", ANALISE: "🔍 ANÁLISE",
+  PAUSAR: "PAUSAR", ESCALAR: "ESCALAR", TESTAR: "TESTAR",
+  CORRIGIR: "CORRIGIR", CONSOLIDAR: "CONSOLIDAR", RENOVAR: "RENOVAR",
+};
+
+const FADIGA_LABELS: Record<string, string> = {
+  SAUDAVEL: "✅ Saudável", HOOK_FRACO: "⚠️ Gancho Fraco",
+  RETENCAO_FRACA: "⚠️ Retenção Fraca", CRIATIVO_FRACO: "🔴 Criativo Fraco",
+  SATURADO: "🔴 Saturado — Trocar", RANKINGS_BAIXOS: "🔴 Baixa Qualidade",
+  SEM_DADOS: "⚪ Sem dados suficientes",
+};
+
+const RANKING_LABELS: Record<string, string> = {
+  ABOVE_AVERAGE: "✅ Acima da Média", AVERAGE: "➖ Na Média",
+  BELOW_AVERAGE: "🔴 Abaixo da Média",
+};
+
+function translateRanking(val: string): string | null {
+  if (!val || val === "N/A") return null;
+  const upper = val.toUpperCase().replace(/\s+/g, "_");
+  if (upper.includes("ABOVE")) return RANKING_LABELS.ABOVE_AVERAGE;
+  if (upper.includes("BELOW")) return RANKING_LABELS.BELOW_AVERAGE;
+  if (upper === "AVERAGE") return RANKING_LABELS.AVERAGE;
+  return val;
+}
+
+const PUBLICO_LABELS: Record<string, string> = {
+  BROAD: "Público Amplo", INTERESSE: "Público por Interesse", LOOKALIKE: "Público Similar",
+};
+
+const METRIC_TOOLTIPS: Record<string, string> = {
+  "CPM": "Quanto você paga para seu anúncio ser visto 1.000 vezes. Quanto menor, melhor.",
+  "CTR": "% das pessoas que viram o anúncio e clicaram. Acima de 1% é bom.",
+  "ROAS": "Para cada R$1 investido, quanto voltou em vendas. Acima de 3x é saudável.",
+  "CPL": "Quanto custou cada lead ou venda gerada.",
+  "CPA": "Quanto custou cada lead ou venda gerada.",
+  "Hook": "% das pessoas que assistiram pelo menos 3 segundos do vídeo. Abaixo de 15% significa que o início do vídeo não está prendendo atenção.",
+  "Hold": "% de quem ficou nos 3s iniciais e continuou assistindo. Abaixo de 25% significa que o corpo do vídeo não está entregando o que o início prometeu.",
+  "ThruPlay": "% das pessoas que assistiram o vídeo completo. Acima de 3% é bom.",
+  "Frequência": "Quantas vezes em média a mesma pessoa viu seu anúncio. Acima de 3.5x a audiência começa a cansar.",
+  "Orçamento": "% do orçamento que foi efetivamente gasto. Abaixo de 80% indica que o Meta está com dificuldade de entregar — audiência pequena ou qualidade do pixel baixa.",
+  "Learning": "Conjuntos de anúncios que não conseguiram dados suficientes para o Meta otimizar. Precisa aumentar orçamento ou consolidar campanhas.",
+};
+
+/* ─── Metric label translations ─── */
+function translateMetricLabel(label: string): string {
+  const map: Record<string, string> = {
+    "CPM": "CPM — Custo por 1.000 Exibições",
+    "CTR": "CTR — Taxa de Cliques",
+    "CPC": "CPC — Custo por Clique",
+    "CPL": "CPL — Custo por Lead",
+    "ROAS": "ROAS — Retorno do Investimento",
+    "CPA": "CPA — Custo por Venda",
+    "CPA/CPL": "CPA — Custo por Venda",
+    "Hook Rate": "Atenção Inicial (3s)",
+    "Hold Rate": "Retenção do Vídeo",
+    "ThruPlay Rate": "Assistiu até o Final",
+    "Impressões": "Total de Exibições",
+    "Alcance": "Pessoas Alcançadas",
+    "Cliques Saída": "Cliques para o Site/WhatsApp",
+    "Frequência": "Frequência Média (vezes que viram o anúncio)",
+    "Conversas Iniciadas": "Conversas no WhatsApp",
+    "Conversas": "Conversas no WhatsApp",
+  };
+  return map[label] || label;
+}
+
+function getTooltipForLabel(label: string): string | null {
+  if (label.includes("CPM")) return METRIC_TOOLTIPS.CPM;
+  if (label.includes("CTR")) return METRIC_TOOLTIPS.CTR;
+  if (label.includes("ROAS")) return METRIC_TOOLTIPS.ROAS;
+  if (label.includes("CPL") || label.includes("CPA")) return METRIC_TOOLTIPS.CPL;
+  if (label.includes("Atenção") || label.includes("Hook")) return METRIC_TOOLTIPS.Hook;
+  if (label.includes("Retenção") || label.includes("Hold")) return METRIC_TOOLTIPS.Hold;
+  if (label.includes("Assistiu") || label.includes("ThruPlay")) return METRIC_TOOLTIPS.ThruPlay;
+  if (label.includes("Frequência")) return METRIC_TOOLTIPS.Frequência;
+  if (label.includes("Orçamento")) return METRIC_TOOLTIPS.Orçamento;
+  if (label.includes("Aprendizado") || label.includes("Learning")) return METRIC_TOOLTIPS.Learning;
+  return null;
+}
+
 /* ─── Constants ─── */
 const PERIODOS = [
   { value: "today", label: "Hoje" },
@@ -95,16 +191,17 @@ const LOADING_MSGS = [
 ];
 
 const SCORE_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  CRITICO: { bg: "bg-red-500/20", text: "text-red-400", label: "CRÍTICO" },
-  ATENCAO: { bg: "bg-orange-500/20", text: "text-orange-400", label: "ATENÇÃO" },
-  SAUDAVEL: { bg: "bg-green-500/20", text: "text-green-400", label: "SAUDÁVEL" },
-  ESCALA: { bg: "bg-purple-500/20", text: "text-purple-400", label: "ESCALA" },
+  CRITICO: { bg: "bg-red-500/20", text: "text-red-400", label: "🔴 CRÍTICO" },
+  ATENCAO: { bg: "bg-orange-500/20", text: "text-orange-400", label: "🟡 ATENÇÃO" },
+  SAUDAVEL: { bg: "bg-green-500/20", text: "text-green-400", label: "🟢 SAUDÁVEL" },
+  ESCALA: { bg: "bg-purple-500/20", text: "text-purple-400", label: "🚀 PRONTO PARA ESCALAR" },
 };
 
 const PRIORIDADE_STYLES: Record<string, string> = {
   urgent: "bg-red-500 text-white",
   high: "bg-orange-500 text-white",
   normal: "bg-blue-500 text-white",
+  low: "bg-muted text-muted-foreground",
 };
 
 const TIPO_STYLES: Record<string, string> = {
@@ -114,6 +211,11 @@ const TIPO_STYLES: Record<string, string> = {
   CORRIGIR: "bg-orange-500/20 text-orange-400",
   CONSOLIDAR: "bg-purple-500/20 text-purple-400",
   RENOVAR: "bg-cyan-500/20 text-cyan-400",
+  CRIATIVO: "bg-pink-500/20 text-pink-400",
+  TRACKING: "bg-yellow-500/20 text-yellow-400",
+  ESTRUTURA: "bg-indigo-500/20 text-indigo-400",
+  OTIMIZACAO: "bg-amber-500/20 text-amber-400",
+  ANALISE: "bg-teal-500/20 text-teal-400",
 };
 
 const URGENCIA_STYLES: Record<string, string> = {
@@ -332,6 +434,7 @@ const GestorMetaAds = () => {
 
   /* ─── Render ─── */
   return (
+    <TooltipProvider delayDuration={300}>
     <div className="min-h-screen bg-background p-4 md:p-6">
       <div className="max-w-7xl mx-auto space-y-4">
 
@@ -460,7 +563,7 @@ const GestorMetaAds = () => {
                   {scoreStyle.label}
                 </span>
                 <span className="text-muted-foreground">
-                  Cliente: <span className="text-foreground font-medium">{data.cliente}</span> | Período: {data.periodo} | {data.data_analise}
+                  Cliente: <span className="text-foreground font-medium">{data.cliente}</span> | Período: {PERIODO_LABELS[data.periodo] || data.periodo} | {data.data_analise}
                 </span>
               </div>
             )}
@@ -497,7 +600,7 @@ const GestorMetaAds = () => {
                     {/* Metric Cards */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <MetricCard icon={DollarSign} label="Investimento" value={`R$ ${Number(data.resumo.total_investimento || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} />
-                      <MetricCard icon={TrendingUp} label="ROAS Geral" value={
+                      <MetricCard icon={TrendingUp} label="ROAS — Retorno do Investimento" value={
                         (() => {
                           const roas = data.resumo.roas_geral;
                           const objetivo = (data.resumo.tipo_campanha || data.resumo.objetivo || "").toString().toUpperCase();
@@ -509,7 +612,7 @@ const GestorMetaAds = () => {
                           }
                           return `${roas || "0"}x`;
                         })()
-                      } />
+                      } tooltip={METRIC_TOOLTIPS.ROAS} />
                       <MetricCard icon={Layers} label="Campanhas" value={
                         <span className="flex gap-1.5 text-sm">
                           <span className="text-green-400">🟢{data.resumo.campanhas_saudaveis || 0}</span>
@@ -525,12 +628,12 @@ const GestorMetaAds = () => {
                       {(() => {
                         const cpmVal = parseFloat(String(data.resumo.cpm_medio || "0").replace(",", "."));
                         const cpmStatus: "green" | "yellow" | "red" = cpmVal < 22 ? "green" : cpmVal <= 38 ? "yellow" : "red";
-                        return <MiniMetric label="CPM Médio" value={`R$ ${data.resumo.cpm_medio || "0"}`} status={cpmStatus} />;
+                        return <MiniMetric label="CPM — Custo por 1.000 Exibições" value={`R$ ${data.resumo.cpm_medio || "0"}`} status={cpmStatus} tooltip={METRIC_TOOLTIPS.CPM} />;
                       })()}
                       {(() => {
                         const freqVal = parseFloat(String(data.resumo.frequencia_media || "0").replace(",", "."));
                         const freqStatus: "green" | "yellow" | "red" = freqVal < 3.0 ? "green" : freqVal <= 3.5 ? "yellow" : "red";
-                        return <MiniMetric label="Frequência Média" value={data.resumo.frequencia_media || "0"} status={freqStatus} />;
+                        return <MiniMetric label="Frequência Média (vezes que viram o anúncio)" value={data.resumo.frequencia_media || "0"} status={freqStatus} tooltip={METRIC_TOOLTIPS.Frequência} />;
                       })()}
                       {(() => {
                         const isMsg = String(data.resumo.objetivo_predominante || "").toUpperCase() === "MENSAGENS" && (data.resumo.total_conversas ?? 0) > 0;
@@ -542,20 +645,21 @@ const GestorMetaAds = () => {
                         }
                         return (
                           <MiniMetric
-                            label={isMsg ? "Conversas Iniciadas" : "Total Leads/Compras"}
+                            label={isMsg ? "Conversas no WhatsApp" : "Total Leads/Compras"}
                             value={
                               isMsg
                                 ? <span className="flex flex-col items-center"><span>{data.resumo.total_conversas}</span>{data.resumo.cpl_conversas && <span className="text-xs text-muted-foreground">CPL R${Number(data.resumo.cpl_conversas).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>}</span>
                                 : `${data.resumo.total_leads || 0} / ${data.resumo.total_compras || 0}`
                             }
                             status={cplStatus}
+                            tooltip={METRIC_TOOLTIPS.CPL}
                           />
                         );
                       })()}
                       {(() => {
                         const llVal = Number(data.resumo.adsets_learning_limited || 0);
                         const llStatus: "green" | "yellow" | "red" = llVal === 0 ? "green" : llVal === 1 ? "yellow" : "red";
-                        return <MiniMetric label="Ad Sets Learning Limited" value={String(llVal)} status={llStatus} />;
+                        return <MiniMetric label="Conjuntos em Aprendizado Limitado" value={String(llVal)} status={llStatus} tooltip={METRIC_TOOLTIPS.Learning} />;
                       })()}
                     </div>
 
@@ -673,7 +777,7 @@ const GestorMetaAds = () => {
                           : isLeads
                           ? `Leads: ${m.leads || m.total_leads || 0} | CPL R$${Number(m.cpl || m.cost_per_lead || 0).toFixed(2)}`
                           : isTrafego
-                          ? `Cliques Saída: ${Number(m.outbound_clicks || m.clicks || 0).toLocaleString()} | CPC R$${Number(m.cpc || m.cost_per_click || 0).toFixed(2)}`
+                          ? `Cliques: ${Number(m.outbound_clicks || m.clicks || 0).toLocaleString()} | CPC R$${Number(m.cpc || m.cost_per_click || 0).toFixed(2)}`
                           : isAwareness
                           ? `Alcance: ${Number(m.reach || 0).toLocaleString()} | CPM R$${Number(m.cpm || 0).toFixed(2)}`
                           : `ROAS ${m.roas || "—"}x`;
@@ -700,66 +804,89 @@ const GestorMetaAds = () => {
                                         ];
                                         if (isMsg) {
                                           base.push(
-                                            ["Conversas", String(m.conversas_iniciadas || m.conversas || m.messaging_conversations_started || 0)],
-                                            ["CPL", `R$ ${Number(m.custo_por_conversa || m.cpl || m.cost_per_conversation || 0).toFixed(2)}`],
+                                            ["Conversas no WhatsApp", String(m.conversas_iniciadas || m.conversas || m.messaging_conversations_started || 0)],
+                                            ["CPL — Custo por Lead", `R$ ${Number(m.custo_por_conversa || m.cpl || m.cost_per_conversation || 0).toFixed(2)}`],
                                           );
                                         } else if (isLeads) {
                                           base.push(
                                             ["Leads", String(m.leads || m.total_leads || 0)],
-                                            ["CPL", `R$ ${Number(m.cpl || m.cost_per_lead || 0).toFixed(2)}`],
+                                            ["CPL — Custo por Lead", `R$ ${Number(m.cpl || m.cost_per_lead || 0).toFixed(2)}`],
                                           );
                                         } else if (isTrafego) {
                                           base.push(
-                                            ["Cliques Saída", Number(m.outbound_clicks || m.clicks || 0).toLocaleString()],
-                                            ["CPC", `R$ ${Number(m.cpc || m.cost_per_click || 0).toFixed(2)}`],
+                                            ["Cliques para o Site/WhatsApp", Number(m.outbound_clicks || m.clicks || 0).toLocaleString()],
+                                            ["CPC — Custo por Clique", `R$ ${Number(m.cpc || m.cost_per_click || 0).toFixed(2)}`],
                                           );
                                         } else if (isAwareness) {
                                           base.push(
-                                            ["Alcance", Number(m.reach || 0).toLocaleString()],
-                                            ["CPM", `R$ ${Number(m.cpm || 0).toFixed(2)}`],
+                                            ["Pessoas Alcançadas", Number(m.reach || 0).toLocaleString()],
+                                            ["CPM — Custo por 1.000 Exibições", `R$ ${Number(m.cpm || 0).toFixed(2)}`],
                                           );
                                         } else {
                                           base.push(
                                             ["Receita", `R$ ${Number(m.revenue || 0).toFixed(2)}`],
-                                            ["ROAS", `${m.roas || "—"}x`],
-                                            ["CPA/CPL", `R$ ${Number(m.cpa || m.cpl || 0).toFixed(2)}`],
+                                            ["ROAS — Retorno do Investimento", `${m.roas || "—"}x`],
+                                            ["CPA — Custo por Venda", `R$ ${Number(m.cpa || m.cpl || 0).toFixed(2)}`],
                                           );
                                         }
                                         base.push(
-                                          ["Impressões", Number(m.impressions || 0).toLocaleString()],
-                                          ["Alcance", Number(m.reach || 0).toLocaleString()],
-                                          ["Frequência", m.frequency || "—"],
-                                          ["CPM", `R$ ${Number(m.cpm || 0).toFixed(2)}`],
-                                          ["CTR", `${m.ctr || "—"}%`],
-                                          ["Cliques Saída", Number(m.outbound_clicks || m.clicks || 0).toLocaleString()],
+                                          ["Total de Exibições", Number(m.impressions || 0).toLocaleString()],
+                                          ["Pessoas Alcançadas", Number(m.reach || 0).toLocaleString()],
+                                          ["Frequência Média (vezes que viram o anúncio)", m.frequency || "—"],
+                                          ["CPM — Custo por 1.000 Exibições", `R$ ${Number(m.cpm || 0).toFixed(2)}`],
+                                          ["CTR — Taxa de Cliques", `${m.ctr || "—"}%`],
+                                          ["Cliques para o Site/WhatsApp", Number(m.outbound_clicks || m.clicks || 0).toLocaleString()],
                                         );
                                         // Deduplicate by label
                                         const seen = new Set<string>();
                                         return base.filter(([l]) => { if (seen.has(l)) return false; seen.add(l); return true; })
-                                          .map(([label, val]) => (
-                                            <div key={label} className="bg-muted/30 rounded p-2">
-                                              <span className="text-muted-foreground block">{label}</span>
-                                              <span className="text-foreground font-medium">{val}</span>
-                                            </div>
-                                          ));
+                                          .map(([label, val]) => {
+                                            const tip = getTooltipForLabel(label);
+                                            return (
+                                              <Tooltip key={label}>
+                                                <TooltipTrigger asChild>
+                                                  <div className="bg-muted/30 rounded p-2 cursor-default">
+                                                    <span className="text-muted-foreground block">{label}</span>
+                                                    <span className="text-foreground font-medium">{val}</span>
+                                                  </div>
+                                                </TooltipTrigger>
+                                                {tip && <TooltipContent side="top" className="max-w-xs text-xs"><p>{tip}</p></TooltipContent>}
+                                              </Tooltip>
+                                            );
+                                          });
                                       })()}
                                     </div>
 
                                     {/* Video metrics */}
                                     {(m.hook_rate || m.hold_rate) && (
                                       <div className="grid grid-cols-3 gap-2 text-xs">
-                                        <div className="bg-muted/30 rounded p-2">
-                                          <span className="text-muted-foreground">Hook Rate</span>
-                                          <span className="text-foreground font-medium block">{m.hook_rate || "—"}%</span>
-                                        </div>
-                                        <div className="bg-muted/30 rounded p-2">
-                                          <span className="text-muted-foreground">Hold Rate</span>
-                                          <span className="text-foreground font-medium block">{m.hold_rate || "—"}%</span>
-                                        </div>
-                                        <div className="bg-muted/30 rounded p-2">
-                                          <span className="text-muted-foreground">ThruPlay Rate</span>
-                                          <span className="text-foreground font-medium block">{m.thruplay_rate || "—"}%</span>
-                                        </div>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className="bg-muted/30 rounded p-2 cursor-default">
+                                              <span className="text-muted-foreground">Atenção Inicial (3s)</span>
+                                              <span className="text-foreground font-medium block">{m.hook_rate || "—"}%</span>
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="top" className="max-w-xs text-xs"><p>{METRIC_TOOLTIPS.Hook}</p></TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className="bg-muted/30 rounded p-2 cursor-default">
+                                              <span className="text-muted-foreground">Retenção do Vídeo</span>
+                                              <span className="text-foreground font-medium block">{m.hold_rate || "—"}%</span>
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="top" className="max-w-xs text-xs"><p>{METRIC_TOOLTIPS.Hold}</p></TooltipContent>
+                                        </Tooltip>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className="bg-muted/30 rounded p-2 cursor-default">
+                                              <span className="text-muted-foreground">Assistiu até o Final</span>
+                                              <span className="text-foreground font-medium block">{m.thruplay_rate || "—"}%</span>
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent side="top" className="max-w-xs text-xs"><p>{METRIC_TOOLTIPS.ThruPlay}</p></TooltipContent>
+                                        </Tooltip>
                                       </div>
                                     )}
 
@@ -844,37 +971,40 @@ const GestorMetaAds = () => {
                             const fadigaColors: Record<string, string> = {
                               SATURADO: "bg-red-500/20 text-red-400",
                               HOOK_FRACO: "bg-orange-500/20 text-orange-400",
-                              CRIATIVO_FRACO: "bg-yellow-500/20 text-yellow-400",
-                              RANKINGS_BAIXOS: "bg-orange-500/20 text-orange-400",
-                            };
-                            const rankingColors: Record<string, string> = {
-                              ABOVE_AVERAGE: "text-green-400",
-                              AVERAGE: "text-gray-400",
-                              BELOW_AVERAGE: "text-red-400",
+                              RETENCAO_FRACA: "bg-orange-500/20 text-orange-400",
+                              CRIATIVO_FRACO: "bg-red-500/20 text-red-400",
+                              RANKINGS_BAIXOS: "bg-red-500/20 text-red-400",
+                              SAUDAVEL: "bg-green-500/20 text-green-400",
+                              SEM_DADOS: "bg-muted text-muted-foreground",
                             };
                             return (
                               <Card key={i} className="border-orange-500/20">
                                 <CardContent className="p-3 space-y-2">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${fadigaColors[f.diagnostico_fadiga] || "bg-orange-500/20 text-orange-400"}`}>
-                                      {f.diagnostico_fadiga || "ATENÇÃO"}
+                                      {FADIGA_LABELS[f.diagnostico_fadiga] || f.diagnostico_fadiga || "ATENÇÃO"}
                                     </span>
                                     <span className="text-sm text-foreground font-medium">{typeof f === "string" ? f : f.nome || f.name || ""}</span>
                                   </div>
                                   {f.rankings && (
-                                    <div className="flex gap-3 text-xs">
-                                      {Object.entries(f.rankings).map(([k, v]) => (
-                                        <span key={k} className={rankingColors[v as string] || "text-gray-400"}>
-                                          {k}: {(v as string).replace("_", " ")}
-                                        </span>
-                                      ))}
+                                    <div className="flex gap-3 text-xs flex-wrap">
+                                      {Object.entries(f.rankings).map(([k, v]) => {
+                                        const translated = translateRanking(v as string);
+                                        if (!translated) return null;
+                                        return (
+                                          <span key={k} className="text-muted-foreground">
+                                            {k.replace(/_/g, " ")}: {translated}
+                                          </span>
+                                        );
+                                      })}
                                     </div>
                                   )}
                                   {f.metricas && (
-                                    <div className="flex gap-3 text-xs text-muted-foreground">
+                                    <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
                                       {f.metricas.ctr && <span>CTR {f.metricas.ctr}%</span>}
-                                      {f.metricas.hook_rate && <span>Hook {f.metricas.hook_rate}%</span>}
-                                      {f.metricas.frequency && <span>Freq {f.metricas.frequency}</span>}
+                                      {f.metricas.hook_rate && <span>Atenção Inicial {f.metricas.hook_rate}%</span>}
+                                      {f.metricas.hold_rate && <span>Retenção {f.metricas.hold_rate}%</span>}
+                                      {f.metricas.frequency && <span>Frequência {f.metricas.frequency}</span>}
                                       {f.metricas.cpm && <span>CPM R${f.metricas.cpm}</span>}
                                     </div>
                                   )}
@@ -910,7 +1040,9 @@ const GestorMetaAds = () => {
                               <div className="flex items-center gap-2">
                                 <span className="text-sm font-medium text-foreground">{an.nome}</span>
                                 {an.diagnostico_fadiga && (
-                                  <span className="bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded text-xs">{an.diagnostico_fadiga}</span>
+                                  <span className="bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded text-xs">
+                                    {FADIGA_LABELS[an.diagnostico_fadiga] || an.diagnostico_fadiga}
+                                  </span>
                                 )}
                               </div>
                             </CardContent>
@@ -946,6 +1078,11 @@ const GestorMetaAds = () => {
 
                     {(data.tarefas_sugeridas || []).map((tarefa, i) => {
                       const expanded = expandedTasks.has(i);
+                      // Split description into problem + execution guide
+                      const descParts = (tarefa.descricao || "").split(/(?:📋\s*)?[Cc]omo\s+[Ee]xecutar\s*:?/);
+                      const problemPart = descParts[0]?.trim() || tarefa.descricao;
+                      const executionPart = descParts.length > 1 ? descParts[1]?.trim() : null;
+
                       return (
                         <Card key={i}>
                           <CardContent className="p-4">
@@ -965,12 +1102,12 @@ const GestorMetaAds = () => {
                                 <div className="flex items-center gap-2 flex-wrap">
                                   {tarefa.prioridade && (
                                     <span className={`px-2 py-0.5 rounded text-xs font-semibold ${PRIORIDADE_STYLES[tarefa.prioridade] || PRIORIDADE_STYLES.normal}`}>
-                                      {tarefa.prioridade_texto || tarefa.prioridade}
+                                      {PRIORIDADE_LABELS[tarefa.prioridade] || tarefa.prioridade_texto || tarefa.prioridade}
                                     </span>
                                   )}
                                   {tarefa.tipo && (
                                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${TIPO_STYLES[tarefa.tipo] || "bg-blue-500/20 text-blue-400"}`}>
-                                      {tarefa.tipo}
+                                      {TIPO_LABELS[tarefa.tipo] || tarefa.tipo}
                                     </span>
                                   )}
                                   {tarefa.urgencia && (
@@ -978,14 +1115,27 @@ const GestorMetaAds = () => {
                                       {tarefa.urgencia}
                                     </span>
                                   )}
-                                  <span className="font-medium text-foreground text-sm">{tarefa.nome}</span>
                                 </div>
 
-                                <p className="text-xs text-muted-foreground">{tarefa.descricao}</p>
+                                {/* Task title */}
+                                <span className="font-medium text-foreground text-sm block">{tarefa.nome}</span>
+
+                                {/* Problem description */}
+                                <p className="text-xs text-muted-foreground">{problemPart}</p>
+
+                                {/* Execution guide */}
+                                {executionPart && (
+                                  <div className="bg-muted/40 rounded-lg p-3 mt-1 border border-border/50">
+                                    <span className="text-xs font-semibold text-foreground flex items-center gap-1 mb-1">
+                                      📋 Como executar:
+                                    </span>
+                                    <p className="text-xs text-foreground/70 whitespace-pre-line">{executionPart}</p>
+                                  </div>
+                                )}
 
                                 {expanded && (
                                   <div className="text-xs text-foreground/70 bg-muted/30 rounded p-2 mt-1 whitespace-pre-line">
-                                    <strong>Ação:</strong> {tarefa.tipo}<br />
+                                    <strong>Ação:</strong> {TIPO_LABELS[tarefa.tipo] || tarefa.tipo}<br />
                                     <strong>Impacto esperado:</strong> {(tarefa as any).impacto_esperado || "—"}
                                   </div>
                                 )}
@@ -1084,12 +1234,13 @@ const GestorMetaAds = () => {
         </DialogContent>
       </Dialog>
     </div>
+    </TooltipProvider>
   );
 };
 
 /* ─── Sub-components ─── */
-function MetricCard({ icon: Icon, label, value, accent }: { icon: any; label: string; value: React.ReactNode; accent?: string }) {
-  return (
+function MetricCard({ icon: Icon, label, value, accent, tooltip }: { icon: any; label: string; value: React.ReactNode; accent?: string; tooltip?: string }) {
+  const card = (
     <Card>
       <CardContent className="p-4 flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg bg-[#1877F2]/10 flex items-center justify-center shrink-0">
@@ -1102,17 +1253,26 @@ function MetricCard({ icon: Icon, label, value, accent }: { icon: any; label: st
       </CardContent>
     </Card>
   );
+  if (tooltip) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{card}</TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs text-xs"><p>{tooltip}</p></TooltipContent>
+      </Tooltip>
+    );
+  }
+  return card;
 }
 
-function MiniMetric({ label, value, status }: { label: string; value: React.ReactNode; status?: "green" | "yellow" | "red" | "gray" }) {
+function MiniMetric({ label, value, status, tooltip }: { label: string; value: React.ReactNode; status?: "green" | "yellow" | "red" | "gray"; tooltip?: string }) {
   const dot = status ? {
     green: "bg-green-400",
     yellow: "bg-yellow-400",
     red: "bg-red-400",
     gray: "bg-muted-foreground/50",
   }[status] : null;
-  return (
-    <div className={`bg-muted/30 rounded-lg p-3 ${dot ? `border-l-2 ${status === "green" ? "border-green-400" : status === "yellow" ? "border-yellow-400" : status === "red" ? "border-red-400" : "border-muted-foreground/50"}` : ""}`}>
+  const content = (
+    <div className={`bg-muted/30 rounded-lg p-3 cursor-default ${dot ? `border-l-2 ${status === "green" ? "border-green-400" : status === "yellow" ? "border-yellow-400" : status === "red" ? "border-red-400" : "border-muted-foreground/50"}` : ""}`}>
       <span className="text-xs text-muted-foreground block">{label}</span>
       <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
         {dot && <span className={`inline-block w-2 h-2 rounded-full ${dot} flex-shrink-0`} />}
@@ -1120,6 +1280,15 @@ function MiniMetric({ label, value, status }: { label: string; value: React.Reac
       </span>
     </div>
   );
+  if (tooltip) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{content}</TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs text-xs"><p>{tooltip}</p></TooltipContent>
+      </Tooltip>
+    );
+  }
+  return content;
 }
 
 function HistoryList({ onLoad }: { onLoad: (entry: any) => void }) {
@@ -1145,7 +1314,7 @@ function HistoryList({ onLoad }: { onLoad: (entry: any) => void }) {
             <span className={`px-2 py-0.5 rounded text-xs font-semibold ${st.bg} ${st.text}`}>{st.label}</span>
             <div className="flex-1">
               <span className="text-sm font-medium text-foreground">{item.cliente}</span>
-              <span className="text-xs text-muted-foreground ml-2">{item.data} · {item.periodo}</span>
+              <span className="text-xs text-muted-foreground ml-2">{item.data} · {PERIODO_LABELS[item.periodo] || item.periodo}</span>
             </div>
             <Button variant="ghost" size="sm" onClick={() => onLoad(item)}>Ver</Button>
             <Button variant="ghost" size="sm" onClick={() => remove(item.id)} className="text-destructive">
