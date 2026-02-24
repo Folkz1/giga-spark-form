@@ -946,16 +946,32 @@ const GestorMetaAds = () => {
                           <Award className="w-4 h-4" /> Winners
                         </h3>
                         <div className="space-y-2">
-                          {data.analise.diagnostico_criativos.winners.map((w: any, i: number) => (
-                            <Card key={i} className="border-green-500/20 bg-green-500/5">
-                              <CardContent className="p-3 flex items-center gap-3">
-                                <span className="bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-xs font-medium">BOM</span>
-                                <span className="text-sm text-foreground flex-1">{typeof w === "string" ? w : w.nome || w.name || JSON.stringify(w)}</span>
-                                {w.roas && <span className="text-xs text-muted-foreground">ROAS {w.roas}x</span>}
-                                {w.ctr && <span className="text-xs text-muted-foreground">CTR {w.ctr}%</span>}
-                              </CardContent>
-                            </Card>
-                          ))}
+                          {data.analise.diagnostico_criativos.winners.map((w: any, i: number) => {
+                            const isVideo = w.metricas?.hook_rate != null && w.metricas?.hook_rate !== "" && w.metricas?.hook_rate !== "N/A";
+                            const nome = typeof w === "string" ? w : w.nome || w.name || "";
+                            const isCarrossel = /carrossel|carousel/i.test(nome);
+                            const tipoBadge = isVideo ? "🎬 Vídeo" : isCarrossel ? "🎠 Carrossel" : "🖼️ Imagem";
+                            return (
+                              <Card key={i} className="border-green-500/20 bg-green-500/5">
+                                <CardContent className="p-3 space-y-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-xs font-medium">BOM</span>
+                                    <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded text-xs">{tipoBadge}</span>
+                                    <span className="text-sm text-foreground flex-1">{typeof w === "string" ? w : w.nome || w.name || JSON.stringify(w)}</span>
+                                  </div>
+                                  <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
+                                    {w.roas && <span>ROAS {w.roas}x</span>}
+                                    {w.ctr && <span>CTR {w.ctr}%</span>}
+                                    {w.metricas?.cpm && <span>CPM R${w.metricas.cpm}</span>}
+                                    {w.metricas?.frequency && <span>Frequência {w.metricas.frequency}</span>}
+                                    {isVideo && w.metricas?.hook_rate && <span>Atenção Inicial {w.metricas.hook_rate}%</span>}
+                                    {isVideo && w.metricas?.hold_rate && <span>Retenção {w.metricas.hold_rate}%</span>}
+                                    {isVideo && w.metricas?.thruplay_rate && <span>Assistiu até o Final {w.metricas.thruplay_rate}%</span>}
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -977,14 +993,23 @@ const GestorMetaAds = () => {
                               SAUDAVEL: "bg-green-500/20 text-green-400",
                               SEM_DADOS: "bg-muted text-muted-foreground",
                             };
+                            const isVideo = f.metricas?.hook_rate != null && f.metricas?.hook_rate !== "" && f.metricas?.hook_rate !== "N/A";
+                            const nome = typeof f === "string" ? f : f.nome || f.name || "";
+                            const isCarrossel = /carrossel|carousel/i.test(nome);
+                            const tipoBadge = isVideo ? "🎬 Vídeo" : isCarrossel ? "🎠 Carrossel" : "🖼️ Imagem";
+                            // For images, hide video-only fatigue diagnoses
+                            const fadigaKey = f.diagnostico_fadiga;
+                            const hideForImage = !isVideo && (fadigaKey === "HOOK_FRACO" || fadigaKey === "RETENCAO_FRACA");
+                            const displayFadiga = hideForImage ? "CRIATIVO_FRACO" : fadigaKey;
                             return (
                               <Card key={i} className="border-orange-500/20">
                                 <CardContent className="p-3 space-y-2">
                                   <div className="flex items-center gap-2 flex-wrap">
-                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${fadigaColors[f.diagnostico_fadiga] || "bg-orange-500/20 text-orange-400"}`}>
-                                      {FADIGA_LABELS[f.diagnostico_fadiga] || f.diagnostico_fadiga || "ATENÇÃO"}
+                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${fadigaColors[displayFadiga] || "bg-orange-500/20 text-orange-400"}`}>
+                                      {FADIGA_LABELS[displayFadiga] || displayFadiga || "ATENÇÃO"}
                                     </span>
-                                    <span className="text-sm text-foreground font-medium">{typeof f === "string" ? f : f.nome || f.name || ""}</span>
+                                    <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded text-xs">{tipoBadge}</span>
+                                    <span className="text-sm text-foreground font-medium">{nome}</span>
                                   </div>
                                   {f.rankings && (
                                     <div className="flex gap-3 text-xs flex-wrap">
@@ -1002,10 +1027,12 @@ const GestorMetaAds = () => {
                                   {f.metricas && (
                                     <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
                                       {f.metricas.ctr && <span>CTR {f.metricas.ctr}%</span>}
-                                      {f.metricas.hook_rate && <span>Atenção Inicial {f.metricas.hook_rate}%</span>}
-                                      {f.metricas.hold_rate && <span>Retenção {f.metricas.hold_rate}%</span>}
-                                      {f.metricas.frequency && <span>Frequência {f.metricas.frequency}</span>}
                                       {f.metricas.cpm && <span>CPM R${f.metricas.cpm}</span>}
+                                      {f.metricas.frequency && <span>Frequência {f.metricas.frequency}</span>}
+                                      {f.metricas.investimento && <span>Investimento R${f.metricas.investimento}</span>}
+                                      {isVideo && f.metricas.hook_rate && <span>Atenção Inicial {f.metricas.hook_rate}%</span>}
+                                      {isVideo && f.metricas.hold_rate && <span>Retenção {f.metricas.hold_rate}%</span>}
+                                      {isVideo && f.metricas.thruplay_rate && <span>Assistiu até o Final {f.metricas.thruplay_rate}%</span>}
                                     </div>
                                   )}
                                   {f.recomendacao && <p className="text-xs text-orange-300/80">{f.recomendacao}</p>}
@@ -1034,20 +1061,39 @@ const GestorMetaAds = () => {
                     {/* Individual ads fallback */}
                     {!data.analise?.diagnostico_criativos && data.anuncios?.length > 0 && (
                       <div className="space-y-2">
-                        {data.anuncios.map((an, i) => (
-                          <Card key={i}>
-                            <CardContent className="p-3">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm font-medium text-foreground">{an.nome}</span>
-                                {an.diagnostico_fadiga && (
-                                  <span className="bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded text-xs">
-                                    {FADIGA_LABELS[an.diagnostico_fadiga] || an.diagnostico_fadiga}
-                                  </span>
+                        {data.anuncios.map((an, i) => {
+                          const isVideo = an.metricas?.hook_rate != null && an.metricas?.hook_rate !== "" && an.metricas?.hook_rate !== "N/A";
+                          const isCarrossel = /carrossel|carousel/i.test(an.nome);
+                          const tipoBadge = isVideo ? "🎬 Vídeo" : isCarrossel ? "🎠 Carrossel" : "🖼️ Imagem";
+                          const fadigaKey = an.diagnostico_fadiga;
+                          const hideForImage = !isVideo && (fadigaKey === "HOOK_FRACO" || fadigaKey === "RETENCAO_FRACA");
+                          const displayFadiga = hideForImage ? "CRIATIVO_FRACO" : fadigaKey;
+                          return (
+                            <Card key={i}>
+                              <CardContent className="p-3 space-y-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="text-sm font-medium text-foreground">{an.nome}</span>
+                                  <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded text-xs">{tipoBadge}</span>
+                                  {displayFadiga && (
+                                    <span className="bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded text-xs">
+                                      {FADIGA_LABELS[displayFadiga] || displayFadiga}
+                                    </span>
+                                  )}
+                                </div>
+                                {an.metricas && (
+                                  <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
+                                    {an.metricas.ctr && <span>CTR {an.metricas.ctr}%</span>}
+                                    {an.metricas.cpm && <span>CPM R${an.metricas.cpm}</span>}
+                                    {an.metricas.frequency && <span>Frequência {an.metricas.frequency}</span>}
+                                    {isVideo && an.metricas.hook_rate && <span>Atenção Inicial {an.metricas.hook_rate}%</span>}
+                                    {isVideo && an.metricas.hold_rate && <span>Retenção {an.metricas.hold_rate}%</span>}
+                                    {isVideo && an.metricas.thruplay_rate && <span>Assistiu até o Final {an.metricas.thruplay_rate}%</span>}
+                                  </div>
                                 )}
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
