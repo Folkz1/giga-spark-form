@@ -29,6 +29,9 @@ interface MetaResumo {
   campanhas_saudaveis: number; adsets_learning_limited: number; adsets_aprendendo: number;
   total_adsets: number; total_anuncios: number; anuncios_criticos: number;
   anuncios_bons: number; anuncios_fatigados: number;
+  tipo_campanha?: string; objetivo?: string;
+  cpl?: string | number; custo_por_lead?: string | number;
+  total_conversas?: number; conversas_iniciadas?: number;
 }
 
 interface MetaAnalise {
@@ -490,7 +493,19 @@ const GestorMetaAds = () => {
                     {/* Metric Cards */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <MetricCard icon={DollarSign} label="Investimento" value={`R$ ${Number(data.resumo.total_investimento || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`} />
-                      <MetricCard icon={TrendingUp} label="ROAS Geral" value={`${data.resumo.roas_geral || "0"}x`} />
+                      <MetricCard icon={TrendingUp} label="ROAS Geral" value={
+                        (() => {
+                          const roas = data.resumo.roas_geral;
+                          const objetivo = (data.resumo.tipo_campanha || data.resumo.objetivo || "").toString().toUpperCase();
+                          const isVendas = objetivo.includes("VENDA") || objetivo.includes("SALE") || objetivo.includes("PURCHASE");
+                          const roasStr = String(roas || "0").replace(/x$/i, "");
+                          if ((roasStr === "0" || roasStr === "0.00") && !isVendas) {
+                            const cpl = data.resumo.cpl || data.resumo.custo_por_lead;
+                            return cpl ? <span className="flex flex-col items-center"><span>N/A</span><span className="text-xs text-muted-foreground">CPL: R${Number(cpl).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span></span> : "N/A";
+                          }
+                          return `${roas || "0"}x`;
+                        })()
+                      } />
                       <MetricCard icon={Layers} label="Campanhas" value={
                         <span className="flex gap-1.5 text-sm">
                           <span className="text-green-400">🟢{data.resumo.campanhas_saudaveis || 0}</span>
@@ -505,7 +520,13 @@ const GestorMetaAds = () => {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       <MiniMetric label="CPM Médio" value={`R$ ${data.resumo.cpm_medio || "0"}`} />
                       <MiniMetric label="Frequência Média" value={data.resumo.frequencia_media || "0"} />
-                      <MiniMetric label="Total Leads/Compras" value={`${data.resumo.total_leads || 0} / ${data.resumo.total_compras || 0}`} />
+                      <MiniMetric label={
+                        (data.resumo.total_conversas > 0 || data.resumo.conversas_iniciadas > 0) ? "Conversas Iniciadas" : "Total Leads/Compras"
+                      } value={
+                        (data.resumo.total_conversas > 0 || data.resumo.conversas_iniciadas > 0)
+                          ? String(data.resumo.total_conversas || data.resumo.conversas_iniciadas)
+                          : `${data.resumo.total_leads || 0} / ${data.resumo.total_compras || 0}`
+                      } />
                       <MiniMetric label="Ad Sets Learning Limited" value={String(data.resumo.adsets_learning_limited || 0)} />
                     </div>
 
