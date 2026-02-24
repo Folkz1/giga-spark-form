@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Rocket, TrendingUp, Lock, Brain } from "lucide-react";
+import { Rocket, TrendingUp, Brain, BarChart2 } from "lucide-react";
 
 const cards = [
   {
@@ -25,11 +25,12 @@ const cards = [
     disabled: false,
   },
   {
-    title: "Meta Ads",
-    description: "Em breve — criação e otimização de campanhas Meta Ads",
-    icon: Lock,
-    path: "#",
-    disabled: true,
+    title: "Gestor Meta Ads",
+    description: "Análise e otimização inteligente das suas campanhas Meta Ads",
+    icon: BarChart2,
+    path: "/gestor-meta",
+    disabled: false,
+    metaBlue: true,
   },
 ];
 
@@ -48,7 +49,7 @@ const Index = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl w-full">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl w-full">
         {cards.map((card, i) => (
           <motion.button
             key={card.title}
@@ -67,12 +68,14 @@ const Index = () => {
               className={`w-14 h-14 rounded-xl flex items-center justify-center mb-5 ${
                 card.disabled
                   ? "bg-muted"
-                  : "gradient-primary glow-primary"
+                  : (card as any).metaBlue
+                    ? "bg-[#1877F2] shadow-[0_0_20px_rgba(24,119,242,0.3)]"
+                    : "gradient-primary glow-primary"
               }`}
             >
               <card.icon
                 className={`w-7 h-7 ${
-                  card.disabled ? "text-muted-foreground" : "text-primary-foreground"
+                  card.disabled ? "text-muted-foreground" : "text-white"
                 }`}
               />
             </div>
@@ -86,7 +89,7 @@ const Index = () => {
 
             {card.disabled && (
               <div className="absolute top-4 right-4">
-                <Lock className="w-4 h-4 text-muted-foreground" />
+                <BarChart2 className="w-4 h-4 text-muted-foreground" />
               </div>
             )}
           </motion.button>
