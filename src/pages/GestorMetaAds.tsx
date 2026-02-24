@@ -653,8 +653,23 @@ const GestorMetaAds = () => {
                         return (
                           <Card key={camp.id} className="overflow-hidden">
                             <button onClick={() => toggleCampaign(camp.id)} className="w-full text-left p-4 flex items-center gap-3 hover:bg-muted/30 transition-colors">
-                              <span className={`px-2 py-0.5 rounded text-xs font-semibold ${st.bg} ${st.text}`}>{st.label}</span>
-                              <span className="font-medium text-foreground flex-1 truncate">{camp.nome}</span>
+                              <span className={`px-2 py-0.5 rounded text-xs font-semibold shrink-0 ${st.bg} ${st.text}`}>{st.label}</span>
+                              {(() => {
+                                const raw = camp.nome || "";
+                                const chips = [...raw.matchAll(/\[([^\]]+)\]/g)].map(m => m[1]);
+                                const title = raw.replace(/\[[^\]]*\]/g, "").trim();
+                                if (chips.length === 0) return <span className="font-medium text-foreground flex-1 truncate">{raw}</span>;
+                                return (
+                                  <div className="flex-1 min-w-0">
+                                    {title && <span className="font-medium text-foreground block truncate">{title}</span>}
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {chips.map((c, ci) => (
+                                        <span key={ci} className="bg-secondary text-secondary-foreground text-[10px] px-1.5 py-0.5 rounded-md">{c}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                );
+                              })()}
                               <span className="text-sm text-muted-foreground">R$ {Number(m.spend || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                               <span className="text-sm text-muted-foreground">{headerMetric}</span>
                               {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
