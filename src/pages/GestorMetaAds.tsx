@@ -518,17 +518,41 @@ const GestorMetaAds = () => {
 
                     {/* Secondary metrics */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                      <MiniMetric label="CPM Médio" value={`R$ ${data.resumo.cpm_medio || "0"}`} />
-                      <MiniMetric label="Frequência Média" value={data.resumo.frequencia_media || "0"} />
-                      <MiniMetric label={
-                        (String(data.resumo.objetivo_predominante || "").toUpperCase() === "MENSAGENS" && (data.resumo.total_conversas ?? 0) > 0)
-                          ? "Conversas Iniciadas" : "Total Leads/Compras"
-                      } value={
-                        (String(data.resumo.objetivo_predominante || "").toUpperCase() === "MENSAGENS" && (data.resumo.total_conversas ?? 0) > 0)
-                          ? <span className="flex flex-col items-center"><span>{data.resumo.total_conversas}</span>{data.resumo.cpl_conversas && <span className="text-xs text-muted-foreground">CPL R${Number(data.resumo.cpl_conversas).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>}</span>
-                          : `${data.resumo.total_leads || 0} / ${data.resumo.total_compras || 0}`
-                      } />
-                      <MiniMetric label="Ad Sets Learning Limited" value={String(data.resumo.adsets_learning_limited || 0)} />
+                      {(() => {
+                        const cpmVal = parseFloat(String(data.resumo.cpm_medio || "0").replace(",", "."));
+                        const cpmStatus: "green" | "yellow" | "red" = cpmVal < 22 ? "green" : cpmVal <= 38 ? "yellow" : "red";
+                        return <MiniMetric label="CPM Médio" value={`R$ ${data.resumo.cpm_medio || "0"}`} status={cpmStatus} />;
+                      })()}
+                      {(() => {
+                        const freqVal = parseFloat(String(data.resumo.frequencia_media || "0").replace(",", "."));
+                        const freqStatus: "green" | "yellow" | "red" = freqVal < 3.0 ? "green" : freqVal <= 3.5 ? "yellow" : "red";
+                        return <MiniMetric label="Frequência Média" value={data.resumo.frequencia_media || "0"} status={freqStatus} />;
+                      })()}
+                      {(() => {
+                        const isMsg = String(data.resumo.objetivo_predominante || "").toUpperCase() === "MENSAGENS" && (data.resumo.total_conversas ?? 0) > 0;
+                        const cplVal = isMsg ? Number(data.resumo.cpl_conversas || data.resumo.cpl || 0) : Number(data.resumo.cpl_geral || data.resumo.cpl || 0);
+                        const metaCpa = parseFloat(String(data.resumo.cpa_geral || "0").replace(",", "."));
+                        let cplStatus: "green" | "yellow" | "red" | "gray" = "gray";
+                        if (metaCpa > 0 && cplVal > 0) {
+                          cplStatus = cplVal <= metaCpa ? "green" : cplVal <= metaCpa * 1.2 ? "yellow" : "red";
+                        }
+                        return (
+                          <MiniMetric
+                            label={isMsg ? "Conversas Iniciadas" : "Total Leads/Compras"}
+                            value={
+                              isMsg
+                                ? <span className="flex flex-col items-center"><span>{data.resumo.total_conversas}</span>{data.resumo.cpl_conversas && <span className="text-xs text-muted-foreground">CPL R${Number(data.resumo.cpl_conversas).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>}</span>
+                                : `${data.resumo.total_leads || 0} / ${data.resumo.total_compras || 0}`
+                            }
+                            status={cplStatus}
+                          />
+                        );
+                      })()}
+                      {(() => {
+                        const llVal = Number(data.resumo.adsets_learning_limited || 0);
+                        const llStatus: "green" | "yellow" | "red" = llVal === 0 ? "green" : llVal === 1 ? "yellow" : "red";
+                        return <MiniMetric label="Ad Sets Learning Limited" value={String(llVal)} status={llStatus} />;
+                      })()}
                     </div>
 
                     {/* Alerts */}
@@ -1076,11 +1100,20 @@ function MetricCard({ icon: Icon, label, value, accent }: { icon: any; label: st
   );
 }
 
-function MiniMetric({ label, value }: { label: string; value: React.ReactNode }) {
+function MiniMetric({ label, value, status }: { label: string; value: React.ReactNode; status?: "green" | "yellow" | "red" | "gray" }) {
+  const dot = status ? {
+    green: "bg-green-400",
+    yellow: "bg-yellow-400",
+    red: "bg-red-400",
+    gray: "bg-muted-foreground/50",
+  }[status] : null;
   return (
-    <div className="bg-muted/30 rounded-lg p-3">
+    <div className={`bg-muted/30 rounded-lg p-3 ${dot ? `border-l-2 ${status === "green" ? "border-green-400" : status === "yellow" ? "border-yellow-400" : status === "red" ? "border-red-400" : "border-muted-foreground/50"}` : ""}`}>
       <span className="text-xs text-muted-foreground block">{label}</span>
-      <span className="text-sm font-medium text-foreground">{value}</span>
+      <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
+        {dot && <span className={`inline-block w-2 h-2 rounded-full ${dot} flex-shrink-0`} />}
+        {value}
+      </span>
     </div>
   );
 }
