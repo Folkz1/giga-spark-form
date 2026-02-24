@@ -64,6 +64,8 @@ interface MetaTarefa {
   nome: string; descricao: string; prioridade: string;
   prioridade_texto: string; tipo: string; urgencia: string;
   impacto_esperado?: string;
+  por_que_fazer?: string;
+  como_executar?: string;
 }
 
 interface MetaData {
@@ -1124,10 +1126,12 @@ const GestorMetaAds = () => {
 
                     {(data.tarefas_sugeridas || []).map((tarefa, i) => {
                       const expanded = expandedTasks.has(i);
-                      // Split description into problem + execution guide
-                      const descParts = (tarefa.descricao || "").split(/(?:📋\s*)?[Cc]omo\s+[Ee]xecutar\s*:?/);
-                      const problemPart = descParts[0]?.trim() || tarefa.descricao;
-                      const executionPart = descParts.length > 1 ? descParts[1]?.trim() : null;
+                      const porQueFazer = tarefa.por_que_fazer?.trim();
+                      const comoExecutar = tarefa.como_executar?.trim();
+                      // Split como_executar by ";" into numbered steps
+                      const execSteps = comoExecutar
+                        ? comoExecutar.split(";").map(s => s.trim().replace(/^\d+\.\s*/, "")).filter(Boolean)
+                        : [];
 
                       return (
                         <Card key={i}>
@@ -1166,23 +1170,37 @@ const GestorMetaAds = () => {
                                 {/* Task title */}
                                 <span className="font-medium text-foreground text-sm block">{tarefa.nome}</span>
 
-                                {/* Problem description */}
-                                <p className="text-xs text-muted-foreground">{problemPart}</p>
+                                {/* Por que fazer */}
+                                {porQueFazer && (
+                                  <div className="mt-1">
+                                    <span className="text-xs font-semibold text-amber-400 flex items-center gap-1 mb-0.5">
+                                      ⚠️ Por que fazer:
+                                    </span>
+                                    <p className="text-xs text-muted-foreground">{porQueFazer}</p>
+                                  </div>
+                                )}
 
-                                {/* Execution guide */}
-                                {executionPart && (
+                                {/* Como executar */}
+                                {execSteps.length > 0 && (
                                   <div className="bg-muted/40 rounded-lg p-3 mt-1 border border-border/50">
-                                    <span className="text-xs font-semibold text-foreground flex items-center gap-1 mb-1">
+                                    <span className="text-xs font-semibold text-blue-400 flex items-center gap-1 mb-1.5">
                                       📋 Como executar:
                                     </span>
-                                    <p className="text-xs text-foreground/70 whitespace-pre-line">{executionPart}</p>
+                                    <ol className="space-y-1">
+                                      {execSteps.map((step, si) => (
+                                        <li key={si} className="text-xs text-foreground/70 flex gap-1.5">
+                                          <span className="text-blue-400/70 font-medium shrink-0">{si + 1}.</span>
+                                          <span>{step}</span>
+                                        </li>
+                                      ))}
+                                    </ol>
                                   </div>
                                 )}
 
                                 {expanded && (
                                   <div className="text-xs text-foreground/70 bg-muted/30 rounded p-2 mt-1 whitespace-pre-line">
                                     <strong>Ação:</strong> {TIPO_LABELS[tarefa.tipo] || tarefa.tipo}<br />
-                                    <strong>Impacto esperado:</strong> {(tarefa as any).impacto_esperado || "—"}
+                                    <strong>Impacto esperado:</strong> {tarefa.impacto_esperado || "—"}
                                   </div>
                                 )}
 
