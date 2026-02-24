@@ -584,7 +584,20 @@ const GestorMetaAds = () => {
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="bg-muted/50 rounded-lg p-3">
                               <span className="text-xs text-muted-foreground">Cenário atual</span>
-                              <p className="text-sm text-foreground mt-1">{data.analise.projecao.cenario_atual}</p>
+                              <p className="text-sm text-foreground mt-1">
+                                {(() => {
+                                  const periodDays: Record<string, number> = {
+                                    today: 1, yesterday: 1, last_7d: 7, last_14d: 14,
+                                    last_28d: 28, last_30d: 30, last_90d: 90, this_month: new Date().getDate(),
+                                    last_month: new Date(new Date().getFullYear(), new Date().getMonth(), 0).getDate(),
+                                  };
+                                  const dias = periodDays[data.periodo] || 28;
+                                  const investimento = Number(data.resumo.total_investimento || 0);
+                                  const diaria = investimento / dias;
+                                  const projecao30 = diaria * 30;
+                                  return `Se nada mudar, em 30 dias a campanha vai gastar aproximadamente R$${projecao30.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                                })()}
+                              </p>
                             </div>
                             <div className="bg-green-500/10 rounded-lg p-3">
                               <span className="text-xs text-green-400">Com otimizações</span>
