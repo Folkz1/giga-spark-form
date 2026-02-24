@@ -29,8 +29,8 @@ interface MetaResumo {
   campanhas_saudaveis: number; adsets_learning_limited: number; adsets_aprendendo: number;
   total_adsets: number; total_anuncios: number; anuncios_criticos: number;
   anuncios_bons: number; anuncios_fatigados: number;
-  tipo_campanha?: string; objetivo?: string;
-  cpl?: string | number; custo_por_lead?: string | number;
+  tipo_campanha?: string; objetivo?: string; objetivo_predominante?: string;
+  cpl?: string | number; custo_por_lead?: string | number; cpl_conversas?: string | number;
   total_conversas?: number; conversas_iniciadas?: number;
 }
 
@@ -521,10 +521,11 @@ const GestorMetaAds = () => {
                       <MiniMetric label="CPM Médio" value={`R$ ${data.resumo.cpm_medio || "0"}`} />
                       <MiniMetric label="Frequência Média" value={data.resumo.frequencia_media || "0"} />
                       <MiniMetric label={
-                        (data.resumo.total_conversas > 0 || data.resumo.conversas_iniciadas > 0) ? "Conversas Iniciadas" : "Total Leads/Compras"
+                        (String(data.resumo.objetivo_predominante || "").toUpperCase() === "MENSAGENS" && (data.resumo.total_conversas ?? 0) > 0)
+                          ? "Conversas Iniciadas" : "Total Leads/Compras"
                       } value={
-                        (data.resumo.total_conversas > 0 || data.resumo.conversas_iniciadas > 0)
-                          ? String(data.resumo.total_conversas || data.resumo.conversas_iniciadas)
+                        (String(data.resumo.objetivo_predominante || "").toUpperCase() === "MENSAGENS" && (data.resumo.total_conversas ?? 0) > 0)
+                          ? <span className="flex flex-col items-center"><span>{data.resumo.total_conversas}</span>{data.resumo.cpl_conversas && <span className="text-xs text-muted-foreground">CPL R${Number(data.resumo.cpl_conversas).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>}</span>
                           : `${data.resumo.total_leads || 0} / ${data.resumo.total_compras || 0}`
                       } />
                       <MiniMetric label="Ad Sets Learning Limited" value={String(data.resumo.adsets_learning_limited || 0)} />
@@ -1014,7 +1015,7 @@ function MetricCard({ icon: Icon, label, value, accent }: { icon: any; label: st
   );
 }
 
-function MiniMetric({ label, value }: { label: string; value: string }) {
+function MiniMetric({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="bg-muted/30 rounded-lg p-3">
       <span className="text-xs text-muted-foreground block">{label}</span>
