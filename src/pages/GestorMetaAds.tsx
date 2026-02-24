@@ -187,12 +187,15 @@ const GestorMetaAds = () => {
     const timeout = setTimeout(() => {
       setLoading(false);
       toast.error("A análise demorou mais que o esperado. Tente novamente.");
-    }, 90000);
+    }, 300000);
 
     try {
+      const controller = new AbortController();
+      const fetchTimeout = setTimeout(() => controller.abort(), 295000);
       const res = await fetch(config.webhookAnalise, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           ad_account_id: selectedCliente.adAccountId,
           cliente_nome: selectedCliente.nome,
@@ -205,6 +208,7 @@ const GestorMetaAds = () => {
       });
 
       let raw = await res.text();
+      clearTimeout(fetchTimeout);
       let parsed: any;
 
       // Handle n8n/MCP array wrapper
