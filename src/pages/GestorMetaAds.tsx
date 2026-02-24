@@ -633,6 +633,22 @@ const GestorMetaAds = () => {
                         const st = SCORE_STYLES[camp.status_performance] || SCORE_STYLES.ATENCAO;
                         const m = camp.metricas || {};
                         const diag = data.analise?.diagnostico_por_campanha?.find(d => d.nome === camp.nome);
+                        const tipo = (m.tipo_campanha || m.objetivo || m.objective || "").toString().toUpperCase();
+                        const isMsg = tipo.includes("MENSAG") || tipo.includes("MESSAGE");
+                        const isLeads = tipo.includes("LEAD");
+                        const isTrafego = tipo.includes("TRAFEGO") || tipo.includes("TRAFFIC") || tipo.includes("LINK_CLICK");
+                        const isAwareness = tipo.includes("AWARENESS") || tipo.includes("ALCANCE") || tipo.includes("REACH");
+                        const isNonSales = isMsg || isLeads || isTrafego || isAwareness;
+
+                        const headerMetric = isMsg
+                          ? `Conversas: ${m.conversas || m.messaging_conversations_started || 0} | CPL R$${Number(m.cpl || m.cost_per_conversation || 0).toFixed(2)}`
+                          : isLeads
+                          ? `Leads: ${m.leads || m.total_leads || 0} | CPL R$${Number(m.cpl || m.cost_per_lead || 0).toFixed(2)}`
+                          : isTrafego
+                          ? `Cliques Saída: ${Number(m.outbound_clicks || m.clicks || 0).toLocaleString()} | CPC R$${Number(m.cpc || m.cost_per_click || 0).toFixed(2)}`
+                          : isAwareness
+                          ? `Alcance: ${Number(m.reach || 0).toLocaleString()} | CPM R$${Number(m.cpm || 0).toFixed(2)}`
+                          : `ROAS ${m.roas || "—"}x`;
 
                         return (
                           <Card key={camp.id} className="overflow-hidden">
@@ -640,7 +656,7 @@ const GestorMetaAds = () => {
                               <span className={`px-2 py-0.5 rounded text-xs font-semibold ${st.bg} ${st.text}`}>{st.label}</span>
                               <span className="font-medium text-foreground flex-1 truncate">{camp.nome}</span>
                               <span className="text-sm text-muted-foreground">R$ {Number(m.spend || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
-                              <span className="text-sm text-muted-foreground">ROAS {m.roas || "—"}x</span>
+                              <span className="text-sm text-muted-foreground">{headerMetric}</span>
                               {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
                             </button>
 
@@ -650,23 +666,55 @@ const GestorMetaAds = () => {
                                   <div className="p-4 pt-0 space-y-3 border-t border-border">
                                     {/* Metrics grid */}
                                     <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-xs">
-                                      {[
-                                        ["Investimento", `R$ ${Number(m.spend || 0).toFixed(2)}`],
-                                        ["Receita", `R$ ${Number(m.revenue || 0).toFixed(2)}`],
-                                        ["ROAS", `${m.roas || "—"}x`],
-                                        ["CPA/CPL", `R$ ${Number(m.cpa || m.cpl || 0).toFixed(2)}`],
-                                        ["Impressões", Number(m.impressions || 0).toLocaleString()],
-                                        ["Alcance", Number(m.reach || 0).toLocaleString()],
-                                        ["Frequência", m.frequency || "—"],
-                                        ["CPM", `R$ ${Number(m.cpm || 0).toFixed(2)}`],
-                                        ["CTR", `${m.ctr || "—"}%`],
-                                        ["Cliques Saída", Number(m.outbound_clicks || m.clicks || 0).toLocaleString()],
-                                      ].map(([label, val]) => (
-                                        <div key={label as string} className="bg-muted/30 rounded p-2">
-                                          <span className="text-muted-foreground block">{label}</span>
-                                          <span className="text-foreground font-medium">{val}</span>
-                                        </div>
-                                      ))}
+                                      {(() => {
+                                        const base: [string, string][] = [
+                                          ["Investimento", `R$ ${Number(m.spend || 0).toFixed(2)}`],
+                                        ];
+                                        if (isMsg) {
+                                          base.push(
+                                            ["Conversas", String(m.conversas || m.messaging_conversations_started || 0)],
+                                            ["CPL", `R$ ${Number(m.cpl || m.cost_per_conversation || 0).toFixed(2)}`],
+                                          );
+                                        } else if (isLeads) {
+                                          base.push(
+                                            ["Leads", String(m.leads || m.total_leads || 0)],
+                                            ["CPL", `R$ ${Number(m.cpl || m.cost_per_lead || 0).toFixed(2)}`],
+                                          );
+                                        } else if (isTrafego) {
+                                          base.push(
+                                            ["Cliques Saída", Number(m.outbound_clicks || m.clicks || 0).toLocaleString()],
+                                            ["CPC", `R$ ${Number(m.cpc || m.cost_per_click || 0).toFixed(2)}`],
+                                          );
+                                        } else if (isAwareness) {
+                                          base.push(
+                                            ["Alcance", Number(m.reach || 0).toLocaleString()],
+                                            ["CPM", `R$ ${Number(m.cpm || 0).toFixed(2)}`],
+                                          );
+                                        } else {
+                                          base.push(
+                                            ["Receita", `R$ ${Number(m.revenue || 0).toFixed(2)}`],
+                                            ["ROAS", `${m.roas || "—"}x`],
+                                            ["CPA/CPL", `R$ ${Number(m.cpa || m.cpl || 0).toFixed(2)}`],
+                                          );
+                                        }
+                                        base.push(
+                                          ["Impressões", Number(m.impressions || 0).toLocaleString()],
+                                          ["Alcance", Number(m.reach || 0).toLocaleString()],
+                                          ["Frequência", m.frequency || "—"],
+                                          ["CPM", `R$ ${Number(m.cpm || 0).toFixed(2)}`],
+                                          ["CTR", `${m.ctr || "—"}%`],
+                                          ["Cliques Saída", Number(m.outbound_clicks || m.clicks || 0).toLocaleString()],
+                                        );
+                                        // Deduplicate by label
+                                        const seen = new Set<string>();
+                                        return base.filter(([l]) => { if (seen.has(l)) return false; seen.add(l); return true; })
+                                          .map(([label, val]) => (
+                                            <div key={label} className="bg-muted/30 rounded p-2">
+                                              <span className="text-muted-foreground block">{label}</span>
+                                              <span className="text-foreground font-medium">{val}</span>
+                                            </div>
+                                          ));
+                                      })()}
                                     </div>
 
                                     {/* Video metrics */}
