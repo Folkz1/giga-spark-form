@@ -210,10 +210,19 @@ const GestorMetaAds = () => {
       // Handle n8n/MCP array wrapper
       try {
         const arr = JSON.parse(raw);
-        if (Array.isArray(arr) && arr[0]?.content?.[0]?.text) {
-          raw = arr[0].content[0].text.replace(/```json\s*/g, "").replace(/```/g, "").trim();
+
+        if (Array.isArray(arr)) {
+          if (arr[0]?.json) {
+            parsed = arr[0].json;
+          } else if (arr[0]?.content?.[0]?.text) {
+            const inner = arr[0].content[0].text.replace(/```json\s*/g, "").replace(/```/g, "").trim();
+            parsed = JSON.parse(inner);
+          } else {
+            parsed = arr[0];
+          }
+        } else {
+          parsed = arr;
         }
-        parsed = typeof arr === "object" && !Array.isArray(arr) ? arr : JSON.parse(raw);
       } catch {
         parsed = JSON.parse(raw);
       }
