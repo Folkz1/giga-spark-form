@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import CriarCampanha from "./pages/CriarCampanha";
 import OtimizarCampanha from "./pages/OtimizarCampanha";
 import GestorIA from "./pages/GestorIA";
+import GestorMetaAds from "./pages/GestorMetaAds";
+import ClientesMeta from "./pages/ClientesMeta";
 import NotFound from "./pages/NotFound";
 import AuthGuard from "./components/AuthGuard";
 import Header from "./components/Header";
@@ -33,6 +35,8 @@ const App = () => (
           <Route path="/criar-campanha" element={<ProtectedRoute><CriarCampanha /></ProtectedRoute>} />
           <Route path="/otimizar-campanha" element={<ProtectedRoute><OtimizarCampanha /></ProtectedRoute>} />
           <Route path="/gestor-ia" element={<ProtectedRoute><GestorIA /></ProtectedRoute>} />
+          <Route path="/gestor-meta" element={<ProtectedRoute><GestorMetaAds /></ProtectedRoute>} />
+          <Route path="/clientes-meta" element={<ProtectedRoute><ClientesMeta /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
