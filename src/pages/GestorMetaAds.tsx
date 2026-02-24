@@ -40,7 +40,7 @@ interface MetaAnalise {
   alertas_criticos: string[];
   oportunidades: string[];
   diagnostico_por_campanha: { nome: string; status: string; diagnostico: string; acao_principal: string }[];
-  diagnostico_criativos: { resumo: string; fatigados: any[]; winners: any[]; recomendacao: string; proximos_testes?: string };
+  diagnostico_criativos: { resumo: string; fatigados: any[]; winners: any[]; recomendacao: string };
   recomendacoes: { titulo: string; prioridade: string; tipo: string; diagnostico: string; acao: string; impacto_esperado: string; urgencia: string }[];
   projecao: { cenario_atual: string; com_otimizacoes: string; roas_esperado: string; reducao_cpa_estimada: string };
 }
@@ -653,23 +653,8 @@ const GestorMetaAds = () => {
                         return (
                           <Card key={camp.id} className="overflow-hidden">
                             <button onClick={() => toggleCampaign(camp.id)} className="w-full text-left p-4 flex items-center gap-3 hover:bg-muted/30 transition-colors">
-                              <span className={`px-2 py-0.5 rounded text-xs font-semibold shrink-0 ${st.bg} ${st.text}`}>{st.label}</span>
-                              {(() => {
-                                const raw = camp.nome || "";
-                                const chips = [...raw.matchAll(/\[([^\]]+)\]/g)].map(m => m[1]);
-                                const title = raw.replace(/\[[^\]]*\]/g, "").trim();
-                                if (chips.length === 0) return <span className="font-medium text-foreground flex-1 truncate">{raw}</span>;
-                                return (
-                                  <div className="flex-1 min-w-0">
-                                    {title && <span className="font-medium text-foreground block truncate">{title}</span>}
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                      {chips.map((c, ci) => (
-                                        <span key={ci} className="bg-secondary text-secondary-foreground text-[10px] px-1.5 py-0.5 rounded-md">{c}</span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                );
-                              })()}
+                              <span className={`px-2 py-0.5 rounded text-xs font-semibold ${st.bg} ${st.text}`}>{st.label}</span>
+                              <span className="font-medium text-foreground flex-1 truncate">{camp.nome}</span>
                               <span className="text-sm text-muted-foreground">R$ {Number(m.spend || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                               <span className="text-sm text-muted-foreground">{headerMetric}</span>
                               {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
@@ -794,127 +779,116 @@ const GestorMetaAds = () => {
                       <Card className="border-[#1877F2]/30">
                         <CardContent className="p-4">
                           <h3 className="font-semibold text-[#1877F2] mb-2">Resumo geral dos criativos</h3>
-                          <p className="text-sm text-foreground/80 whitespace-pre-line">{data.analise.diagnostico_criativos.resumo}</p>
+                          <p className="text-sm text-foreground/80">{data.analise.diagnostico_criativos.resumo}</p>
                         </CardContent>
                       </Card>
                     )}
 
-                    {/* Próximos testes sugeridos */}
-                    {data.analise?.diagnostico_criativos?.proximos_testes && (
-                      <Card className="border-warning/30 bg-warning/5">
-                        <CardContent className="p-4">
-                          <h3 className="font-semibold text-warning mb-2 flex items-center gap-2">
-                            <Lightbulb className="w-4 h-4" /> Próximos testes sugeridos
-                          </h3>
-                          <p className="text-sm text-foreground/80 whitespace-pre-line">{data.analise.diagnostico_criativos.proximos_testes}</p>
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {/* Ad cards */}
-                    {data.anuncios?.length > 0 ? (
-                      <div className="space-y-3">
-                        {data.anuncios.map((an: any, i: number) => {
-                          const m = an.metricas || an;
-                          const diag = (an.diagnostico_fadiga || "").toString().toUpperCase();
-                          const diagColors: Record<string, string> = {
-                            SAUDAVEL: "bg-green-500/20 text-green-400 border-green-500/30",
-                            HOOK_FRACO: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-                            RETENCAO_FRACA: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-                            CRIATIVO_FRACO: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-                            SATURADO: "bg-red-500/20 text-red-400 border-red-500/30",
-                            RANKINGS_BAIXOS: "bg-red-500/20 text-red-400 border-red-500/30",
-                            SEM_DADOS: "bg-gray-500/20 text-gray-400 border-gray-500/30",
-                          };
-                          const diagStyle = diagColors[diag] || "bg-gray-500/20 text-gray-400 border-gray-500/30";
-
-                          const hookRate = Number(m.hook_rate ?? m.hookRate ?? 0);
-                          const holdRate = Number(m.hold_rate ?? m.holdRate ?? 0);
-                          const hookColor = hookRate > 20 ? "text-green-400" : hookRate >= 15 ? "text-yellow-400" : "text-red-400";
-                          const holdColor = holdRate > 40 ? "text-green-400" : holdRate >= 25 ? "text-yellow-400" : "text-red-400";
-
-                          const rankings = an.rankings || m.rankings || {};
-                          const rankingLabel = (val: string) => {
-                            if (!val || val === "N/A" || val === "" || val === "UNKNOWN") return null;
-                            const v = val.toUpperCase();
-                            if (v.includes("ABOVE")) return { text: "Acima da média", cls: "bg-green-500/20 text-green-400" };
-                            if (v.includes("BELOW")) return { text: "Abaixo da média", cls: "bg-red-500/20 text-red-400" };
-                            if (v.includes("AVERAGE")) return { text: "Na média", cls: "bg-gray-500/20 text-gray-400" };
-                            return null;
-                          };
-                          const rQ = rankingLabel(rankings.quality_ranking || "");
-                          const rE = rankingLabel(rankings.engagement_rate_ranking || "");
-                          const rC = rankingLabel(rankings.conversion_rate_ranking || "");
-                          const hasRankings = rQ || rE || rC;
-
-                          return (
-                            <Card key={i} className="border-border">
-                              <CardContent className="p-4 space-y-3">
-                                {/* Header */}
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-sm font-semibold text-foreground flex-1 min-w-0 truncate">{an.nome || an.name || `Anúncio ${i + 1}`}</span>
-                                  {diag && (
-                                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${diagStyle}`}>
-                                      {diag.replace(/_/g, " ")}
-                                    </span>
-                                  )}
-                                </div>
-
-                                {/* Metrics grid */}
-                                <div className="grid grid-cols-3 gap-3">
-                                  <div className="space-y-0.5">
-                                    <span className="text-xs text-muted-foreground">Hook Rate</span>
-                                    <p className={`text-sm font-semibold ${hookColor}`}>{hookRate.toFixed(1)}%</p>
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <span className="text-xs text-muted-foreground">Hold Rate</span>
-                                    <p className={`text-sm font-semibold ${holdColor}`}>{holdRate.toFixed(1)}%</p>
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <span className="text-xs text-muted-foreground">CTR</span>
-                                    <p className="text-sm font-semibold text-foreground">{Number(m.ctr || 0).toFixed(2)}%</p>
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <span className="text-xs text-muted-foreground">CPM</span>
-                                    <p className="text-sm font-semibold text-foreground">R$ {Number(m.cpm || 0).toFixed(2)}</p>
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <span className="text-xs text-muted-foreground">Frequência</span>
-                                    <p className="text-sm font-semibold text-foreground">{Number(m.frequency ?? m.frequencia ?? 0).toFixed(1)}</p>
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <span className="text-xs text-muted-foreground">Investimento</span>
-                                    <p className="text-sm font-semibold text-foreground">R$ {Number(m.spend ?? m.investimento ?? 0).toFixed(2)}</p>
-                                  </div>
-                                </div>
-
-                                {/* Rankings */}
-                                {hasRankings && (
-                                  <div className="flex gap-2 flex-wrap pt-1 border-t border-border">
-                                    {rQ && (
-                                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${rQ.cls}`}>
-                                        Qualidade: {rQ.text}
-                                      </span>
-                                    )}
-                                    {rE && (
-                                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${rE.cls}`}>
-                                        Engajamento: {rE.text}
-                                      </span>
-                                    )}
-                                    {rC && (
-                                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${rC.cls}`}>
-                                        Conversão: {rC.text}
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
+                    {/* Winners */}
+                    {data.analise?.diagnostico_criativos?.winners?.length > 0 && (
+                      <div>
+                        <h3 className="font-semibold text-green-400 mb-2 flex items-center gap-2">
+                          <Award className="w-4 h-4" /> Winners
+                        </h3>
+                        <div className="space-y-2">
+                          {data.analise.diagnostico_criativos.winners.map((w: any, i: number) => (
+                            <Card key={i} className="border-green-500/20 bg-green-500/5">
+                              <CardContent className="p-3 flex items-center gap-3">
+                                <span className="bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-xs font-medium">BOM</span>
+                                <span className="text-sm text-foreground flex-1">{typeof w === "string" ? w : w.nome || w.name || JSON.stringify(w)}</span>
+                                {w.roas && <span className="text-xs text-muted-foreground">ROAS {w.roas}x</span>}
+                                {w.ctr && <span className="text-xs text-muted-foreground">CTR {w.ctr}%</span>}
                               </CardContent>
                             </Card>
-                          );
-                        })}
+                          ))}
+                        </div>
                       </div>
-                    ) : (
-                      <p className="text-center text-muted-foreground py-8">Nenhum anúncio com gasto no período selecionado.</p>
+                    )}
+
+                    {/* Fatigued / Problem ads */}
+                    {data.analise?.diagnostico_criativos?.fatigados?.length > 0 && (
+                      <div>
+                        <h3 className="font-semibold text-orange-400 mb-2 flex items-center gap-2">
+                          <AlertTriangle className="w-4 h-4" /> Atenção / Fadiga
+                        </h3>
+                        <div className="space-y-2">
+                          {data.analise.diagnostico_criativos.fatigados.map((f: any, i: number) => {
+                            const fadigaColors: Record<string, string> = {
+                              SATURADO: "bg-red-500/20 text-red-400",
+                              HOOK_FRACO: "bg-orange-500/20 text-orange-400",
+                              CRIATIVO_FRACO: "bg-yellow-500/20 text-yellow-400",
+                              RANKINGS_BAIXOS: "bg-orange-500/20 text-orange-400",
+                            };
+                            const rankingColors: Record<string, string> = {
+                              ABOVE_AVERAGE: "text-green-400",
+                              AVERAGE: "text-gray-400",
+                              BELOW_AVERAGE: "text-red-400",
+                            };
+                            return (
+                              <Card key={i} className="border-orange-500/20">
+                                <CardContent className="p-3 space-y-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${fadigaColors[f.diagnostico_fadiga] || "bg-orange-500/20 text-orange-400"}`}>
+                                      {f.diagnostico_fadiga || "ATENÇÃO"}
+                                    </span>
+                                    <span className="text-sm text-foreground font-medium">{typeof f === "string" ? f : f.nome || f.name || ""}</span>
+                                  </div>
+                                  {f.rankings && (
+                                    <div className="flex gap-3 text-xs">
+                                      {Object.entries(f.rankings).map(([k, v]) => (
+                                        <span key={k} className={rankingColors[v as string] || "text-gray-400"}>
+                                          {k}: {(v as string).replace("_", " ")}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                  {f.metricas && (
+                                    <div className="flex gap-3 text-xs text-muted-foreground">
+                                      {f.metricas.ctr && <span>CTR {f.metricas.ctr}%</span>}
+                                      {f.metricas.hook_rate && <span>Hook {f.metricas.hook_rate}%</span>}
+                                      {f.metricas.frequency && <span>Freq {f.metricas.frequency}</span>}
+                                      {f.metricas.cpm && <span>CPM R${f.metricas.cpm}</span>}
+                                    </div>
+                                  )}
+                                  {f.recomendacao && <p className="text-xs text-orange-300/80">{f.recomendacao}</p>}
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Creative recommendation */}
+                    {data.analise?.diagnostico_criativos?.recomendacao && (
+                      <Card>
+                        <CardContent className="p-4">
+                          <h3 className="font-semibold text-foreground mb-2">Recomendação geral de criativos</h3>
+                          <p className="text-sm text-foreground/80 whitespace-pre-line">{data.analise.diagnostico_criativos.recomendacao}</p>
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {!data.analise?.diagnostico_criativos && !data.anuncios?.length && (
+                      <p className="text-center text-muted-foreground py-8">Nenhum dado de criativos disponível</p>
+                    )}
+
+                    {/* Individual ads fallback */}
+                    {!data.analise?.diagnostico_criativos && data.anuncios?.length > 0 && (
+                      <div className="space-y-2">
+                        {data.anuncios.map((an, i) => (
+                          <Card key={i}>
+                            <CardContent className="p-3">
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium text-foreground">{an.nome}</span>
+                                {an.diagnostico_fadiga && (
+                                  <span className="bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded text-xs">{an.diagnostico_fadiga}</span>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
                     )}
                   </div>
                 )}
