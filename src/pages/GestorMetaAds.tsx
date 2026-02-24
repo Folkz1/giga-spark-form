@@ -415,8 +415,12 @@ const GestorMetaAds = () => {
                   <Input className="h-8 text-xs" placeholder="R$50" value={contexto.metaCpa} onChange={e => setContexto({ ...contexto, metaCpa: e.target.value })} />
                 </div>
                 <div className="flex-1 min-w-[200px]">
-                  <Label className="text-xs text-muted-foreground">Contexto</Label>
-                  <Input className="h-8 text-xs" value={contexto.contexto} onChange={e => setContexto({ ...contexto, contexto: e.target.value })} />
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs text-muted-foreground">Contexto</Label>
+                    <button type="button" className="text-[10px] text-primary hover:underline" onClick={() => setContexto({ ...contexto, contexto: "Produto/serviço: Portas laqueadas premium | Ticket médio: R$1.800 | Raio de atendimento: 17km | Público-alvo: Proprietários reformando imóvel, 30-55 anos | Diferencial: Acabamento superior, não fazemos porta popular | Observações: Campanha local, vendas via WhatsApp" })}>Ver exemplo</button>
+                  </div>
+                  <Input className="h-8 text-xs" placeholder="Produto/serviço: | Ticket médio: R$ | Raio de atendimento: km | Público-alvo: | Diferencial: | Observações:" value={contexto.contexto} onChange={e => setContexto({ ...contexto, contexto: e.target.value })} />
+                  <span className="text-[10px] text-muted-foreground mt-0.5 block">Quanto mais contexto, mais precisa é a análise da IA</span>
                 </div>
               </div>
             )}
