@@ -151,6 +151,10 @@ const KeywordChip = ({ keyword, variant = "keyword" }: { keyword: string; varian
 /** Parse como_executar text into individual steps.
  *  Handles "1) ... 2) ..." and "1. ... 2. ..." inline or newline-separated. */
 const parseSteps = (texto: string): string[] => {
+  // Defensive: ensure texto is a string
+  if (typeof texto !== 'string') {
+    try { return [String(texto)]; } catch { return []; }
+  }
   // Split on patterns like "1)" "2." "1-" at word boundaries, keeping content
   const parts = texto.split(/(?:^|\n)\s*\d+[\.\)\-]\s*|(?<=\S)\s+\d+[\.\)\-]\s+/);
   const steps = parts.map((s) => s.replace(/^\d+[\.\)\-]\s*/, "").trim()).filter(Boolean);
