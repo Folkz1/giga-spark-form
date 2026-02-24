@@ -633,15 +633,15 @@ const GestorMetaAds = () => {
                         const st = SCORE_STYLES[camp.status_performance] || SCORE_STYLES.ATENCAO;
                         const m = camp.metricas || {};
                         const diag = data.analise?.diagnostico_por_campanha?.find(d => d.nome === camp.nome);
-                        const tipo = (m.tipo_campanha || m.objetivo || m.objective || "").toString().toUpperCase();
+                        const tipo = ((camp as any).tipo_campanha || m.tipo_campanha || m.objetivo || m.objective || "").toString().toUpperCase();
                         const isMsg = tipo.includes("MENSAG") || tipo.includes("MESSAGE");
-                        const isLeads = tipo.includes("LEAD");
-                        const isTrafego = tipo.includes("TRAFEGO") || tipo.includes("TRAFFIC") || tipo.includes("LINK_CLICK");
-                        const isAwareness = tipo.includes("AWARENESS") || tipo.includes("ALCANCE") || tipo.includes("REACH");
+                        const isLeads = !isMsg && (tipo.includes("LEAD"));
+                        const isTrafego = !isMsg && !isLeads && (tipo.includes("TRAFEGO") || tipo.includes("TRAFFIC") || tipo.includes("LINK_CLICK"));
+                        const isAwareness = !isMsg && !isLeads && !isTrafego && (tipo.includes("AWARENESS") || tipo.includes("ALCANCE") || tipo.includes("REACH"));
                         const isNonSales = isMsg || isLeads || isTrafego || isAwareness;
 
                         const headerMetric = isMsg
-                          ? `Conversas: ${m.conversas || m.messaging_conversations_started || 0} | CPL R$${Number(m.cpl || m.cost_per_conversation || 0).toFixed(2)}`
+                          ? `Conversas: ${m.conversas_iniciadas || m.conversas || m.messaging_conversations_started || 0} | CPL R$${Number(m.custo_por_conversa || m.cpl || m.cost_per_conversation || 0).toFixed(2)}`
                           : isLeads
                           ? `Leads: ${m.leads || m.total_leads || 0} | CPL R$${Number(m.cpl || m.cost_per_lead || 0).toFixed(2)}`
                           : isTrafego
@@ -672,8 +672,8 @@ const GestorMetaAds = () => {
                                         ];
                                         if (isMsg) {
                                           base.push(
-                                            ["Conversas", String(m.conversas || m.messaging_conversations_started || 0)],
-                                            ["CPL", `R$ ${Number(m.cpl || m.cost_per_conversation || 0).toFixed(2)}`],
+                                            ["Conversas", String(m.conversas_iniciadas || m.conversas || m.messaging_conversations_started || 0)],
+                                            ["CPL", `R$ ${Number(m.custo_por_conversa || m.cpl || m.cost_per_conversation || 0).toFixed(2)}`],
                                           );
                                         } else if (isLeads) {
                                           base.push(
