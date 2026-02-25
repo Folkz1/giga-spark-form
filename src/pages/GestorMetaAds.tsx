@@ -905,6 +905,58 @@ const GestorMetaAds = () => {
                                       </div>
                                     )}
 
+                                    {/* Ad Sets (Conjuntos de Anúncios) */}
+                                    {(() => {
+                                      const campAdsets = (data.adsets || []).filter((as: any) =>
+                                        as.campaign_id === camp.id || as.campanha_id === camp.id || as.campanha === camp.nome
+                                      );
+                                      if (campAdsets.length === 0) return null;
+                                      return (
+                                        <div className="space-y-1.5">
+                                          <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                                            <Layers className="w-3 h-3" /> Conjuntos de Anúncios ({campAdsets.length})
+                                          </span>
+                                          {campAdsets.map((as: any, ai: number) => {
+                                            const am = as.metricas || as;
+                                            return (
+                                              <div key={ai} className="bg-muted/20 rounded-lg p-3 border border-border/30 space-y-1.5">
+                                                <div className="flex items-center gap-2">
+                                                  {as.gerenciador_url ? (
+                                                    <a
+                                                      href={as.gerenciador_url}
+                                                      target="_blank"
+                                                      rel="noopener noreferrer"
+                                                      className="text-sm font-medium text-foreground hover:underline inline-flex items-center gap-1 truncate"
+                                                    >
+                                                      {as.nome || as.name || `Conjunto ${ai + 1}`}
+                                                      <ExternalLink className="w-3 h-3 shrink-0 text-muted-foreground" />
+                                                    </a>
+                                                  ) : (
+                                                    <span className="text-sm font-medium text-foreground truncate">{as.nome || as.name || `Conjunto ${ai + 1}`}</span>
+                                                  )}
+                                                  {as.status && <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{as.status}</span>}
+                                                </div>
+                                                <div className="grid grid-cols-3 md:grid-cols-5 gap-1.5 text-xs">
+                                                  {[
+                                                    ["Investimento", `R$ ${Number(am.spend || 0).toFixed(2)}`],
+                                                    ["Total de Exibições", Number(am.impressions || 0).toLocaleString()],
+                                                    ["Pessoas Alcançadas", Number(am.reach || 0).toLocaleString()],
+                                                    ["CPM", `R$ ${Number(am.cpm || 0).toFixed(2)}`],
+                                                    ["CTR", `${am.ctr || "—"}%`],
+                                                  ].map(([label, val]) => (
+                                                    <div key={label as string} className="bg-muted/30 rounded p-1.5">
+                                                      <span className="text-muted-foreground block text-[10px]">{label}</span>
+                                                      <span className="text-foreground font-medium">{val}</span>
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      );
+                                    })()}
+
                                     {/* Alerts */}
                                     {camp.alertas?.length > 0 && (
                                       <div className="bg-red-500/5 rounded p-3">
