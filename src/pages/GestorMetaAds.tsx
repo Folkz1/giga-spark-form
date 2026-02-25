@@ -1234,78 +1234,119 @@ const GestorMetaAds = () => {
                       </div>
                     )}
 
-                    {(data.tarefas_sugeridas || []).map((tarefa, i) => {
-                      const expanded = expandedTasks.has(i);
-                      const porQueFazer = tarefa.por_que_fazer?.trim();
-                      const comoExecutar = tarefa.como_executar?.trim();
-                      // Split como_executar by ";" into numbered steps
-                      const execSteps = comoExecutar
-                        ? comoExecutar.split(";").map(s => s.trim().replace(/^\d+\.\s*/, "")).filter(Boolean)
-                        : [];
+                    {(() => {
+                      // Build lookup of known entity names → gerenciador_url
+                      const entityLinks = new Map<string, string>();
+                      (data.campanhas || []).forEach((c: any) => {
+                        if (c.nome && c.gerenciador_url) entityLinks.set(c.nome, c.gerenciador_url);
+                      });
+                      (data.adsets || []).forEach((a: any) => {
+                        const n = a.nome || a.name;
+                        if (n && a.gerenciador_url) entityLinks.set(n, a.gerenciador_url);
+                      });
+                      (data.anuncios || []).forEach((a: any) => {
+                        const n = a.nome || a.name;
+                        if (n && ((a as any).gerenciador_url || (a as any).instagram_url)) entityLinks.set(n, (a as any).gerenciador_url || (a as any).instagram_url);
+                      });
+                      // Also check diagnostico_criativos winners/fatigados
+                      [...(data.analise?.diagnostico_criativos?.winners || []), ...(data.analise?.diagnostico_criativos?.fatigados || [])].forEach((w: any) => {
+                        const n = w.nome || w.name;
+                        if (n && (w.gerenciador_url || w.instagram_url)) entityLinks.set(n, w.instagram_url || w.gerenciador_url);
+                      });
 
-                      return (
-                        <Card key={i}>
-                          <CardContent className="p-4">
-                            <div className="flex items-start gap-3">
-                              <Checkbox
-                                checked={selectedTasks.has(i)}
-                                onCheckedChange={() => {
-                                  setSelectedTasks(prev => {
-                                    const next = new Set(prev);
-                                    next.has(i) ? next.delete(i) : next.add(i);
-                                    return next;
-                                  });
-                                }}
-                                className="mt-1"
-                              />
-                              <div className="flex-1 space-y-2">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  {tarefa.prioridade && (
-                                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${PRIORIDADE_STYLES[tarefa.prioridade] || PRIORIDADE_STYLES.normal}`}>
-                                      {PRIORIDADE_LABELS[tarefa.prioridade] || tarefa.prioridade_texto || tarefa.prioridade}
-                                    </span>
-                                  )}
-                                  {tarefa.tipo && (
-                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${TIPO_STYLES[tarefa.tipo] || "bg-blue-500/20 text-blue-400"}`}>
-                                      {TIPO_LABELS[tarefa.tipo] || tarefa.tipo}
-                                    </span>
-                                  )}
-                                  {tarefa.urgencia && (
-                                    <span className={`px-2 py-0.5 rounded text-xs ${URGENCIA_STYLES[tarefa.urgencia] || "bg-blue-500/20 text-blue-400"}`}>
-                                      {tarefa.urgencia}
-                                    </span>
-                                  )}
-                                </div>
+                      // Linkify text: replace known entity names with clickable links
+                      const linkifyText = (text: string): React.ReactNode => {
+                        if (!text || entityLinks.size === 0) return text;
+                        // Sort names by length desc so longer names match first
+                        const names = Array.from(entityLinks.keys()).sort((a, b) => b.length - a.length);
+                        // Only match names >= 5 chars to avoid false positives
+                        const validNames = names.filter(n => n.length >= 5);
+                        if (validNames.length === 0) return text;
+                        const escapedNames = validNames.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+                        const regex = new RegExp(`(${escapedNames.join("|")})`, "g");
+                        const parts = text.split(regex);
+                        if (parts.length === 1) return text;
+                        return parts.map((part, pi) => {
+                          const url = entityLinks.get(part);
+                          if (url) {
+                            return (
+                              <a key={pi} href={url} target="_blank" rel="noopener noreferrer" className="text-foreground font-medium hover:underline inline-flex items-center gap-0.5">
+                                {part}<ExternalLink className="w-2.5 h-2.5 shrink-0 text-muted-foreground inline" />
+                              </a>
+                            );
+                          }
+                          return <span key={pi}>{part}</span>;
+                        });
+                      };
 
-                                {/* Task title */}
-                                <span className="font-medium text-foreground text-sm block">{tarefa.nome}</span>
+                      return (data.tarefas_sugeridas || []).map((tarefa, i) => {
+                        const expanded = expandedTasks.has(i);
+                        const porQueFazer = tarefa.por_que_fazer?.trim();
+                        const comoExecutar = tarefa.como_executar?.trim();
+                        const execSteps = comoExecutar
+                          ? comoExecutar.split(";").map(s => s.trim().replace(/^\d+\.\s*/, "")).filter(Boolean)
+                          : [];
 
-                                {/* Por que fazer */}
-                                {porQueFazer && (
-                                  <div className="mt-1">
-                                    <span className="text-xs font-semibold text-amber-400 flex items-center gap-1 mb-0.5">
-                                      ⚠️ Por que fazer:
-                                    </span>
-                                    <p className="text-xs text-muted-foreground">{porQueFazer}</p>
+                        return (
+                          <Card key={i}>
+                            <CardContent className="p-4">
+                              <div className="flex items-start gap-3">
+                                <Checkbox
+                                  checked={selectedTasks.has(i)}
+                                  onCheckedChange={() => {
+                                    setSelectedTasks(prev => {
+                                      const next = new Set(prev);
+                                      next.has(i) ? next.delete(i) : next.add(i);
+                                      return next;
+                                    });
+                                  }}
+                                  className="mt-1"
+                                />
+                                <div className="flex-1 space-y-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {tarefa.prioridade && (
+                                      <span className={`px-2 py-0.5 rounded text-xs font-semibold ${PRIORIDADE_STYLES[tarefa.prioridade] || PRIORIDADE_STYLES.normal}`}>
+                                        {PRIORIDADE_LABELS[tarefa.prioridade] || tarefa.prioridade_texto || tarefa.prioridade}
+                                      </span>
+                                    )}
+                                    {tarefa.tipo && (
+                                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${TIPO_STYLES[tarefa.tipo] || "bg-blue-500/20 text-blue-400"}`}>
+                                        {TIPO_LABELS[tarefa.tipo] || tarefa.tipo}
+                                      </span>
+                                    )}
+                                    {tarefa.urgencia && (
+                                      <span className={`px-2 py-0.5 rounded text-xs ${URGENCIA_STYLES[tarefa.urgencia] || "bg-blue-500/20 text-blue-400"}`}>
+                                        {tarefa.urgencia}
+                                      </span>
+                                    )}
                                   </div>
-                                )}
 
-                                {/* Como executar */}
-                                {execSteps.length > 0 && (
-                                  <div className="bg-muted/40 rounded-lg p-3 mt-1 border border-border/50">
-                                    <span className="text-xs font-semibold text-blue-400 flex items-center gap-1 mb-1.5">
-                                      📋 Como executar:
-                                    </span>
-                                    <ol className="space-y-1">
-                                      {execSteps.map((step, si) => (
-                                        <li key={si} className="text-xs text-foreground/70 flex gap-1.5">
-                                          <span className="text-blue-400/70 font-medium shrink-0">{si + 1}.</span>
-                                          <span>{step}</span>
-                                        </li>
-                                      ))}
-                                    </ol>
-                                  </div>
-                                )}
+                                  <span className="font-medium text-foreground text-sm block">{tarefa.nome}</span>
+
+                                  {porQueFazer && (
+                                    <div className="mt-1">
+                                      <span className="text-xs font-semibold text-amber-400 flex items-center gap-1 mb-0.5">
+                                        ⚠️ Por que fazer:
+                                      </span>
+                                      <p className="text-xs text-muted-foreground">{linkifyText(porQueFazer)}</p>
+                                    </div>
+                                  )}
+
+                                  {execSteps.length > 0 && (
+                                    <div className="bg-muted/40 rounded-lg p-3 mt-1 border border-border/50">
+                                      <span className="text-xs font-semibold text-blue-400 flex items-center gap-1 mb-1.5">
+                                        📋 Como executar:
+                                      </span>
+                                      <ol className="space-y-1">
+                                        {execSteps.map((step, si) => (
+                                          <li key={si} className="text-xs text-foreground/70 flex gap-1.5">
+                                            <span className="text-blue-400/70 font-medium shrink-0">{si + 1}.</span>
+                                            <span>{linkifyText(step)}</span>
+                                          </li>
+                                        ))}
+                                      </ol>
+                                    </div>
+                                  )}
 
                                 {expanded && (
                                   <div className="text-xs text-foreground/70 bg-muted/30 rounded p-2 mt-1 whitespace-pre-line">
@@ -1327,7 +1368,8 @@ const GestorMetaAds = () => {
                           </CardContent>
                         </Card>
                       );
-                    })}
+                      });
+                    })()}
 
                     {(!data.tarefas_sugeridas || data.tarefas_sugeridas.length === 0) && (
                       <p className="text-center text-muted-foreground py-8">Nenhuma tarefa sugerida</p>
