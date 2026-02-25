@@ -1022,9 +1022,24 @@ const GestorMetaAds = () => {
                               <Card key={i} className="border-green-500/20 bg-green-500/5">
                                 <CardContent className="p-3 space-y-2">
                                   <div className="flex items-center gap-2 flex-wrap">
+                                    {w.thumbnail_url && (
+                                      <img src={w.thumbnail_url} alt="" className="w-[60px] h-[60px] rounded-lg object-cover shrink-0" />
+                                    )}
                                     <span className="bg-green-500/20 text-green-400 px-2 py-0.5 rounded text-xs font-medium">BOM</span>
                                     <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded text-xs">{tipoBadge}</span>
-                                    <span className="text-sm text-foreground flex-1">{typeof w === "string" ? w : w.nome || w.name || JSON.stringify(w)}</span>
+                                    {(w.instagram_url || w.gerenciador_url) ? (
+                                      <a
+                                        href={w.instagram_url || w.gerenciador_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-foreground hover:underline inline-flex items-center gap-1 flex-1"
+                                      >
+                                        {nome || JSON.stringify(w)}
+                                        <ExternalLink className="w-3 h-3 shrink-0 text-muted-foreground" />
+                                      </a>
+                                    ) : (
+                                      <span className="text-sm text-foreground flex-1">{typeof w === "string" ? w : nome || JSON.stringify(w)}</span>
+                                    )}
                                   </div>
                                   <div className="flex gap-3 text-xs text-muted-foreground flex-wrap">
                                     {w.roas && <span>ROAS {w.roas}x</span>}
@@ -1072,11 +1087,26 @@ const GestorMetaAds = () => {
                               <Card key={i} className="border-orange-500/20">
                                 <CardContent className="p-3 space-y-2">
                                   <div className="flex items-center gap-2 flex-wrap">
+                                    {f.thumbnail_url && (
+                                      <img src={f.thumbnail_url} alt="" className="w-[60px] h-[60px] rounded-lg object-cover shrink-0" />
+                                    )}
                                     <span className={`px-2 py-0.5 rounded text-xs font-medium ${fadigaColors[displayFadiga] || "bg-orange-500/20 text-orange-400"}`}>
                                       {FADIGA_LABELS[displayFadiga] || displayFadiga || "ATENÇÃO"}
                                     </span>
                                     <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded text-xs">{tipoBadge}</span>
-                                    <span className="text-sm text-foreground font-medium">{nome}</span>
+                                    {(f.instagram_url || f.gerenciador_url) ? (
+                                      <a
+                                        href={f.instagram_url || f.gerenciador_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-sm text-foreground font-medium hover:underline inline-flex items-center gap-1 flex-1"
+                                      >
+                                        {nome}
+                                        <ExternalLink className="w-3 h-3 shrink-0 text-muted-foreground" />
+                                      </a>
+                                    ) : (
+                                      <span className="text-sm text-foreground font-medium">{nome}</span>
+                                    )}
                                   </div>
                                   {f.rankings && (
                                     <div className="flex gap-3 text-xs flex-wrap">
@@ -1139,7 +1169,22 @@ const GestorMetaAds = () => {
                             <Card key={i}>
                               <CardContent className="p-3 space-y-2">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="text-sm font-medium text-foreground">{an.nome}</span>
+                                  {(an as any).thumbnail_url && (
+                                    <img src={(an as any).thumbnail_url} alt="" className="w-[60px] h-[60px] rounded-lg object-cover shrink-0" />
+                                  )}
+                                  {((an as any).instagram_url || (an as any).gerenciador_url) ? (
+                                    <a
+                                      href={(an as any).instagram_url || (an as any).gerenciador_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-sm font-medium text-foreground hover:underline inline-flex items-center gap-1"
+                                    >
+                                      {an.nome}
+                                      <ExternalLink className="w-3 h-3 shrink-0 text-muted-foreground" />
+                                    </a>
+                                  ) : (
+                                    <span className="text-sm font-medium text-foreground">{an.nome}</span>
+                                  )}
                                   <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded text-xs">{tipoBadge}</span>
                                   {displayFadiga && (
                                     <span className="bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded text-xs">
