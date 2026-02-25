@@ -788,7 +788,20 @@ const GestorMetaAds = () => {
                           <Card key={camp.id} className="overflow-hidden">
                             <button onClick={() => toggleCampaign(camp.id)} className="w-full text-left p-4 flex items-center gap-3 hover:bg-muted/30 transition-colors">
                               <span className={`px-2 py-0.5 rounded text-xs font-semibold ${st.bg} ${st.text}`}>{st.label}</span>
-                              <span className="font-medium text-foreground flex-1 truncate">{camp.nome}</span>
+                              {(camp as any).gerenciador_url ? (
+                                <a
+                                  href={(camp as any).gerenciador_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="font-medium text-foreground flex-1 truncate hover:underline inline-flex items-center gap-1"
+                                >
+                                  {camp.nome}
+                                  <ExternalLink className="w-3 h-3 shrink-0 text-muted-foreground" />
+                                </a>
+                              ) : (
+                                <span className="font-medium text-foreground flex-1 truncate">{camp.nome}</span>
+                              )}
                               <span className="text-sm text-muted-foreground">R$ {Number(m.spend || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</span>
                               <span className="text-sm text-muted-foreground">{headerMetric}</span>
                               {open ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
