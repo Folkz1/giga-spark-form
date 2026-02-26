@@ -113,6 +113,12 @@ interface ResumoCards {
   oportunidade_principal?: string;
 }
 
+interface RelatorioAuditoria {
+  emoji?: string;
+  status?: string;
+  texto?: string;
+}
+
 interface RelatorioData {
   resumo: Resumo;
   alertas: Alerta[];
@@ -121,6 +127,7 @@ interface RelatorioData {
   resumo_cards: ResumoCards | null;
   resumo_executivo: string;
   adGroups: AdGroup[];
+  relatorio_auditoria?: RelatorioAuditoria | null;
 }
 
 const KeywordChip = ({ keyword, variant = "keyword" }: { keyword: string; variant?: "keyword" | "group" }) => {
@@ -226,6 +233,7 @@ const GestorIA = () => {
   const [chatOpen, setChatOpen] = useState(false);
   const [resumoExpanded, setResumoExpanded] = useState(false);
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
+  const [showAuditoria, setShowAuditoria] = useState(false);
 
   const [selectedTermos, setSelectedTermos] = useState<Record<number, Set<string>>>({});
   const [negativados, setNegativados] = useState<Record<number, Set<string>>>(() => {
@@ -575,6 +583,11 @@ const GestorIA = () => {
         : typeof rawExec === "object" && rawExec !== null
           ? [rawExec.visao_geral, rawExec.problema_principal, rawExec.destaques, rawExec.oportunidade_principal].filter(Boolean).join("\n\n")
           : "";
+      const rawAuditoria = data._relatorio_auditoria;
+      const auditoriaObj: RelatorioAuditoria | null =
+        typeof rawAuditoria === "object" && rawAuditoria !== null && rawAuditoria.texto
+          ? rawAuditoria
+          : null;
       setRelatorio({
         resumo: resumoData,
         alertas: Array.isArray(data.alertas_criticos) ? data.alertas_criticos : [],
@@ -583,6 +596,7 @@ const GestorIA = () => {
         resumo_cards: cardsObj,
         resumo_executivo: execTexto,
         adGroups: Array.isArray(data.adGroups) ? data.adGroups : [],
+        relatorio_auditoria: auditoriaObj,
       });
       setStep(3);
     } catch (err: any) {
@@ -1863,19 +1877,64 @@ const GestorIA = () => {
 
               {/* Resumo Executivo */}
               <div>
-                <button
-                  onClick={() => setResumoExpanded(!resumoExpanded)}
-                  className="flex items-center gap-2 text-teal-400 text-sm font-medium hover:text-teal-300 transition-colors"
-                >
-                  <ChevronDown className={`h-4 w-4 transition-transform ${resumoExpanded ? "rotate-180" : ""}`} />
-                  {resumoExpanded ? "Ocultar Resumo Executivo" : "Ver Resumo Executivo"}
-                </button>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <button
+                    onClick={() => setResumoExpanded(!resumoExpanded)}
+                    className="flex items-center gap-2 text-teal-400 text-sm font-medium hover:text-teal-300 transition-colors"
+                  >
+                    <ChevronDown className={`h-4 w-4 transition-transform ${resumoExpanded ? "rotate-180" : ""}`} />
+                    {resumoExpanded ? "Ocultar Resumo Executivo" : "Ver Resumo Executivo"}
+                  </button>
+                  {relatorio.relatorio_auditoria && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAuditoria(true)}
+                      className="text-xs"
+                    >
+                      📋 Relatório do Fluxo
+                    </Button>
+                  )}
+                </div>
                 {resumoExpanded && relatorio.resumo_executivo && (
                   <div className="mt-3 text-gray-300 text-sm bg-gray-800 rounded-lg p-4 whitespace-pre-line">
                     {relatorio.resumo_executivo}
                   </div>
                 )}
               </div>
+
+              {/* Modal Relatório de Auditoria */}
+              <Dialog open={showAuditoria} onOpenChange={setShowAuditoria}>
+                <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+                  <DialogHeader>
+                    <DialogTitle>Relatório de Auditoria do Fluxo</DialogTitle>
+                    {relatorio.relatorio_auditoria?.emoji && relatorio.relatorio_auditoria?.status && (
+                      <p className="text-lg mt-1">
+                        {relatorio.relatorio_auditoria.emoji} {relatorio.relatorio_auditoria.status}
+                      </p>
+                    )}
+                  </DialogHeader>
+                  <div className="flex-1 overflow-auto">
+                    <pre className="text-xs font-mono text-foreground/90 whitespace-pre-wrap bg-muted/50 rounded-lg p-4 border border-border">
+                      {relatorio.relatorio_auditoria?.texto}
+                    </pre>
+                  </div>
+                  <DialogFooter className="gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(relatorio.relatorio_auditoria?.texto || "");
+                      }}
+                    >
+                      Copiar
+                    </Button>
+                    <Button size="sm" onClick={() => setShowAuditoria(false)}>
+                      Fechar
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
 
               {/* Horizontal tabs */}
               <div className="space-y-0">
