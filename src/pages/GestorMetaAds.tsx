@@ -570,6 +570,27 @@ const GestorMetaAds = () => {
               </div>
             )}
 
+            {/* Relatório de Auditoria */}
+            {(data as any).relatorio_fiscal && (() => {
+              const texto = String((data as any).relatorio_fiscal);
+              const auditColor = texto.includes("FALHOU")
+                ? { border: "border-red-500/40", bg: "bg-red-500/10", text: "text-red-400", icon: "🔴" }
+                : texto.includes("AVISOS")
+                ? { border: "border-yellow-500/40", bg: "bg-yellow-500/10", text: "text-yellow-400", icon: "🟡" }
+                : { border: "border-green-500/40", bg: "bg-green-500/10", text: "text-green-400", icon: "🟢" };
+              return (
+                <details className={`rounded-lg border ${auditColor.border} ${auditColor.bg}`}>
+                  <summary className={`cursor-pointer px-4 py-3 text-sm font-semibold ${auditColor.text} select-none list-none flex items-center gap-2`}>
+                    <ChevronDown className="w-4 h-4 shrink-0 transition-transform [[open]>&]:rotate-180" />
+                    <span>{auditColor.icon} 🔍 Relatório de Auditoria</span>
+                  </summary>
+                  <div className="px-4 pb-4">
+                    <pre className="text-xs font-mono whitespace-pre-wrap text-foreground/80 leading-relaxed">{texto}</pre>
+                  </div>
+                </details>
+              );
+            })()}
+
             {/* Tabs */}
             <div className="flex gap-1 border-b border-border">
               {["Resumo", "Campanhas", "Criativos", "Tarefas"].map((tab, i) => (
