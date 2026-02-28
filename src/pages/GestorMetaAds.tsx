@@ -6,7 +6,7 @@ import {
   Lightbulb, ChevronDown, ChevronUp, DollarSign, TrendingUp, Target,
   Users, Eye, MousePointer, Layers, CheckCircle2, X, Trash2,
   ExternalLink, Clock, Zap, Pause, ArrowUpRight, RefreshCw, Palette,
-  Star, Award, XCircle,
+  Star, Award, XCircle, Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -586,6 +586,18 @@ const GestorMetaAds = () => {
                     <span>{auditColor.icon} 🔍 Relatório de Auditoria</span>
                   </summary>
                   <div className="px-4 pb-4">
+                    <div className="flex justify-end mb-2">
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(texto);
+                          toast.success("Relatório copiado para a área de transferência.");
+                        }}
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded border border-border hover:border-foreground/30"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        Copiar
+                      </button>
+                    </div>
                     <pre className="text-xs font-mono whitespace-pre-wrap text-foreground/80 leading-relaxed">{texto}</pre>
                   </div>
                 </details>
