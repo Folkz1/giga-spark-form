@@ -44,6 +44,7 @@ interface MetaAnalise {
   diagnostico_criativos: { resumo: string; fatigados: any[]; winners: any[]; recomendacao: string };
   recomendacoes: { titulo: string; prioridade: string; tipo: string; diagnostico: string; acao: string; impacto_esperado: string; urgencia: string }[];
   projecao: { cenario_atual: string; com_otimizacoes: string; roas_esperado: string; reducao_cpa_estimada: string };
+  relatorio_fiscal?: string;
 }
 
 interface MetaCampanha {
@@ -571,8 +572,8 @@ const GestorMetaAds = () => {
             )}
 
             {/* Relatório de Auditoria */}
-            {(data as any).relatorio_fiscal && (() => {
-              const texto = String((data as any).relatorio_fiscal);
+            {data.analise?.relatorio_fiscal && (() => {
+              const texto = String(data.analise.relatorio_fiscal);
               const auditColor = texto.includes("FALHOU")
                 ? { border: "border-red-500/40", bg: "bg-red-500/10", text: "text-red-400", icon: "🔴" }
                 : texto.includes("AVISOS")
