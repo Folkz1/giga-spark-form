@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Pencil, Trash2, X } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,56 +14,85 @@ export interface ClienteMeta {
   id: number;
   nome: string;
   adAccountId: string;
-  listClickupId: string;
-  listaNome: string;
   tipo: "LOCAL" | "B2C" | "ECOMMERCE" | "B2B";
   metaRoas: string;
   metaCpa: string;
   contexto: string;
 }
 
-const CLIENTES_INICIAIS: ClienteMeta[] = [
-  { id: 1, nome: "Uvva Wine Bar", adAccountId: "act_161393377248868", listClickupId: "901322141120", listaNome: "Uvva", tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "wine bar, foco em reservas e eventos" },
-  { id: 2, nome: "Kombina", adAccountId: "act_362618250503979", listClickupId: "901322140768", listaNome: "Kombina", tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "restaurante delivery e presencial" },
-  { id: 3, nome: "Gueixa Sushi", adAccountId: "act_10152321026399363", listClickupId: "901322140674", listaNome: "Gueixa", tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "restaurante japones, delivery e presencial" },
-  { id: 4, nome: "Dermare Cosméticos", adAccountId: "act_439707696090698", listClickupId: "901322114965", listaNome: "Dermare", tipo: "ECOMMERCE", metaRoas: "3", metaCpa: "", contexto: "cosmeticos, ecommerce" },
-  { id: 5, nome: "SHOP NATURELLIS", adAccountId: "act_667675534071758", listClickupId: "901322114966", listaNome: "Shopnaturallis", tipo: "ECOMMERCE", metaRoas: "3", metaCpa: "", contexto: "produtos naturais, ecommerce" },
-  { id: 6, nome: "La Notte Gastrobar", adAccountId: "act_732505914098803", listClickupId: "901322140789", listaNome: "La Notte", tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "gastrobar, foco em reservas" },
-  { id: 7, nome: "Puppilo Pizza", adAccountId: "act_1858058734370090", listClickupId: "901322141059", listaNome: "Puppilo", tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "pizzaria delivery e presencial" },
-  { id: 8, nome: "Laca Porta Mix", adAccountId: "act_1211969896264688", listClickupId: "901322140795", listaNome: "Laca Porta MIx", tipo: "B2C", metaRoas: "", metaCpa: "", contexto: "" },
-  { id: 9, nome: "Club M Brasil", adAccountId: "act_661116945511798", listClickupId: "901322140405", listaNome: "Club M Alphaville", tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "clube de servicos" },
-  { id: 10, nome: "Miobene Natural Care", adAccountId: "act_3404306946467316", listClickupId: "", listaNome: "", tipo: "ECOMMERCE", metaRoas: "", metaCpa: "", contexto: "" },
-];
-
-const STORAGE_KEY = "meta_clientes";
-
-const emptyCliente: Omit<ClienteMeta, "id"> = {
-  nome: "", adAccountId: "", listClickupId: "", listaNome: "",
-  tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "",
-};
-
-export function getClientesMeta(): ClienteMeta[] {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) return JSON.parse(stored);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(CLIENTES_INICIAIS));
-  return CLIENTES_INICIAIS;
+/* ─── Webhook helpers ─── */
+function getWebhookBase(): string {
+  const stored = localStorage.getItem("meta_config");
+  if (stored) {
+    const config = JSON.parse(stored);
+    return config.webhookClientes || "https://principaln8o.gigainteligencia.com.br/webhook";
+  }
+  return "https://principaln8o.gigainteligencia.com.br/webhook";
 }
+
+function parseN8nResponse(raw: any): any {
+  if (Array.isArray(raw)) {
+    if (raw[0]?.json) return raw[0].json;
+    if (raw[0]?.content?.[0]?.text) {
+      const inner = raw[0].content[0].text.replace(/```json\s*/g, "").replace(/```/g, "").trim();
+      return JSON.parse(inner);
+    }
+    return raw[0];
+  }
+  return raw;
+}
+
+export async function fetchClientesMeta(): Promise<ClienteMeta[]> {
+  const base = getWebhookBase();
+  const res = await fetch(`${base}/cliente/buscar-todos`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  const raw = await res.json();
+  const parsed = parseN8nResponse(raw);
+  const lista = Array.isArray(parsed) ? parsed : parsed?.clientes || [];
+  return lista.map((c: any, i: number) => ({
+    id: c.id || i + 1,
+    nome: c.cliente_nome || c.nome || "",
+    adAccountId: c.ad_account_id || c.adAccountId || "",
+    tipo: c.tipo_negocio || c.tipo || "LOCAL",
+    metaRoas: c.meta_roas || c.metaRoas || "",
+    metaCpa: c.meta_cpa || c.metaCpa || "",
+    contexto: c.contexto || "",
+  }));
+}
+
+const emptyForm = {
+  nome: "", adAccountId: "", tipo: "LOCAL" as ClienteMeta["tipo"],
+  metaRoas: "", metaCpa: "", contexto: "",
+};
 
 const ClientesMeta = () => {
   const navigate = useNavigate();
   const [clientes, setClientes] = useState<ClienteMeta[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ClienteMeta | null>(null);
-  const [form, setForm] = useState<Omit<ClienteMeta, "id">>(emptyCliente);
+  const [form, setForm] = useState<Omit<ClienteMeta, "id">>(emptyForm);
 
-  useEffect(() => { setClientes(getClientesMeta()); }, []);
-
-  const save = (list: ClienteMeta[]) => {
-    setClientes(list);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  const loadClientes = async () => {
+    setLoading(true);
+    try {
+      const lista = await fetchClientesMeta();
+      setClientes(lista);
+    } catch (err) {
+      console.error(err);
+      toast.error("Erro ao carregar clientes do Google Sheets");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const openNew = () => { setEditing(null); setForm(emptyCliente); setModalOpen(true); };
+  useEffect(() => { loadClientes(); }, []);
+
+  const openNew = () => { setEditing(null); setForm(emptyForm); setModalOpen(true); };
   const openEdit = (c: ClienteMeta) => {
     setEditing(c);
     const { id, ...rest } = c;
@@ -71,25 +100,60 @@ const ClientesMeta = () => {
     setModalOpen(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.nome || !form.adAccountId) {
       toast.error("Nome e Ad Account ID são obrigatórios");
       return;
     }
-    if (editing) {
-      save(clientes.map(c => c.id === editing.id ? { ...form, id: editing.id } : c));
-      toast.success("Cliente atualizado!");
-    } else {
-      const newId = Math.max(0, ...clientes.map(c => c.id)) + 1;
-      save([...clientes, { ...form, id: newId }]);
-      toast.success("Cliente adicionado!");
+    setSaving(true);
+    const base = getWebhookBase();
+    try {
+      const payload = {
+        cliente_nome: form.nome,
+        ad_account_id: form.adAccountId,
+        tipo_negocio: form.tipo,
+        meta_roas: form.metaRoas,
+        meta_cpa: form.metaCpa,
+        contexto: form.contexto,
+      };
+
+      if (editing) {
+        await fetch(`${base}/cliente/atualizar`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        toast.success("Cliente atualizado!");
+      } else {
+        await fetch(`${base}/cliente/criar`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        toast.success("Cliente adicionado!");
+      }
+      setModalOpen(false);
+      await loadClientes();
+    } catch {
+      toast.error("Erro ao salvar cliente");
+    } finally {
+      setSaving(false);
     }
-    setModalOpen(false);
   };
 
-  const handleDelete = (id: number) => {
-    save(clientes.filter(c => c.id !== id));
-    toast.success("Cliente removido");
+  const handleDelete = async (c: ClienteMeta) => {
+    const base = getWebhookBase();
+    try {
+      await fetch(`${base}/cliente/deletar`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ad_account_id: c.adAccountId }),
+      });
+      toast.success("Cliente removido");
+      await loadClientes();
+    } catch {
+      toast.error("Erro ao remover cliente");
+    }
   };
 
   const tipoBadgeColor: Record<string, string> = {
@@ -115,45 +179,53 @@ const ClientesMeta = () => {
 
         <Card className="border-border">
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border text-muted-foreground">
-                    <th className="text-left p-3">Nome</th>
-                    <th className="text-left p-3">Ad Account ID</th>
-                    <th className="text-left p-3">Lista ClickUp</th>
-                    <th className="text-left p-3">Tipo</th>
-                    <th className="text-left p-3">Meta ROAS</th>
-                    <th className="text-left p-3">Meta CPA</th>
-                    <th className="text-right p-3">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {clientes.map(c => (
-                    <tr key={c.id} className="border-b border-border/50 hover:bg-muted/30">
-                      <td className="p-3 font-medium text-foreground">{c.nome}</td>
-                      <td className="p-3 text-muted-foreground font-mono text-xs">{c.adAccountId}</td>
-                      <td className="p-3 text-muted-foreground">{c.listaNome || "—"}</td>
-                      <td className="p-3">
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${tipoBadgeColor[c.tipo] || ""}`}>
-                          {c.tipo}
-                        </span>
-                      </td>
-                      <td className="p-3 text-muted-foreground">{c.metaRoas ? `${c.metaRoas}x` : "—"}</td>
-                      <td className="p-3 text-muted-foreground">{c.metaCpa ? `R$${c.metaCpa}` : "—"}</td>
-                      <td className="p-3 text-right">
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(c)}>
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id)} className="text-destructive hover:text-destructive">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </td>
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-muted-foreground">Carregando clientes...</span>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border text-muted-foreground">
+                      <th className="text-left p-3">Nome</th>
+                      <th className="text-left p-3">Ad Account ID</th>
+                      <th className="text-left p-3">Tipo</th>
+                      <th className="text-left p-3">Meta ROAS</th>
+                      <th className="text-left p-3">Meta CPA</th>
+                      <th className="text-right p-3">Ações</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {clientes.map(c => (
+                      <tr key={c.adAccountId} className="border-b border-border/50 hover:bg-muted/30">
+                        <td className="p-3 font-medium text-foreground">{c.nome}</td>
+                        <td className="p-3 text-muted-foreground font-mono text-xs">{c.adAccountId}</td>
+                        <td className="p-3">
+                          <span className={`px-2 py-0.5 rounded text-xs font-medium ${tipoBadgeColor[c.tipo] || ""}`}>
+                            {c.tipo}
+                          </span>
+                        </td>
+                        <td className="p-3 text-muted-foreground">{c.metaRoas ? `${c.metaRoas}x` : "—"}</td>
+                        <td className="p-3 text-muted-foreground">{c.metaCpa ? `R$${c.metaCpa}` : "—"}</td>
+                        <td className="p-3 text-right">
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(c)}>
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(c)} className="text-destructive hover:text-destructive">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                    {clientes.length === 0 && (
+                      <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Nenhum cliente cadastrado</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -171,16 +243,6 @@ const ClientesMeta = () => {
             <div>
               <Label>Ad Account ID *</Label>
               <Input placeholder="act_XXXXXXXXXX" value={form.adAccountId} onChange={e => setForm({ ...form, adAccountId: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Lista ClickUp ID</Label>
-                <Input value={form.listClickupId} onChange={e => setForm({ ...form, listClickupId: e.target.value })} />
-              </div>
-              <div>
-                <Label>Nome da Lista</Label>
-                <Input value={form.listaNome} onChange={e => setForm({ ...form, listaNome: e.target.value })} />
-              </div>
             </div>
             <div>
               <Label>Tipo de Negócio</Label>
@@ -211,7 +273,10 @@ const ClientesMeta = () => {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)}>Cancelar</Button>
-            <Button onClick={handleSave} className="bg-[#1877F2] hover:bg-[#1565c0] text-white">Salvar</Button>
+            <Button onClick={handleSave} disabled={saving} className="bg-[#1877F2] hover:bg-[#1565c0] text-white">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : null}
+              Salvar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

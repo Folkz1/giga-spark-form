@@ -19,7 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { getClientesMeta, type ClienteMeta } from "./ClientesMeta";
+import { fetchClientesMeta, type ClienteMeta } from "./ClientesMeta";
 
 /* ─── Types ─── */
 interface MetaResumo {
@@ -265,7 +265,11 @@ const GestorMetaAds = () => {
   const [historicoOpen, setHistoricoOpen] = useState(false);
   const [historicoBanner, setHistoricoBanner] = useState<string | null>(null);
 
-  useEffect(() => { setClientes(getClientesMeta()); }, []);
+  useEffect(() => {
+    fetchClientesMeta()
+      .then(setClientes)
+      .catch(() => toast.error("Erro ao carregar clientes"));
+  }, []);
 
   useEffect(() => {
     if (selectedCliente) {
@@ -311,7 +315,6 @@ const GestorMetaAds = () => {
           meta_roas: contexto.metaRoas || null,
           meta_cpa: contexto.metaCpa || null,
           contexto: contexto.contexto || "",
-          list_id: selectedCliente.listClickupId,
         }),
       });
 
@@ -408,7 +411,7 @@ const GestorMetaAds = () => {
       titulo: tarefa.nome,
       descricao: `Diagnóstico: ${tarefa.descricao}\n\nAção: ${tarefa.tipo}\n\nImpacto: ${tarefa.impacto_esperado || ""}`,
       prioridade: tarefa.prioridade || "normal",
-      listId: selectedCliente?.listClickupId || "",
+      listId: "",
     });
   };
 
@@ -500,7 +503,18 @@ const GestorMetaAds = () => {
               </Button>
             </div>
 
-            {/* Context fields */}
+            {/* Client info (read-only from Sheets) */}
+            {selectedCliente && (
+              <div className="flex flex-wrap gap-3 items-center border-t border-border pt-3 text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">{selectedCliente.nome}</span>
+                <span className="px-2 py-0.5 rounded bg-muted text-muted-foreground font-medium">{selectedCliente.tipo}</span>
+                {selectedCliente.metaRoas && <span>ROAS: <span className="text-foreground">{selectedCliente.metaRoas}x</span></span>}
+                {selectedCliente.metaCpa && <span>CPA: <span className="text-foreground">R${selectedCliente.metaCpa}</span></span>}
+                {selectedCliente.contexto && <span className="truncate max-w-[300px]">{selectedCliente.contexto}</span>}
+              </div>
+            )}
+
+            {/* Context fields (editable overrides for analysis) */}
             {selectedCliente && (
               <div className="flex flex-wrap gap-3 items-end border-t border-border pt-3">
                 <div className="min-w-[120px]">
