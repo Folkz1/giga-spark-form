@@ -250,7 +250,7 @@ const GestorMetaAds = () => {
   const [clientes, setClientes] = useState<ClienteMeta[]>([]);
   const [selectedCliente, setSelectedCliente] = useState<ClienteMeta | null>(null);
   const [periodo, setPeriodo] = useState("last_28d");
-  const [contexto, setContexto] = useState({ tipo: "LOCAL" as string, metaRoas: "", metaCpa: "", contexto: "" });
+  
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState(0);
   const [data, setData] = useState<MetaData | null>(null);
@@ -271,16 +271,6 @@ const GestorMetaAds = () => {
       .catch(() => toast.error("Erro ao carregar clientes"));
   }, []);
 
-  useEffect(() => {
-    if (selectedCliente) {
-      setContexto({
-        tipo: selectedCliente.tipo,
-        metaRoas: selectedCliente.metaRoas,
-        metaCpa: selectedCliente.metaCpa,
-        contexto: selectedCliente.contexto,
-      });
-    }
-  }, [selectedCliente]);
 
   // Loading messages rotation
   useEffect(() => {
@@ -310,11 +300,7 @@ const GestorMetaAds = () => {
         signal: controller.signal,
         body: JSON.stringify({
           ad_account_id: selectedCliente.adAccountId,
-          cliente_nome: selectedCliente.nome,
-          periodo, tipo_negocio: contexto.tipo,
-          meta_roas: contexto.metaRoas || null,
-          meta_cpa: contexto.metaCpa || null,
-          contexto: contexto.contexto || "",
+          periodo,
         }),
       });
 
@@ -367,7 +353,7 @@ const GestorMetaAds = () => {
       clearTimeout(timeout);
       setLoading(false);
     }
-  }, [selectedCliente, periodo, contexto]);
+  }, [selectedCliente, periodo]);
 
   const saveConfig = () => {
     localStorage.setItem("meta_config", JSON.stringify(configForm));
@@ -511,37 +497,6 @@ const GestorMetaAds = () => {
                 {selectedCliente.metaRoas && <span>ROAS: <span className="text-foreground">{selectedCliente.metaRoas}x</span></span>}
                 {selectedCliente.metaCpa && <span>CPA: <span className="text-foreground">R${selectedCliente.metaCpa}</span></span>}
                 {selectedCliente.contexto && <span className="truncate max-w-[300px]">{selectedCliente.contexto}</span>}
-              </div>
-            )}
-
-            {/* Context fields (editable overrides for analysis) */}
-            {selectedCliente && (
-              <div className="flex flex-wrap gap-3 items-end border-t border-border pt-3">
-                <div className="min-w-[120px]">
-                  <Label className="text-xs text-muted-foreground">Tipo</Label>
-                  <Select value={contexto.tipo} onValueChange={v => setContexto({ ...contexto, tipo: v })}>
-                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {["LOCAL", "B2C", "ECOMMERCE", "B2B"].map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="w-24">
-                  <Label className="text-xs text-muted-foreground">Meta ROAS</Label>
-                  <Input className="h-8 text-xs" placeholder="3.0x" value={contexto.metaRoas} onChange={e => setContexto({ ...contexto, metaRoas: e.target.value })} />
-                </div>
-                <div className="w-28">
-                  <Label className="text-xs text-muted-foreground">Meta CPA/CPL</Label>
-                  <Input className="h-8 text-xs" placeholder="R$50" value={contexto.metaCpa} onChange={e => setContexto({ ...contexto, metaCpa: e.target.value })} />
-                </div>
-                <div className="flex-1 min-w-[200px]">
-                  <div className="flex items-center gap-2">
-                    <Label className="text-xs text-muted-foreground">Contexto</Label>
-                    <button type="button" className="text-[10px] text-primary hover:underline" onClick={() => setContexto({ ...contexto, contexto: "Produto/serviço: Portas laqueadas premium | Ticket médio: R$1.800 | Raio de atendimento: 17km | Público-alvo: Proprietários reformando imóvel, 30-55 anos | Diferencial: Acabamento superior, não fazemos porta popular | Observações: Campanha local, vendas via WhatsApp" })}>Ver exemplo</button>
-                  </div>
-                  <Input className="h-8 text-xs" placeholder="Produto/serviço: | Ticket médio: R$ | Raio de atendimento: km | Público-alvo: | Diferencial: | Observações:" value={contexto.contexto} onChange={e => setContexto({ ...contexto, contexto: e.target.value })} />
-                  <span className="text-[10px] text-muted-foreground mt-0.5 block">Quanto mais contexto, mais precisa é a análise da IA</span>
-                </div>
               </div>
             )}
           </CardContent>
