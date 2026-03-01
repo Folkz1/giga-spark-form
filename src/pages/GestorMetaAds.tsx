@@ -312,7 +312,6 @@ const GestorMetaAds = () => {
           meta_cpa: contexto.metaCpa || null,
           contexto: contexto.contexto || "",
           list_id: selectedCliente.listClickupId,
-          access_token: selectedCliente.accessToken,
         }),
       });
 
@@ -491,19 +490,14 @@ const GestorMetaAds = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex flex-col">
-                <Button
-                  onClick={handleAnalyze}
-                  disabled={loading || !selectedCliente || !selectedCliente.accessToken}
-                  className="bg-[#1877F2] hover:bg-[#1565c0] text-white"
-                >
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Play className="w-4 h-4 mr-1" />}
-                  EXECUTAR ANÁLISE
-                </Button>
-                {selectedCliente && !selectedCliente.accessToken && (
-                  <span className="text-xs text-destructive mt-1">Configure o token Meta Ads deste cliente para executar a análise</span>
-                )}
-              </div>
+              <Button
+                onClick={handleAnalyze}
+                disabled={loading || !selectedCliente}
+                className="bg-[#1877F2] hover:bg-[#1565c0] text-white"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Play className="w-4 h-4 mr-1" />}
+                EXECUTAR ANÁLISE
+              </Button>
             </div>
 
             {/* Context fields */}

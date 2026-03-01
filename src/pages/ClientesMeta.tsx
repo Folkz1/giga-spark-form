@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Pencil, Trash2, X, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -20,27 +20,26 @@ export interface ClienteMeta {
   metaRoas: string;
   metaCpa: string;
   contexto: string;
-  accessToken: string;
 }
 
 const CLIENTES_INICIAIS: ClienteMeta[] = [
-  { id: 1, nome: "Uvva Wine Bar", adAccountId: "act_161393377248868", listClickupId: "901322141120", listaNome: "Uvva", tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "wine bar, foco em reservas e eventos", accessToken: "" },
-  { id: 2, nome: "Kombina", adAccountId: "act_362618250503979", listClickupId: "901322140768", listaNome: "Kombina", tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "restaurante delivery e presencial", accessToken: "" },
-  { id: 3, nome: "Gueixa Sushi", adAccountId: "act_10152321026399363", listClickupId: "901322140674", listaNome: "Gueixa", tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "restaurante japones, delivery e presencial", accessToken: "" },
-  { id: 4, nome: "Dermare Cosméticos", adAccountId: "act_439707696090698", listClickupId: "901322114965", listaNome: "Dermare", tipo: "ECOMMERCE", metaRoas: "3", metaCpa: "", contexto: "cosmeticos, ecommerce", accessToken: "" },
-  { id: 5, nome: "SHOP NATURELLIS", adAccountId: "act_667675534071758", listClickupId: "901322114966", listaNome: "Shopnaturallis", tipo: "ECOMMERCE", metaRoas: "3", metaCpa: "", contexto: "produtos naturais, ecommerce", accessToken: "" },
-  { id: 6, nome: "La Notte Gastrobar", adAccountId: "act_732505914098803", listClickupId: "901322140789", listaNome: "La Notte", tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "gastrobar, foco em reservas", accessToken: "" },
-  { id: 7, nome: "Puppilo Pizza", adAccountId: "act_1858058734370090", listClickupId: "901322141059", listaNome: "Puppilo", tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "pizzaria delivery e presencial", accessToken: "" },
-  { id: 8, nome: "Laca Porta Mix", adAccountId: "act_1211969896264688", listClickupId: "901322140795", listaNome: "Laca Porta MIx", tipo: "B2C", metaRoas: "", metaCpa: "", contexto: "", accessToken: "" },
-  { id: 9, nome: "Club M Brasil", adAccountId: "act_661116945511798", listClickupId: "901322140405", listaNome: "Club M Alphaville", tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "clube de servicos", accessToken: "" },
-  { id: 10, nome: "Miobene Natural Care", adAccountId: "act_3404306946467316", listClickupId: "", listaNome: "", tipo: "ECOMMERCE", metaRoas: "", metaCpa: "", contexto: "", accessToken: "" },
+  { id: 1, nome: "Uvva Wine Bar", adAccountId: "act_161393377248868", listClickupId: "901322141120", listaNome: "Uvva", tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "wine bar, foco em reservas e eventos" },
+  { id: 2, nome: "Kombina", adAccountId: "act_362618250503979", listClickupId: "901322140768", listaNome: "Kombina", tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "restaurante delivery e presencial" },
+  { id: 3, nome: "Gueixa Sushi", adAccountId: "act_10152321026399363", listClickupId: "901322140674", listaNome: "Gueixa", tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "restaurante japones, delivery e presencial" },
+  { id: 4, nome: "Dermare Cosméticos", adAccountId: "act_439707696090698", listClickupId: "901322114965", listaNome: "Dermare", tipo: "ECOMMERCE", metaRoas: "3", metaCpa: "", contexto: "cosmeticos, ecommerce" },
+  { id: 5, nome: "SHOP NATURELLIS", adAccountId: "act_667675534071758", listClickupId: "901322114966", listaNome: "Shopnaturallis", tipo: "ECOMMERCE", metaRoas: "3", metaCpa: "", contexto: "produtos naturais, ecommerce" },
+  { id: 6, nome: "La Notte Gastrobar", adAccountId: "act_732505914098803", listClickupId: "901322140789", listaNome: "La Notte", tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "gastrobar, foco em reservas" },
+  { id: 7, nome: "Puppilo Pizza", adAccountId: "act_1858058734370090", listClickupId: "901322141059", listaNome: "Puppilo", tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "pizzaria delivery e presencial" },
+  { id: 8, nome: "Laca Porta Mix", adAccountId: "act_1211969896264688", listClickupId: "901322140795", listaNome: "Laca Porta MIx", tipo: "B2C", metaRoas: "", metaCpa: "", contexto: "" },
+  { id: 9, nome: "Club M Brasil", adAccountId: "act_661116945511798", listClickupId: "901322140405", listaNome: "Club M Alphaville", tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "clube de servicos" },
+  { id: 10, nome: "Miobene Natural Care", adAccountId: "act_3404306946467316", listClickupId: "", listaNome: "", tipo: "ECOMMERCE", metaRoas: "", metaCpa: "", contexto: "" },
 ];
 
 const STORAGE_KEY = "meta_clientes";
 
 const emptyCliente: Omit<ClienteMeta, "id"> = {
   nome: "", adAccountId: "", listClickupId: "", listaNome: "",
-  tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "", accessToken: "",
+  tipo: "LOCAL", metaRoas: "", metaCpa: "", contexto: "",
 };
 
 export function getClientesMeta(): ClienteMeta[] {
@@ -56,7 +55,6 @@ const ClientesMeta = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ClienteMeta | null>(null);
   const [form, setForm] = useState<Omit<ClienteMeta, "id">>(emptyCliente);
-  const [showToken, setShowToken] = useState(false);
 
   useEffect(() => { setClientes(getClientesMeta()); }, []);
 
@@ -125,7 +123,6 @@ const ClientesMeta = () => {
                     <th className="text-left p-3">Ad Account ID</th>
                     <th className="text-left p-3">Lista ClickUp</th>
                     <th className="text-left p-3">Tipo</th>
-                    <th className="text-left p-3">Token</th>
                     <th className="text-left p-3">Meta ROAS</th>
                     <th className="text-left p-3">Meta CPA</th>
                     <th className="text-right p-3">Ações</th>
@@ -141,13 +138,6 @@ const ClientesMeta = () => {
                         <span className={`px-2 py-0.5 rounded text-xs font-medium ${tipoBadgeColor[c.tipo] || ""}`}>
                           {c.tipo}
                         </span>
-                      </td>
-                      <td className="p-3">
-                        {c.accessToken ? (
-                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-500/20 text-green-400">🟢 Configurado</span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded text-xs font-medium bg-red-500/20 text-red-400">🔴 Não configurado</span>
-                        )}
                       </td>
                       <td className="p-3 text-muted-foreground">{c.metaRoas ? `${c.metaRoas}x` : "—"}</td>
                       <td className="p-3 text-muted-foreground">{c.metaCpa ? `R$${c.metaCpa}` : "—"}</td>
@@ -217,25 +207,6 @@ const ClientesMeta = () => {
             <div>
               <Label>Contexto</Label>
               <Textarea placeholder="Ex: restaurante delivery, foco em pedidos" value={form.contexto} onChange={e => setForm({ ...form, contexto: e.target.value })} />
-            </div>
-            <div>
-              <Label>Token Meta Ads</Label>
-              <div className="relative">
-                <Input
-                  type={showToken ? "text" : "password"}
-                  placeholder="EAAKv1jEJ7..."
-                  value={form.accessToken}
-                  onChange={e => setForm({ ...form, accessToken: e.target.value })}
-                  className="pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowToken(!showToken)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
             </div>
           </div>
           <DialogFooter>
