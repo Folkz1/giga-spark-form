@@ -17,6 +17,8 @@ export interface ClienteMeta {
   tipo: "LOCAL" | "B2C" | "ECOMMERCE" | "B2B";
   metaRoas: string;
   metaCpa: string;
+  metaCpl: string;
+  metaConversa: string;
   contexto: string;
 }
 
@@ -59,13 +61,15 @@ export async function fetchClientesMeta(): Promise<ClienteMeta[]> {
     tipo: c.tipo_negocio || c.tipo || "LOCAL",
     metaRoas: c.meta_roas || c.metaRoas || "",
     metaCpa: c.meta_cpa || c.metaCpa || "",
+    metaCpl: c.meta_cpl || c.metaCpl || "",
+    metaConversa: c.meta_conversa || c.metaConversa || "",
     contexto: c.contexto || "",
   }));
 }
 
 const emptyForm = {
   nome: "", adAccountId: "", tipo: "LOCAL" as ClienteMeta["tipo"],
-  metaRoas: "", metaCpa: "", contexto: "",
+  metaRoas: "", metaCpa: "", metaCpl: "", metaConversa: "", contexto: "",
 };
 
 const ClientesMeta = () => {
@@ -114,6 +118,8 @@ const ClientesMeta = () => {
         tipo_negocio: form.tipo,
         meta_roas: form.metaRoas,
         meta_cpa: form.metaCpa,
+        meta_cpl: form.metaCpl,
+        meta_conversa: form.metaConversa,
         contexto: form.contexto,
       };
 
@@ -262,8 +268,18 @@ const ClientesMeta = () => {
                 <Input placeholder="3.0" value={form.metaRoas} onChange={e => setForm({ ...form, metaRoas: e.target.value })} />
               </div>
               <div>
-                <Label>Meta CPA/CPL (R$)</Label>
+                <Label>Meta CPA (R$)</Label>
                 <Input placeholder="50.00" value={form.metaCpa} onChange={e => setForm({ ...form, metaCpa: e.target.value })} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Meta CPL (R$)</Label>
+                <Input placeholder="Ex: 4.00" value={form.metaCpl} onChange={e => setForm({ ...form, metaCpl: e.target.value })} />
+              </div>
+              <div>
+                <Label>Meta Custo/Conversa (R$)</Label>
+                <Input placeholder="Ex: 8.00" value={form.metaConversa} onChange={e => setForm({ ...form, metaConversa: e.target.value })} />
               </div>
             </div>
             <div>

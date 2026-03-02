@@ -496,6 +496,8 @@ const GestorMetaAds = () => {
                 <span className="px-2 py-0.5 rounded bg-muted text-muted-foreground font-medium">{selectedCliente.tipo}</span>
                 {selectedCliente.metaRoas && <span>ROAS: <span className="text-foreground">{selectedCliente.metaRoas}x</span></span>}
                 {selectedCliente.metaCpa && <span>CPA: <span className="text-foreground">R${selectedCliente.metaCpa}</span></span>}
+                {selectedCliente.metaCpl && <span>CPL: <span className="text-foreground">R${selectedCliente.metaCpl}</span></span>}
+                {selectedCliente.metaConversa && <span>Conversa: <span className="text-foreground">R${selectedCliente.metaConversa}</span></span>}
                 {selectedCliente.contexto && <span className="truncate max-w-[300px]">{selectedCliente.contexto}</span>}
               </div>
             )}
