@@ -4,9 +4,9 @@ import { X, CheckSquare, ChevronDown, Loader2, Calendar, User, List, Flag, Messa
 
 // ─── CONFIGURAÇÃO ────────────────────────────────────────────────
 // Substitua pela URL do seu webhook n8n de busca de dados do ClickUp
-const N8N_BUSCAR_DADOS_URL = "https://SEU_N8N/webhook/clickup-dados";
+const N8N_BUSCAR_DADOS_URL = "https://appn8o2.gigainteligencia.com.br/webhook/clickup-dados";
 // Substitua pela URL do seu webhook n8n de criação de tarefa
-const N8N_CRIAR_TAREFA_URL = "https://SEU_N8N/webhook/clickup-criar-tarefa";
+const N8N_CRIAR_TAREFA_URL = "https://appn8o2.gigainteligencia.com.br/webhook/clickup-criar-tarefa";
 // ─────────────────────────────────────────────────────────────────
 
 interface ClickUpTaskModalProps {
