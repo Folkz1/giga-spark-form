@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { fetchClientesMeta, type ClienteMeta } from "./ClientesMeta";
+import { ClickUpTaskModal } from "@/components/ClickUpTaskModal";
 
 /* ─── Types ─── */
 interface MetaResumo {
@@ -261,7 +262,6 @@ const GestorMetaAds = () => {
   const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
   const [clickupModal, setClickupModal] = useState<{ tarefa: MetaTarefa; index: number } | null>(null);
-  const [clickupForm, setClickupForm] = useState({ titulo: "", descricao: "", prioridade: "normal", listId: "" });
   const [historicoOpen, setHistoricoOpen] = useState(false);
   const [historicoBanner, setHistoricoBanner] = useState<string | null>(null);
 
@@ -393,32 +393,6 @@ const GestorMetaAds = () => {
 
   const openClickup = (tarefa: MetaTarefa, index: number) => {
     setClickupModal({ tarefa, index });
-    setClickupForm({
-      titulo: tarefa.nome,
-      descricao: `Diagnóstico: ${tarefa.descricao}\n\nAção: ${tarefa.tipo}\n\nImpacto: ${tarefa.impacto_esperado || ""}`,
-      prioridade: tarefa.prioridade || "normal",
-      listId: "",
-    });
-  };
-
-  const createClickupTask = async () => {
-    if (!clickupModal) return;
-    const config = getConfig();
-    try {
-      await fetch(config.webhookTarefa, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          list_id: clickupForm.listId,
-          cliente: selectedCliente?.nome || data?.cliente || "",
-          tarefas: [{ nome: clickupForm.titulo, descricao: clickupForm.descricao, prioridade: clickupForm.prioridade }],
-        }),
-      });
-      toast.success("✅ Tarefa criada no ClickUp!");
-      setClickupModal(null);
-    } catch {
-      toast.error("Erro ao criar tarefa no ClickUp");
-    }
   };
 
   const score = data?.analise?.score_conta;
@@ -1409,43 +1383,12 @@ const GestorMetaAds = () => {
       </Dialog>
 
       {/* ─── ClickUp Modal ─── */}
-      <Dialog open={!!clickupModal} onOpenChange={() => setClickupModal(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Criar Tarefa no ClickUp</DialogTitle></DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label>Título</Label>
-              <Input value={clickupForm.titulo} onChange={e => setClickupForm({ ...clickupForm, titulo: e.target.value })} />
-            </div>
-            <div>
-              <Label>Descrição</Label>
-              <Textarea rows={4} value={clickupForm.descricao} onChange={e => setClickupForm({ ...clickupForm, descricao: e.target.value })} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Prioridade</Label>
-                <Select value={clickupForm.prioridade} onValueChange={v => setClickupForm({ ...clickupForm, prioridade: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="urgent">Urgente</SelectItem>
-                    <SelectItem value="high">Alta</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="low">Baixa</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Lista ClickUp ID</Label>
-                <Input value={clickupForm.listId} onChange={e => setClickupForm({ ...clickupForm, listId: e.target.value })} />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setClickupModal(null)}>Cancelar</Button>
-            <Button onClick={createClickupTask}>✓ Criar Tarefa</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ClickUpTaskModal
+        isOpen={!!clickupModal}
+        onClose={() => setClickupModal(null)}
+        taskTitle={clickupModal?.tarefa.nome || ""}
+        taskDescription={clickupModal ? `Diagnóstico: ${clickupModal.tarefa.descricao}\n\nAção: ${clickupModal.tarefa.tipo}\n\nImpacto: ${clickupModal.tarefa.impacto_esperado || ""}` : ""}
+      />
 
       {/* ─── History Modal ─── */}
       <Dialog open={historicoOpen} onOpenChange={setHistoricoOpen}>
