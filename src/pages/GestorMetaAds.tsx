@@ -1387,7 +1387,15 @@ const GestorMetaAds = () => {
         isOpen={!!clickupModal}
         onClose={() => setClickupModal(null)}
         taskTitle={clickupModal?.tarefa.nome || ""}
-        taskDescription={clickupModal ? `Diagnóstico: ${clickupModal.tarefa.descricao}\n\nAção: ${clickupModal.tarefa.tipo}\n\nImpacto: ${clickupModal.tarefa.impacto_esperado || ""}` : ""}
+        taskDescription={clickupModal ? [
+          `📋 Diagnóstico: ${clickupModal.tarefa.descricao}`,
+          `🔧 Tipo de Ação: ${clickupModal.tarefa.tipo}`,
+          clickupModal.tarefa.por_que_fazer ? `💡 Por que fazer: ${clickupModal.tarefa.por_que_fazer}` : '',
+          clickupModal.tarefa.como_executar ? `📝 Como executar:\n${clickupModal.tarefa.como_executar}` : '',
+          clickupModal.tarefa.impacto_esperado ? `🎯 Impacto esperado: ${clickupModal.tarefa.impacto_esperado}` : '',
+          `⚡ Urgência: ${clickupModal.tarefa.urgencia}`,
+          `🔴 Prioridade: ${clickupModal.tarefa.prioridade_texto}`,
+        ].filter(Boolean).join('\n\n') : ""}
       />
 
       {/* ─── History Modal ─── */}
