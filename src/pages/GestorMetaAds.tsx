@@ -1391,7 +1391,7 @@ const GestorMetaAds = () => {
           clickupModal.tarefa.descricao ? `📋 Diagnóstico:\n${clickupModal.tarefa.descricao}` : '',
           clickupModal.tarefa.tipo ? `🔧 Tipo de Ação: ${clickupModal.tarefa.tipo}` : '',
           clickupModal.tarefa.por_que_fazer ? `💡 Por que fazer:\n${clickupModal.tarefa.por_que_fazer}` : '',
-          clickupModal.tarefa.como_executar ? `📝 Como executar:\n${clickupModal.tarefa.como_executar}` : '',
+          clickupModal.tarefa.como_executar ? `📝 Como executar:\n${clickupModal.tarefa.como_executar.split(/;\s*/).map((s: string, i: number) => `${i + 1}. ${s.trim()}`).filter((s: string) => s.length > 3).join('\n')}` : '',
           clickupModal.tarefa.impacto_esperado ? `🎯 Impacto esperado:\n${clickupModal.tarefa.impacto_esperado}` : '',
           clickupModal.tarefa.urgencia ? `⚡ Urgência: ${clickupModal.tarefa.urgencia} dias` : '',
           clickupModal.tarefa.prioridade_texto ? `🔴 Prioridade: ${clickupModal.tarefa.prioridade_texto}` : '',
