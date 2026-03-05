@@ -1388,13 +1388,13 @@ const GestorMetaAds = () => {
         onClose={() => setClickupModal(null)}
         taskTitle={clickupModal?.tarefa.nome || ""}
         taskDescription={clickupModal ? [
-          `📋 Diagnóstico: ${clickupModal.tarefa.descricao}`,
-          `🔧 Tipo de Ação: ${clickupModal.tarefa.tipo}`,
-          clickupModal.tarefa.por_que_fazer ? `💡 Por que fazer: ${clickupModal.tarefa.por_que_fazer}` : '',
+          clickupModal.tarefa.descricao ? `📋 Diagnóstico:\n${clickupModal.tarefa.descricao}` : '',
+          clickupModal.tarefa.tipo ? `🔧 Tipo de Ação: ${clickupModal.tarefa.tipo}` : '',
+          clickupModal.tarefa.por_que_fazer ? `💡 Por que fazer:\n${clickupModal.tarefa.por_que_fazer}` : '',
           clickupModal.tarefa.como_executar ? `📝 Como executar:\n${clickupModal.tarefa.como_executar}` : '',
-          clickupModal.tarefa.impacto_esperado ? `🎯 Impacto esperado: ${clickupModal.tarefa.impacto_esperado}` : '',
-          `⚡ Urgência: ${clickupModal.tarefa.urgencia}`,
-          `🔴 Prioridade: ${clickupModal.tarefa.prioridade_texto}`,
+          clickupModal.tarefa.impacto_esperado ? `🎯 Impacto esperado:\n${clickupModal.tarefa.impacto_esperado}` : '',
+          clickupModal.tarefa.urgencia ? `⚡ Urgência: ${clickupModal.tarefa.urgencia} dias` : '',
+          clickupModal.tarefa.prioridade_texto ? `🔴 Prioridade: ${clickupModal.tarefa.prioridade_texto}` : '',
         ].filter(Boolean).join('\n\n') : ""}
       />
 
