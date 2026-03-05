@@ -173,7 +173,7 @@ export function ClickUpTaskModal({
     try {
       const body = {
         titulo: taskTitle,
-        descricao: taskDescription,
+        descricao: taskDescription.replace(/\\n/g, '\n'),
         lista_id: listaSelecionada,
         responsavel_id: responsavelSelecionado || null,
         data_conclusao: dataConclusao || null,
