@@ -68,6 +68,9 @@ interface MetaTarefa {
   impacto_esperado?: string;
   por_que_fazer?: string;
   como_executar?: string;
+  angulos_criativo?: string;
+  prerequisito?: string;
+  links?: {nome: string; url: string}[];
 }
 
 interface MetaData {
