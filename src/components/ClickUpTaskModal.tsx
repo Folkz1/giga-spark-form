@@ -307,6 +307,9 @@ export function ClickUpTaskModal({
                     onChange={setListaSelecionada}
                     options={listas}
                     loading={loadingDados}
+                    searchable
+                    searchPlaceholder="Buscar lista..."
+                    getSearchText={(opt) => `${opt.name} ${opt.space || ""}`}
                     renderOption={(opt) => (
                       <div>
                         <span className="text-white">{opt.name}</span>
