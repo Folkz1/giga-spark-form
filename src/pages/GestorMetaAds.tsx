@@ -1400,7 +1400,7 @@ const GestorMetaAds = () => {
           clickupModal.tarefa.impacto_esperado ? `🎯 Impacto esperado:\n${clickupModal.tarefa.impacto_esperado}` : '',
           clickupModal.tarefa.urgencia ? `⚡ Urgência: ${clickupModal.tarefa.urgencia}` : '',
           clickupModal.tarefa.prioridade_texto ? `🔴 Prioridade: ${clickupModal.tarefa.prioridade_texto}` : '',
-          clickupModal.tarefa.links?.length ? `🔗 Links do Gerenciador:\n${clickupModal.tarefa.links.map((l: {nome: string; url: string}) => `[${l.nome}](${l.url})`).join('\n')}` : '',
+          clickupModal.tarefa.links?.length ? `🔗 Links do Gerenciador:\n${clickupModal.tarefa.links.map((l: {nome: string; url: string}) => `${l.nome}\n${l.url}`).join('\n\n')}` : '',
         ].filter(Boolean).join('\n\n') : ""}
       />
 
