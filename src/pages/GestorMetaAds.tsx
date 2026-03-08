@@ -1390,18 +1390,52 @@ const GestorMetaAds = () => {
         isOpen={!!clickupModal}
         onClose={() => setClickupModal(null)}
         taskTitle={clickupModal?.tarefa.nome || ""}
-        taskDescription={clickupModal ? [
-          clickupModal.tarefa.descricao ? `📋 Diagnóstico:\n${clickupModal.tarefa.descricao}` : '',
-          clickupModal.tarefa.tipo ? `🔧 Tipo de Ação: ${clickupModal.tarefa.tipo}` : '',
-          clickupModal.tarefa.por_que_fazer ? `💡 Por que fazer:\n${clickupModal.tarefa.por_que_fazer}` : '',
-          clickupModal.tarefa.como_executar ? `📝 Como executar:\n${clickupModal.tarefa.como_executar.split(/;\s*/).map((s: string) => s.trim()).filter((s: string) => s.length > 3).join('\n')}` : '',
-          clickupModal.tarefa.angulos_criativo ? `🎨 Ângulos de criativo:\n${clickupModal.tarefa.angulos_criativo}` : '',
-          clickupModal.tarefa.prerequisito ? `⚠️ Pré-requisito:\n${clickupModal.tarefa.prerequisito}` : '',
-          clickupModal.tarefa.impacto_esperado ? `🎯 Impacto esperado:\n${clickupModal.tarefa.impacto_esperado}` : '',
-          clickupModal.tarefa.urgencia ? `⚡ Urgência: ${clickupModal.tarefa.urgencia}` : '',
-          clickupModal.tarefa.prioridade_texto ? `🔴 Prioridade: ${clickupModal.tarefa.prioridade_texto}` : '',
-          clickupModal.tarefa.links?.length ? `🔗 Links do Gerenciador:\n${clickupModal.tarefa.links.map((l: {nome: string; url: string}) => `${l.nome}\n${l.url}`).join('\n\n')}` : '',
-        ].filter(Boolean).join('\n\n') : ""}
+        taskDescription={clickupModal ? (() => {
+          const t = clickupModal.tarefa;
+          
+          // Build entity links map from data
+          const linkMap = new Map<string, string>();
+          (data?.campanhas || []).forEach((c: any) => {
+            if (c.nome && c.gerenciador_url) linkMap.set(c.nome, c.gerenciador_url);
+          });
+          (data?.adsets || []).forEach((a: any) => {
+            const n = a.nome || a.name;
+            if (n && a.gerenciador_url) linkMap.set(n, a.gerenciador_url);
+          });
+          (data?.anuncios || []).forEach((a: any) => {
+            const n = a.nome || a.name;
+            if (n && ((a as any).gerenciador_url || (a as any).instagram_url)) linkMap.set(n, (a as any).gerenciador_url || (a as any).instagram_url);
+          });
+          
+          // Extract links: use tarefa.links if available, otherwise auto-detect from text
+          const allText = [t.por_que_fazer, t.como_executar, t.nome].filter(Boolean).join(' ');
+          const detectedLinks: {nome: string; url: string}[] = [];
+          
+          if (t.links && t.links.length > 0) {
+            t.links.forEach(l => detectedLinks.push(l));
+          }
+          
+          linkMap.forEach((url, nome) => {
+            if (nome.length >= 5 && allText.includes(nome) && !detectedLinks.some(dl => dl.url === url)) {
+              detectedLinks.push({ nome, url });
+            }
+          });
+          
+          const parts = [
+            t.descricao ? `📋 Diagnóstico:\n${t.descricao}` : '',
+            t.tipo ? `🔧 Tipo de Ação: ${t.tipo}` : '',
+            t.por_que_fazer ? `💡 Por que fazer:\n${t.por_que_fazer}` : '',
+            t.como_executar ? `📝 Como executar:\n${t.como_executar.split(/;\s*/).map((s: string) => s.trim()).filter((s: string) => s.length > 3).join('\n')}` : '',
+            t.angulos_criativo ? `🎨 Ângulos de criativo:\n${t.angulos_criativo}` : '',
+            t.prerequisito ? `⚠️ Pré-requisito:\n${t.prerequisito}` : '',
+            t.impacto_esperado ? `🎯 Impacto esperado:\n${t.impacto_esperado}` : '',
+            t.urgencia ? `⚡ Urgência: ${t.urgencia}` : '',
+            t.prioridade_texto ? `🔴 Prioridade: ${t.prioridade_texto}` : '',
+            detectedLinks.length > 0 ? `🔗 Links do Gerenciador:\n${detectedLinks.map(l => `${l.nome}\n${l.url}`).join('\n\n')}` : '',
+          ];
+          
+          return parts.filter(Boolean).join('\n\n');
+        })() : ""}
       />
 
       {/* ─── History Modal ─── */}
