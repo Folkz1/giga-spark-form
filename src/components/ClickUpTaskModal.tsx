@@ -334,6 +334,9 @@ export function ClickUpTaskModal({
                     onChange={setResponsavelSelecionado}
                     options={membros}
                     loading={loadingDados}
+                    searchable
+                    searchPlaceholder="Buscar responsável..."
+                    getSearchText={(opt) => `${opt.username} ${opt.email}`}
                     renderOption={(opt) => (
                       <div className="flex items-center gap-2">
                         {opt.profilePicture ? (
