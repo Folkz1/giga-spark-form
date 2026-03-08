@@ -254,6 +254,7 @@ const GestorMetaAds = () => {
   const [clientes, setClientes] = useState<ClienteMeta[]>([]);
   const [selectedCliente, setSelectedCliente] = useState<ClienteMeta | null>(null);
   const [periodo, setPeriodo] = useState("last_28d");
+  const [clienteFilter, setClienteFilter] = useState("");
   
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState(0);
