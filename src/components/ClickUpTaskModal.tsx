@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, CheckSquare, ChevronDown, Loader2, Calendar, User, List, Flag, MessageSquare } from "lucide-react";
+import { X, CheckSquare, ChevronDown, Loader2, Calendar, User, List, Flag, MessageSquare, Search } from "lucide-react";
 
 // ─── CONFIGURAÇÃO ────────────────────────────────────────────────
 // Substitua pela URL do seu webhook n8n de busca de dados do ClickUp
@@ -46,6 +46,9 @@ function CustomSelect({
   loading,
   renderOption,
   renderValue,
+  searchable = false,
+  searchPlaceholder = "Buscar...",
+  getSearchText,
 }: {
   icon: any;
   placeholder: string;
@@ -55,15 +58,33 @@ function CustomSelect({
   loading?: boolean;
   renderOption?: (opt: any) => React.ReactNode;
   renderValue?: (opt: any) => React.ReactNode;
+  searchable?: boolean;
+  searchPlaceholder?: string;
+  getSearchText?: (opt: any) => string;
 }) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const selected = options.find((o) => o.id === value || o.value === value);
+
+  const filtered = searchable && search.trim()
+    ? options.filter((opt) => {
+        const text = getSearchText
+          ? getSearchText(opt)
+          : (opt.name || opt.label || opt.username || "");
+        return text.toLowerCase().includes(search.toLowerCase());
+      })
+    : options;
+
+  const handleOpen = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (!newOpen) setSearch("");
+  };
 
   return (
     <div className="relative">
       <button
         type="button"
-        onClick={() => setOpen((p) => !p)}
+        onClick={() => handleOpen(!open)}
         className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#1a1a2e] border border-white/10 text-sm text-white hover:border-purple-500/50 transition-all duration-200 focus:outline-none focus:border-purple-500"
       >
         {loading ? (
@@ -92,33 +113,50 @@ function CustomSelect({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 w-full mt-2 rounded-xl bg-[#1a1a2e] border border-white/10 shadow-2xl shadow-black/50 overflow-hidden max-h-52 overflow-y-auto"
+            className="absolute z-50 w-full mt-2 rounded-xl bg-[#1a1a2e] border border-white/10 shadow-2xl shadow-black/50 overflow-hidden"
           >
-            {options.length === 0 ? (
-              <div className="px-4 py-3 text-sm text-white/40 text-center">
-                Nenhum item encontrado
+            {searchable && (
+              <div className="px-3 pt-3 pb-2 border-b border-white/5">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+                  <input
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={searchPlaceholder}
+                    autoFocus
+                    className="w-full pl-8 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-purple-500/50"
+                  />
+                </div>
               </div>
-            ) : (
-              options.map((opt) => (
-                <button
-                  key={opt.id || opt.value}
-                  type="button"
-                  onClick={() => {
-                    onChange(opt.id || opt.value);
-                    setOpen(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-purple-500/10 transition-colors text-left"
-                >
-                  {renderOption ? renderOption(opt) : opt.name || opt.label}
-                </button>
-              ))
             )}
+            <div className="max-h-44 overflow-y-auto">
+              {filtered.length === 0 ? (
+                <div className="px-4 py-3 text-sm text-white/40 text-center">
+                  Nenhum item encontrado
+                </div>
+              ) : (
+                filtered.map((opt) => (
+                  <button
+                    key={opt.id || opt.value}
+                    type="button"
+                    onClick={() => {
+                      onChange(opt.id || opt.value);
+                      handleOpen(false);
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-purple-500/10 transition-colors text-left"
+                  >
+                    {renderOption ? renderOption(opt) : opt.name || opt.label}
+                  </button>
+                ))
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {open && (
-        <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+        <div className="fixed inset-0 z-40" onClick={() => handleOpen(false)} />
       )}
     </div>
   );
@@ -269,6 +307,9 @@ export function ClickUpTaskModal({
                     onChange={setListaSelecionada}
                     options={listas}
                     loading={loadingDados}
+                    searchable
+                    searchPlaceholder="Buscar lista..."
+                    getSearchText={(opt) => `${opt.name} ${opt.space || ""}`}
                     renderOption={(opt) => (
                       <div>
                         <span className="text-white">{opt.name}</span>
@@ -293,6 +334,9 @@ export function ClickUpTaskModal({
                     onChange={setResponsavelSelecionado}
                     options={membros}
                     loading={loadingDados}
+                    searchable
+                    searchPlaceholder="Buscar responsável..."
+                    getSearchText={(opt) => `${opt.username} ${opt.email}`}
                     renderOption={(opt) => (
                       <div className="flex items-center gap-2">
                         {opt.profilePicture ? (
