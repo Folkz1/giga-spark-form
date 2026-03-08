@@ -438,13 +438,30 @@ const GestorMetaAds = () => {
             <div className="flex flex-wrap gap-3 items-end">
               <div className="min-w-[200px] flex-1">
                 <Label className="text-xs text-muted-foreground mb-1">Cliente</Label>
+                <div className="relative">
+                  <Input
+                    placeholder="Buscar cliente..."
+                    value={clienteFilter}
+                    onChange={e => setClienteFilter(e.target.value)}
+                    className="mb-2"
+                  />
+                </div>
                 <Select
                   value={selectedCliente?.id?.toString() || ""}
-                  onValueChange={v => setSelectedCliente(clientes.find(c => c.id.toString() === v) || null)}
+                  onValueChange={v => {
+                    setSelectedCliente(clientes.find(c => c.id.toString() === v) || null);
+                    setClienteFilter("");
+                  }}
                 >
                   <SelectTrigger><SelectValue placeholder="Selecionar Cliente" /></SelectTrigger>
                   <SelectContent>
-                    {clientes.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.nome}</SelectItem>)}
+                    {clientes
+                      .filter(c => 
+                        !clienteFilter || 
+                        c.nome.toLowerCase().includes(clienteFilter.toLowerCase()) ||
+                        c.tipo.toLowerCase().includes(clienteFilter.toLowerCase())
+                      )
+                      .map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.nome}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
