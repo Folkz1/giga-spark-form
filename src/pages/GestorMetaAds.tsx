@@ -68,6 +68,9 @@ interface MetaTarefa {
   impacto_esperado?: string;
   por_que_fazer?: string;
   como_executar?: string;
+  angulos_criativo?: string;
+  prerequisito?: string;
+  links?: {nome: string; url: string}[];
 }
 
 interface MetaData {
@@ -1392,9 +1395,12 @@ const GestorMetaAds = () => {
           clickupModal.tarefa.tipo ? `🔧 Tipo de Ação: ${clickupModal.tarefa.tipo}` : '',
           clickupModal.tarefa.por_que_fazer ? `💡 Por que fazer:\n${clickupModal.tarefa.por_que_fazer}` : '',
           clickupModal.tarefa.como_executar ? `📝 Como executar:\n${clickupModal.tarefa.como_executar.split(/;\s*/).map((s: string) => s.trim()).filter((s: string) => s.length > 3).join('\n')}` : '',
+          clickupModal.tarefa.angulos_criativo ? `🎨 Ângulos de criativo:\n${clickupModal.tarefa.angulos_criativo}` : '',
+          clickupModal.tarefa.prerequisito ? `⚠️ Pré-requisito:\n${clickupModal.tarefa.prerequisito}` : '',
           clickupModal.tarefa.impacto_esperado ? `🎯 Impacto esperado:\n${clickupModal.tarefa.impacto_esperado}` : '',
           clickupModal.tarefa.urgencia ? `⚡ Urgência: ${clickupModal.tarefa.urgencia}` : '',
           clickupModal.tarefa.prioridade_texto ? `🔴 Prioridade: ${clickupModal.tarefa.prioridade_texto}` : '',
+          clickupModal.tarefa.links?.length ? `🔗 Links do Gerenciador:\n${clickupModal.tarefa.links.map((l: {nome: string; url: string}) => `[${l.nome}](${l.url})`).join('\n')}` : '',
         ].filter(Boolean).join('\n\n') : ""}
       />
 
