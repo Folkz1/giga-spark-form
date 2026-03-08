@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, CheckSquare, ChevronDown, Loader2, Calendar, User, List, Flag, MessageSquare } from "lucide-react";
+import { X, CheckSquare, ChevronDown, Loader2, Calendar, User, List, Flag, MessageSquare, Search } from "lucide-react";
 
 // ─── CONFIGURAÇÃO ────────────────────────────────────────────────
 // Substitua pela URL do seu webhook n8n de busca de dados do ClickUp
