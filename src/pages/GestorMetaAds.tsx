@@ -6,7 +6,7 @@ import {
   Lightbulb, ChevronDown, ChevronUp, DollarSign, TrendingUp, Target,
   Users, Eye, MousePointer, Layers, CheckCircle2, X, Trash2,
   ExternalLink, Clock, Zap, Pause, ArrowUpRight, RefreshCw, Palette,
-  Star, Award, XCircle, Copy,
+  Star, Award, XCircle, Copy, ChevronsUpDown, Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { toast } from "sonner";
 import { fetchClientesMeta, type ClienteMeta } from "./ClientesMeta";
 import { ClickUpTaskModal } from "@/components/ClickUpTaskModal";
