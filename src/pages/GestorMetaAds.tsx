@@ -6,7 +6,7 @@ import {
   Lightbulb, ChevronDown, ChevronUp, DollarSign, TrendingUp, Target,
   Users, Eye, MousePointer, Layers, CheckCircle2, X, Trash2,
   ExternalLink, Clock, Zap, Pause, ArrowUpRight, RefreshCw, Palette,
-  Star, Award, XCircle, Copy,
+  Star, Award, XCircle, Copy, ChevronsUpDown, Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { toast } from "sonner";
 import { fetchClientesMeta, type ClienteMeta } from "./ClientesMeta";
 import { ClickUpTaskModal } from "@/components/ClickUpTaskModal";
@@ -254,7 +256,7 @@ const GestorMetaAds = () => {
   const [clientes, setClientes] = useState<ClienteMeta[]>([]);
   const [selectedCliente, setSelectedCliente] = useState<ClienteMeta | null>(null);
   const [periodo, setPeriodo] = useState("last_28d");
-  const [clienteFilter, setClienteFilter] = useState("");
+  const [clientePickerOpen, setClientePickerOpen] = useState(false);
   
   const [loading, setLoading] = useState(false);
   const [loadingMsg, setLoadingMsg] = useState(0);
@@ -436,34 +438,57 @@ const GestorMetaAds = () => {
         <Card>
           <CardContent className="p-4 space-y-3">
             <div className="flex flex-wrap gap-3 items-end">
-              <div className="min-w-[200px] flex-1">
-                <Label className="text-xs text-muted-foreground mb-1">Cliente</Label>
-                <div className="relative">
-                  <Input
-                    placeholder="Buscar cliente..."
-                    value={clienteFilter}
-                    onChange={e => setClienteFilter(e.target.value)}
-                    className="mb-2"
-                  />
-                </div>
-                <Select
-                  value={selectedCliente?.id?.toString() || ""}
-                  onValueChange={v => {
-                    setSelectedCliente(clientes.find(c => c.id.toString() === v) || null);
-                    setClienteFilter("");
-                  }}
-                >
-                  <SelectTrigger><SelectValue placeholder="Selecionar Cliente" /></SelectTrigger>
-                  <SelectContent>
-                    {clientes
-                      .filter(c => 
-                        !clienteFilter || 
-                        c.nome.toLowerCase().includes(clienteFilter.toLowerCase()) ||
-                        c.tipo.toLowerCase().includes(clienteFilter.toLowerCase())
-                      )
-                      .map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.nome}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+              <div className="min-w-[240px] flex-1">
+                <Label className="mb-1 text-xs text-muted-foreground">Cliente</Label>
+                <Popover open={clientePickerOpen} onOpenChange={setClientePickerOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={clientePickerOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      <span className="truncate text-left">
+                        {selectedCliente
+                          ? `${selectedCliente.nome} · ${selectedCliente.tipo}`
+                          : "Selecionar cliente"}
+                      </span>
+                      <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="start" className="w-[var(--radix-popover-trigger-width)] p-0">
+                    <Command>
+                      <CommandInput placeholder="Buscar por nome, tipo ou conta..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhum cliente encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          {clientes.map((cliente) => (
+                            <CommandItem
+                              key={cliente.id}
+                              value={`${cliente.nome} ${cliente.tipo} ${cliente.adAccountId}`}
+                              onSelect={() => {
+                                setSelectedCliente(cliente);
+                                setClientePickerOpen(false);
+                              }}
+                              className="gap-2"
+                            >
+                              <div className="flex min-w-0 flex-1 flex-col">
+                                <span className="truncate">{cliente.nome}</span>
+                                <span className="truncate text-xs text-muted-foreground">
+                                  {cliente.tipo} • {cliente.adAccountId}
+                                </span>
+                              </div>
+                              <Check
+                                className={`h-4 w-4 ${selectedCliente?.id === cliente.id ? "opacity-100" : "opacity-0"}`}
+                              />
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <p className="mt-1 text-xs text-muted-foreground">Digite para encontrar rapidamente o cliente certo.</p>
               </div>
               <div className="min-w-[180px]">
                 <Label className="text-xs text-muted-foreground mb-1">Período</Label>
