@@ -12,7 +12,7 @@ const Login = () => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (usuario === "giga" && senha === "giga2024") {
+    if ((usuario === "giga" && senha === "giga2024") || (usuario === "bento" && senha === "2026")) {
       sessionStorage.setItem("autenticado", "true");
       navigate("/");
     } else {
