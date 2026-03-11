@@ -400,6 +400,8 @@ const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: strin
     setIsLoadingChat(true);
     setRespostaMarkdown(null);
     setRespostaHtml(null);
+    setCsvData(null);
+    setTemCsv(false);
     try {
       const data = await apiFetch("/chat", {
         method: "POST", token, timeoutMs: 120000,
