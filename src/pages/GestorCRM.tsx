@@ -438,6 +438,19 @@ const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: strin
     URL.revokeObjectURL(url);
   };
 
+  const handleDownloadCsv = () => {
+    if (!csvData) return;
+    const bom = "\uFEFF";
+    const blob = new Blob([bom + csvData], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const today = new Date().toISOString().slice(0, 10);
+    a.download = `export_${clienteSelecionado?.cliente_nome || "dados"}_${today}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   const canChat = !!clienteSelecionado && !!dadosCrm && !isLoadingCrm;
 
   return (
