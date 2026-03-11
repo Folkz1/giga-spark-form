@@ -233,10 +233,59 @@ const SUGGESTIONS = [
   "Resumo geral do período",
   "Quais conversas precisam de atenção?",
   "Monte um plano de ação semanal",
+  "Exportar leads ativos em CSV",
 ];
 
+// ─── CSV TABLE RENDERER ───
+const CsvTable = ({ csvString }: { csvString: string }) => {
+  const lines = csvString.trim().split("\n").filter(l => l.trim());
+  if (lines.length === 0) return null;
+  const headers = lines[0].split(",").map(h => h.trim());
+  const dataLines = lines.slice(1);
+  const maxRows = 20;
+  const visibleRows = dataLines.slice(0, maxRows);
+  const remaining = dataLines.length - maxRows;
+
+  return (
+    <div className="my-4 rounded-lg overflow-hidden" style={{ border: "1px solid #374151" }}>
+      <div className="flex items-center gap-2 px-4 py-2" style={{ background: "rgba(6,78,59,0.2)", borderBottom: "1px solid #374151" }}>
+        <span>📊</span>
+        <span className="text-sm font-medium" style={{ color: "#10b981" }}>Dados para exportação</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr style={{ background: "#1e293b" }}>
+              {headers.map((h, i) => (
+                <th key={i} className="px-3 py-2 text-left font-semibold" style={{ color: "#f1f5f9", borderBottom: "1px solid #374151" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {visibleRows.map((line, ri) => {
+              const cells = line.split(",").map(c => c.trim());
+              return (
+                <tr key={ri} style={{ background: ri % 2 === 0 ? "transparent" : "rgba(30,41,59,0.5)" }}>
+                  {cells.map((cell, ci) => (
+                    <td key={ci} className="px-3 py-2 text-left" style={{ color: "#94a3b8", borderBottom: "1px solid #1e293b" }}>{cell}</td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {remaining > 0 && (
+        <div className="px-4 py-2 text-xs text-center" style={{ color: "#94a3b8", background: "#0f172a" }}>
+          ... e mais {remaining} registros (baixe o CSV completo)
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── MARKDOWN COMPONENTS ───
-const mdComponents: Record<string, React.FC<any>> = {
+const createMdComponents = (): Record<string, React.FC<any>> => ({
   table: ({ children, ...props }: any) => <div className="overflow-x-auto my-4"><table className="w-full text-sm border-collapse" style={{ borderColor: "#1e293b" }} {...props}>{children}</table></div>,
   thead: ({ children, ...props }: any) => <thead style={{ background: "#1e293b" }} {...props}>{children}</thead>,
   th: ({ children, ...props }: any) => <th className="px-3 py-2 text-left font-semibold border" style={{ borderColor: "#374151", color: "#f1f5f9" }} {...props}>{children}</th>,
@@ -250,9 +299,23 @@ const mdComponents: Record<string, React.FC<any>> = {
   ol: ({ children, ...props }: any) => <ol className="list-decimal pl-5 mb-3 space-y-1" style={{ color: "#d1d5db" }} {...props}>{children}</ol>,
   li: ({ children, ...props }: any) => <li {...props}><span style={{ color: "#10b981" }}>•</span> {children}</li>,
   a: ({ children, ...props }: any) => <a className="underline" style={{ color: "#10b981" }} target="_blank" rel="noopener" {...props}>{children}</a>,
-  code: ({ children, inline, ...props }: any) => inline ? <code className="px-1.5 py-0.5 rounded text-sm" style={{ background: "#1e293b", color: "#10b981" }} {...props}>{children}</code> : <pre className="rounded-lg p-4 overflow-x-auto my-3 text-sm" style={{ background: "#0f172a", color: "#d1d5db" }}><code {...props}>{children}</code></pre>,
+  code: ({ children, className: codeClassName, inline, ...props }: any) => {
+    const match = /language-(\w+)/.exec(codeClassName || "");
+    const lang = match ? match[1] : null;
+    if (!inline && lang === "csv") {
+      return <CsvTable csvString={String(children).replace(/\n$/, "")} />;
+    }
+    if (inline) {
+      return <code className="px-1.5 py-0.5 rounded text-sm" style={{ background: "#1e293b", color: "#10b981" }} {...props}>{children}</code>;
+    }
+    return (
+      <pre className="rounded-lg p-4 overflow-x-auto my-3 text-sm" style={{ background: "#0f172a", color: "#d1d5db" }}>
+        <code {...props}>{children}</code>
+      </pre>
+    );
+  },
   strong: ({ children, ...props }: any) => <strong style={{ color: "#f1f5f9" }} {...props}>{children}</strong>,
-};
+});
 
 // ─── DASHBOARD ───
 const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: string | null; userName: string; onLogout: () => void; onNeedLogin: () => void }) => {
@@ -270,6 +333,8 @@ const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: strin
   const [isLoadingChat, setIsLoadingChat] = useState(false);
   const [respostaMarkdown, setRespostaMarkdown] = useState<string | null>(null);
   const [respostaHtml, setRespostaHtml] = useState<string | null>(null);
+  const [csvData, setCsvData] = useState<string | null>(null);
+  const [temCsv, setTemCsv] = useState(false);
   const [clickupOpen, setClickupOpen] = useState(false);
   const [clienteSearch, setClienteSearch] = useState("");
   const [clientePickerOpen, setClientePickerOpen] = useState(false);
@@ -307,6 +372,8 @@ const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: strin
     setResumoRapido(null);
     setRespostaMarkdown(null);
     setRespostaHtml(null);
+    setCsvData(null);
+    setTemCsv(false);
 
     apiFetch("/carregar-crm", {
       method: "POST", token, timeoutMs: 120000,
@@ -333,6 +400,8 @@ const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: strin
     setIsLoadingChat(true);
     setRespostaMarkdown(null);
     setRespostaHtml(null);
+    setCsvData(null);
+    setTemCsv(false);
     try {
       const data = await apiFetch("/chat", {
         method: "POST", token, timeoutMs: 120000,
@@ -347,6 +416,8 @@ const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: strin
       if (data.success) {
         setRespostaMarkdown(data.resposta_markdown);
         setRespostaHtml(data.resposta_html || null);
+        setCsvData(data.csv_data || null);
+        setTemCsv(!!data.tem_csv);
       }
     } catch (err: any) {
       if (err.message === "SESSION_EXPIRED") handleSessionExpired();
@@ -363,6 +434,19 @@ const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: strin
     const a = document.createElement("a");
     a.href = url;
     a.download = `relatorio-crm-${clienteSelecionado?.cliente_nome || "report"}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadCsv = () => {
+    if (!csvData) return;
+    const bom = "\uFEFF";
+    const blob = new Blob([bom + csvData], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const today = new Date().toISOString().slice(0, 10);
+    a.download = `export_${clienteSelecionado?.cliente_nome || "dados"}_${today}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -493,18 +577,31 @@ const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: strin
         ) : (
           <div className="max-w-4xl mx-auto">
             <div className="rounded-xl p-6 border" style={{ background: "#111827", borderColor: "#1e293b" }}>
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+              {temCsv && (
+                <div className="mb-4 rounded-lg pl-3" style={{ borderLeft: "3px solid #10b981", background: "rgba(6,78,59,0.2)" }}>
+                  <div className="px-3 py-2 flex items-center gap-2">
+                    <span>📊</span>
+                    <span className="text-sm font-medium" style={{ color: "#10b981" }}>Esta resposta contém dados para exportação em CSV</span>
+                  </div>
+                </div>
+              )}
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMdComponents()}>
                 {respostaMarkdown || ""}
               </ReactMarkdown>
             </div>
             <div className="flex flex-wrap gap-3 mt-4">
+              {temCsv && csvData && (
+                <Button onClick={handleDownloadCsv} className="gap-2 rounded-lg text-white font-semibold" style={{ background: "#10b981" }}>
+                  <Download className="w-4 h-4" /> ⬇️ Baixar CSV
+                </Button>
+              )}
               {respostaHtml && (
                 <Button onClick={handleDownloadHtml} variant="outline" className="gap-2 rounded-lg border" style={{ borderColor: "#374151", color: "#f1f5f9", background: "#1e293b" }}>
-                  <Download className="w-4 h-4" /> Baixar Relatório HTML
+                  <Download className="w-4 h-4" /> 📎 Baixar HTML
                 </Button>
               )}
               <Button onClick={() => setClickupOpen(true)} variant="outline" className="gap-2 rounded-lg border" style={{ borderColor: "#374151", color: "#f1f5f9", background: "#1e293b" }}>
-                <ClipboardList className="w-4 h-4" /> Criar Tarefa no ClickUp
+                <ClipboardList className="w-4 h-4" /> 📋 ClickUp
               </Button>
             </div>
           </div>
