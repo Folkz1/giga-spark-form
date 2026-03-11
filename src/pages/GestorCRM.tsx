@@ -374,7 +374,7 @@ const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: strin
       {/* Controls */}
       <div className="px-4 md:px-6 py-4 border-b flex flex-wrap items-center gap-4" style={{ borderColor: "#1e293b" }}>
         {/* Combobox Cliente */}
-        <div className="relative w-full sm:w-72">
+        <div className="relative w-full sm:w-72" onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setClientePickerOpen(false); }}>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#94a3b8" }} />
             <input
