@@ -38,6 +38,7 @@ const App = () => (
           <Route path="/gestor-ia" element={<ProtectedRoute><GestorIA /></ProtectedRoute>} />
           <Route path="/gestor-meta" element={<ProtectedRoute><GestorMetaAds /></ProtectedRoute>} />
           <Route path="/clientes-meta" element={<ProtectedRoute><ClientesMeta /></ProtectedRoute>} />
+          <Route path="/gestor-crm" element={<ProtectedRoute><GestorCRM /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

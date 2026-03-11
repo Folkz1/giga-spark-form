@@ -32,6 +32,13 @@ const cards = [
     disabled: false,
     metaBlue: true,
   },
+  {
+    title: "Gestor CRM IA",
+    description: "Consultoria inteligente de vendas e CRM com análise de dados em tempo real",
+    icon: MessageSquareText,
+    path: "/gestor-crm",
+    disabled: false,
+  },
 ];
 
 const Index = () => {
