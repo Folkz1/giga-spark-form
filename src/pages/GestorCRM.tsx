@@ -242,7 +242,7 @@ const mdComponents: Record<string, React.FC<any>> = {
 };
 
 // ─── DASHBOARD ───
-const CrmDashboard = ({ token, userName, onLogout }: { token: string; userName: string; onLogout: () => void }) => {
+const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: string | null; userName: string; onLogout: () => void; onNeedLogin: () => void }) => {
   const navigate = useNavigate();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
@@ -262,9 +262,9 @@ const CrmDashboard = ({ token, userName, onLogout }: { token: string; userName: 
   const handleSessionExpired = useCallback(() => {
     localStorage.removeItem("gestor_crm_token");
     localStorage.removeItem("gestor_crm_user");
-    toast({ title: "Sessão expirada", description: "Faça login novamente", variant: "destructive" });
-    onLogout();
-  }, [onLogout]);
+    toast({ title: "Autenticação necessária", description: "Faça login no Gestor CRM para continuar", variant: "destructive" });
+    onNeedLogin();
+  }, [onNeedLogin]);
 
   // Load clientes
   useEffect(() => {
@@ -482,17 +482,19 @@ const CrmDashboard = ({ token, userName, onLogout }: { token: string; userName: 
 const GestorCRM = () => {
   const [token, setToken] = useState<string | null>(localStorage.getItem("gestor_crm_token"));
   const [userName, setUserName] = useState<string>(localStorage.getItem("gestor_crm_user") || "");
+  const [showLogin, setShowLogin] = useState(false);
 
-  const handleLogin = (t: string, name: string) => { setToken(t); setUserName(name); };
+  const handleLogin = (t: string, name: string) => { setToken(t); setUserName(name); setShowLogin(false); };
   const handleLogout = () => {
     localStorage.removeItem("gestor_crm_token");
     localStorage.removeItem("gestor_crm_user");
     setToken(null);
     setUserName("");
+    setShowLogin(true);
   };
 
-  if (!token) return <CrmLogin onLogin={handleLogin} />;
-  return <CrmDashboard token={token} userName={userName} onLogout={handleLogout} />;
+  if (showLogin || (!token && showLogin)) return <CrmLogin onLogin={handleLogin} />;
+  return <CrmDashboard token={token} userName={userName} onLogout={handleLogout} onNeedLogin={() => setShowLogin(true)} />;
 };
 
 export default GestorCRM;
