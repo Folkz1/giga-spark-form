@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Rocket, TrendingUp, Brain, BarChart2 } from "lucide-react";
+import { Rocket, TrendingUp, Brain, BarChart2, MessageSquareText } from "lucide-react";
 
 const cards = [
   {
@@ -31,6 +31,13 @@ const cards = [
     path: "/gestor-meta",
     disabled: false,
     metaBlue: true,
+  },
+  {
+    title: "Gestor CRM IA",
+    description: "Consultoria inteligente de vendas e CRM com análise de dados em tempo real",
+    icon: MessageSquareText,
+    path: "/gestor-crm",
+    disabled: false,
   },
 ];
 
