@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { MessageSquareText, Send, ArrowLeft, LogOut, Loader2, Download, ClipboardList, Check, ChevronsUpDown, X } from "lucide-react";
+import { MessageSquareText, Send, ArrowLeft, LogOut, Loader2, Download, ClipboardList, Check, ChevronsUpDown, X, Search } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
