@@ -366,28 +366,65 @@ const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: strin
 
       {/* Controls */}
       <div className="px-4 md:px-6 py-4 border-b flex flex-wrap items-center gap-4" style={{ borderColor: "#1e293b" }}>
-        <div className="w-full sm:w-64">
-          <Select value={clienteSelecionado?.cliente_nome || ""} onValueChange={v => { const c = clientes.find(cl => cl.cliente_nome === v); if (c) setClienteSelecionado(c); }}>
-            <SelectTrigger className="border rounded-lg h-10" style={{ background: "#1e293b", borderColor: "#374151", color: "#f1f5f9" }}>
-              <SelectValue placeholder="Selecione um cliente..." />
-            </SelectTrigger>
-            <SelectContent style={{ background: "#1e293b", borderColor: "#374151" }}>
-              {clientes.map(c => <SelectItem key={c.cliente_nome} value={c.cliente_nome} style={{ color: "#f1f5f9" }}>{c.cliente_nome}</SelectItem>)}
-            </SelectContent>
-          </Select>
+        {/* Combobox Cliente */}
+        <div className="relative w-full sm:w-72">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: "#94a3b8" }} />
+            <input
+              type="text"
+              placeholder="Buscar cliente..."
+              value={clienteSearch}
+              onChange={e => { setClienteSearch(e.target.value); setClientePickerOpen(true); }}
+              onFocus={() => setClientePickerOpen(true)}
+              className="w-full h-10 pl-9 pr-8 rounded-lg border text-sm outline-none focus:ring-1"
+              style={{ background: "#1e293b", borderColor: "#374151", color: "#f1f5f9" }}
+            />
+            {clienteSelecionado && (
+              <button onClick={() => { setClienteSelecionado(null); setClienteSearch(""); }} className="absolute right-2 top-1/2 -translate-y-1/2">
+                <X className="w-4 h-4" style={{ color: "#94a3b8" }} />
+              </button>
+            )}
+          </div>
+          {clientePickerOpen && (
+            <div className="absolute z-50 top-full mt-1 w-full rounded-lg border shadow-xl max-h-60 overflow-y-auto" style={{ background: "#1e293b", borderColor: "#374151" }}>
+              {filteredClientes.length === 0 ? (
+                <div className="px-3 py-4 text-sm text-center" style={{ color: "#94a3b8" }}>Nenhum cliente encontrado</div>
+              ) : filteredClientes.map(c => (
+                <button
+                  key={c.cliente_nome}
+                  onClick={() => { setClienteSelecionado(c); setClienteSearch(c.cliente_nome); setClientePickerOpen(false); }}
+                  className="w-full text-left px-3 py-2.5 text-sm hover:bg-white/5 flex items-center justify-between transition-colors"
+                  style={{ color: "#f1f5f9" }}
+                >
+                  <div>
+                    <div className="font-medium">{c.cliente_nome}</div>
+                    <div className="text-xs" style={{ color: "#94a3b8" }}>{c.segmento !== "Nao informado" ? c.segmento : "—"}</div>
+                  </div>
+                  {clienteSelecionado?.cliente_nome === c.cliente_nome && <Check className="w-4 h-4 shrink-0" style={{ color: "#10b981" }} />}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="w-full sm:w-40">
+
+        {/* Período com mais opções */}
+        <div className="w-full sm:w-44">
           <Select value={String(periodoDias)} onValueChange={v => setPeriodoDias(Number(v))}>
             <SelectTrigger className="border rounded-lg h-10" style={{ background: "#1e293b", borderColor: "#374151", color: "#f1f5f9" }}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent style={{ background: "#1e293b", borderColor: "#374151" }}>
+              <SelectItem value="3" style={{ color: "#f1f5f9" }}>3 dias</SelectItem>
               <SelectItem value="7" style={{ color: "#f1f5f9" }}>7 dias</SelectItem>
               <SelectItem value="14" style={{ color: "#f1f5f9" }}>14 dias</SelectItem>
+              <SelectItem value="21" style={{ color: "#f1f5f9" }}>21 dias</SelectItem>
               <SelectItem value="30" style={{ color: "#f1f5f9" }}>30 dias</SelectItem>
+              <SelectItem value="60" style={{ color: "#f1f5f9" }}>60 dias</SelectItem>
+              <SelectItem value="90" style={{ color: "#f1f5f9" }}>90 dias</SelectItem>
             </SelectContent>
           </Select>
         </div>
+
         <div className="flex-1 min-w-0">
           {isLoadingCrm && (
             <div className="flex items-center gap-2 text-sm animate-pulse" style={{ color: "#10b981" }}>
