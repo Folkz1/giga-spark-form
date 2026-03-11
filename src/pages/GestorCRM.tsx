@@ -233,6 +233,7 @@ const SUGGESTIONS = [
   "Resumo geral do período",
   "Quais conversas precisam de atenção?",
   "Monte um plano de ação semanal",
+  "Exportar leads ativos em CSV",
 ];
 
 // ─── MARKDOWN COMPONENTS ───
