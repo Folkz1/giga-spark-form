@@ -213,6 +213,19 @@ const ClickUpModal = ({ open, onClose, clienteSelecionado, respostaMarkdown, tok
 };
 
 // ─── SUGGESTIONS ───
+const PERIODO_OPTIONS = [
+  { label: "Hoje", value: 1 },
+  { label: "Ontem", value: 2 },
+  { label: "Últimos 3 dias", value: 3 },
+  { label: "Últimos 7 dias", value: 7 },
+  { label: "Últimos 14 dias", value: 14 },
+  { label: "Últimos 21 dias", value: 21 },
+  { label: "Últimos 28 dias", value: 28 },
+  { label: "Últimos 30 dias", value: 30 },
+  { label: "Últimos 60 dias", value: 60 },
+  { label: "Últimos 90 dias", value: 90 },
+];
+
 const SUGGESTIONS = [
   "Como estão os leads esta semana?",
   "Quais negócios estão parados?",
