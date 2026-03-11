@@ -242,7 +242,7 @@ const mdComponents: Record<string, React.FC<any>> = {
 };
 
 // ─── DASHBOARD ───
-const CrmDashboard = ({ token, userName, onLogout }: { token: string; userName: string; onLogout: () => void }) => {
+const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: string | null; userName: string; onLogout: () => void; onNeedLogin: () => void }) => {
   const navigate = useNavigate();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [clienteSelecionado, setClienteSelecionado] = useState<Cliente | null>(null);
