@@ -262,9 +262,9 @@ const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: strin
   const handleSessionExpired = useCallback(() => {
     localStorage.removeItem("gestor_crm_token");
     localStorage.removeItem("gestor_crm_user");
-    toast({ title: "Sessão expirada", description: "Faça login novamente", variant: "destructive" });
-    onLogout();
-  }, [onLogout]);
+    toast({ title: "Autenticação necessária", description: "Faça login no Gestor CRM para continuar", variant: "destructive" });
+    onNeedLogin();
+  }, [onNeedLogin]);
 
   // Load clientes
   useEffect(() => {
