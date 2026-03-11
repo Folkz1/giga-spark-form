@@ -482,17 +482,19 @@ const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: strin
 const GestorCRM = () => {
   const [token, setToken] = useState<string | null>(localStorage.getItem("gestor_crm_token"));
   const [userName, setUserName] = useState<string>(localStorage.getItem("gestor_crm_user") || "");
+  const [showLogin, setShowLogin] = useState(false);
 
-  const handleLogin = (t: string, name: string) => { setToken(t); setUserName(name); };
+  const handleLogin = (t: string, name: string) => { setToken(t); setUserName(name); setShowLogin(false); };
   const handleLogout = () => {
     localStorage.removeItem("gestor_crm_token");
     localStorage.removeItem("gestor_crm_user");
     setToken(null);
     setUserName("");
+    setShowLogin(true);
   };
 
-  if (!token) return <CrmLogin onLogin={handleLogin} />;
-  return <CrmDashboard token={token} userName={userName} onLogout={handleLogout} />;
+  if (showLogin || (!token && showLogin)) return <CrmLogin onLogin={handleLogin} />;
+  return <CrmDashboard token={token} userName={userName} onLogout={handleLogout} onNeedLogin={() => setShowLogin(true)} />;
 };
 
 export default GestorCRM;
