@@ -266,6 +266,7 @@ const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: strin
   const [isLoadingCrm, setIsLoadingCrm] = useState(false);
   const [crmError, setCrmError] = useState(false);
   const [pergunta, setPergunta] = useState("");
+  const [periodoPickerOpen, setPeriodoPickerOpen] = useState(false);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
   const [respostaMarkdown, setRespostaMarkdown] = useState<string | null>(null);
   const [respostaHtml, setRespostaHtml] = useState<string | null>(null);
