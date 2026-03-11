@@ -257,7 +257,14 @@ const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: strin
   const [respostaMarkdown, setRespostaMarkdown] = useState<string | null>(null);
   const [respostaHtml, setRespostaHtml] = useState<string | null>(null);
   const [clickupOpen, setClickupOpen] = useState(false);
+  const [clienteSearch, setClienteSearch] = useState("");
+  const [clientePickerOpen, setClientePickerOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const filteredClientes = clientes.filter(c =>
+    c.cliente_nome.toLowerCase().includes(clienteSearch.toLowerCase()) ||
+    (c.segmento && c.segmento.toLowerCase().includes(clienteSearch.toLowerCase()))
+  );
 
   const handleSessionExpired = useCallback(() => {
     localStorage.removeItem("gestor_crm_token");
