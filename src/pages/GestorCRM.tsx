@@ -372,6 +372,8 @@ const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: strin
     setResumoRapido(null);
     setRespostaMarkdown(null);
     setRespostaHtml(null);
+    setCsvData(null);
+    setTemCsv(false);
 
     apiFetch("/carregar-crm", {
       method: "POST", token, timeoutMs: 120000,
