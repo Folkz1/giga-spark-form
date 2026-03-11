@@ -236,8 +236,56 @@ const SUGGESTIONS = [
   "Exportar leads ativos em CSV",
 ];
 
+// ─── CSV TABLE RENDERER ───
+const CsvTable = ({ csvString }: { csvString: string }) => {
+  const lines = csvString.trim().split("\n").filter(l => l.trim());
+  if (lines.length === 0) return null;
+  const headers = lines[0].split(",").map(h => h.trim());
+  const dataLines = lines.slice(1);
+  const maxRows = 20;
+  const visibleRows = dataLines.slice(0, maxRows);
+  const remaining = dataLines.length - maxRows;
+
+  return (
+    <div className="my-4 rounded-lg overflow-hidden" style={{ border: "1px solid #374151" }}>
+      <div className="flex items-center gap-2 px-4 py-2" style={{ background: "rgba(6,78,59,0.2)", borderBottom: "1px solid #374151" }}>
+        <span>📊</span>
+        <span className="text-sm font-medium" style={{ color: "#10b981" }}>Dados para exportação</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr style={{ background: "#1e293b" }}>
+              {headers.map((h, i) => (
+                <th key={i} className="px-3 py-2 text-left font-semibold" style={{ color: "#f1f5f9", borderBottom: "1px solid #374151" }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {visibleRows.map((line, ri) => {
+              const cells = line.split(",").map(c => c.trim());
+              return (
+                <tr key={ri} style={{ background: ri % 2 === 0 ? "transparent" : "rgba(30,41,59,0.5)" }}>
+                  {cells.map((cell, ci) => (
+                    <td key={ci} className="px-3 py-2 text-left" style={{ color: "#94a3b8", borderBottom: "1px solid #1e293b" }}>{cell}</td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {remaining > 0 && (
+        <div className="px-4 py-2 text-xs text-center" style={{ color: "#94a3b8", background: "#0f172a" }}>
+          ... e mais {remaining} registros (baixe o CSV completo)
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── MARKDOWN COMPONENTS ───
-const mdComponents: Record<string, React.FC<any>> = {
+const createMdComponents = (): Record<string, React.FC<any>> => ({
   table: ({ children, ...props }: any) => <div className="overflow-x-auto my-4"><table className="w-full text-sm border-collapse" style={{ borderColor: "#1e293b" }} {...props}>{children}</table></div>,
   thead: ({ children, ...props }: any) => <thead style={{ background: "#1e293b" }} {...props}>{children}</thead>,
   th: ({ children, ...props }: any) => <th className="px-3 py-2 text-left font-semibold border" style={{ borderColor: "#374151", color: "#f1f5f9" }} {...props}>{children}</th>,
@@ -251,9 +299,23 @@ const mdComponents: Record<string, React.FC<any>> = {
   ol: ({ children, ...props }: any) => <ol className="list-decimal pl-5 mb-3 space-y-1" style={{ color: "#d1d5db" }} {...props}>{children}</ol>,
   li: ({ children, ...props }: any) => <li {...props}><span style={{ color: "#10b981" }}>•</span> {children}</li>,
   a: ({ children, ...props }: any) => <a className="underline" style={{ color: "#10b981" }} target="_blank" rel="noopener" {...props}>{children}</a>,
-  code: ({ children, inline, ...props }: any) => inline ? <code className="px-1.5 py-0.5 rounded text-sm" style={{ background: "#1e293b", color: "#10b981" }} {...props}>{children}</code> : <pre className="rounded-lg p-4 overflow-x-auto my-3 text-sm" style={{ background: "#0f172a", color: "#d1d5db" }}><code {...props}>{children}</code></pre>,
+  code: ({ children, className: codeClassName, inline, ...props }: any) => {
+    const match = /language-(\w+)/.exec(codeClassName || "");
+    const lang = match ? match[1] : null;
+    if (!inline && lang === "csv") {
+      return <CsvTable csvString={String(children).replace(/\n$/, "")} />;
+    }
+    if (inline) {
+      return <code className="px-1.5 py-0.5 rounded text-sm" style={{ background: "#1e293b", color: "#10b981" }} {...props}>{children}</code>;
+    }
+    return (
+      <pre className="rounded-lg p-4 overflow-x-auto my-3 text-sm" style={{ background: "#0f172a", color: "#d1d5db" }}>
+        <code {...props}>{children}</code>
+      </pre>
+    );
+  },
   strong: ({ children, ...props }: any) => <strong style={{ color: "#f1f5f9" }} {...props}>{children}</strong>,
-};
+});
 
 // ─── DASHBOARD ───
 const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: string | null; userName: string; onLogout: () => void; onNeedLogin: () => void }) => {
