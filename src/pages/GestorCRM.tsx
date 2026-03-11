@@ -577,18 +577,31 @@ const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: strin
         ) : (
           <div className="max-w-4xl mx-auto">
             <div className="rounded-xl p-6 border" style={{ background: "#111827", borderColor: "#1e293b" }}>
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+              {temCsv && (
+                <div className="mb-4 rounded-lg pl-3" style={{ borderLeft: "3px solid #10b981", background: "rgba(6,78,59,0.2)" }}>
+                  <div className="px-3 py-2 flex items-center gap-2">
+                    <span>📊</span>
+                    <span className="text-sm font-medium" style={{ color: "#10b981" }}>Esta resposta contém dados para exportação em CSV</span>
+                  </div>
+                </div>
+              )}
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={createMdComponents()}>
                 {respostaMarkdown || ""}
               </ReactMarkdown>
             </div>
             <div className="flex flex-wrap gap-3 mt-4">
+              {temCsv && csvData && (
+                <Button onClick={handleDownloadCsv} className="gap-2 rounded-lg text-white font-semibold" style={{ background: "#10b981" }}>
+                  <Download className="w-4 h-4" /> ⬇️ Baixar CSV
+                </Button>
+              )}
               {respostaHtml && (
                 <Button onClick={handleDownloadHtml} variant="outline" className="gap-2 rounded-lg border" style={{ borderColor: "#374151", color: "#f1f5f9", background: "#1e293b" }}>
-                  <Download className="w-4 h-4" /> Baixar Relatório HTML
+                  <Download className="w-4 h-4" /> 📎 Baixar HTML
                 </Button>
               )}
               <Button onClick={() => setClickupOpen(true)} variant="outline" className="gap-2 rounded-lg border" style={{ borderColor: "#374151", color: "#f1f5f9", background: "#1e293b" }}>
-                <ClipboardList className="w-4 h-4" /> Criar Tarefa no ClickUp
+                <ClipboardList className="w-4 h-4" /> 📋 ClickUp
               </Button>
             </div>
           </div>
