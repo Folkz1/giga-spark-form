@@ -416,6 +416,8 @@ const CrmDashboard = ({ token, userName, onLogout, onNeedLogin }: { token: strin
       if (data.success) {
         setRespostaMarkdown(data.resposta_markdown);
         setRespostaHtml(data.resposta_html || null);
+        setCsvData(data.csv_data || null);
+        setTemCsv(!!data.tem_csv);
       }
     } catch (err: any) {
       if (err.message === "SESSION_EXPIRED") handleSessionExpired();
