@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Rocket, TrendingUp, Brain, BarChart2 } from "lucide-react";
+import { Rocket, TrendingUp, Brain, BarChart2, MessageSquareText } from "lucide-react";
 
 const cards = [
   {
