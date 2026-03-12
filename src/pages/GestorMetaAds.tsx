@@ -1405,6 +1405,22 @@ const GestorMetaAds = () => {
 
               </motion.div>
             </AnimatePresence>
+            {/* Chat Panel */}
+            <MetaChatPanel
+              clienteNome={selectedCliente?.nome || data.cliente || ""}
+              segmento={selectedCliente?.tipo || ""}
+              tipoNegocio={selectedCliente?.tipo || ""}
+              dadosAnalise={{
+                recomendacoes: data.analise?.recomendacoes,
+                metricas_gerais: data.resumo,
+                resumo_executivo: data.analise?.resumo_executivo,
+              }}
+              dadosMeta={{
+                campanhas: data.campanhas,
+                adsets: data.adsets,
+                anuncios: data.anuncios,
+              }}
+            />
           </>
         )}
       </div>
