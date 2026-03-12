@@ -18,7 +18,7 @@ const cards = [
     disabled: false,
   },
   {
-    title: "Gestor de Tráfego IA",
+    title: "Gestor Google Ads",
     description: "Análise inteligente das suas campanhas com alertas, oportunidades e recomendações",
     icon: Brain,
     path: "/gestor-ia",
