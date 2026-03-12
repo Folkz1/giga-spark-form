@@ -23,6 +23,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { toast } from "sonner";
 import { fetchClientesMeta, type ClienteMeta } from "./ClientesMeta";
 import { ClickUpTaskModal } from "@/components/ClickUpTaskModal";
+import { MetaChatPanel } from "@/components/MetaChatPanel";
 
 /* ─── Types ─── */
 interface MetaResumo {
