@@ -895,10 +895,26 @@ const OtimizarCampanha = () => {
                   onRetry={fetchAccounts}
                 />
 
+                {/* Campaigns resumo if available */}
+                {campaignsResumo && (
+                  <div className="flex items-center gap-4 px-4 py-2.5 rounded-xl bg-secondary/60 border border-border text-sm">
+                    {campaignsResumo?.roasGeral && (
+                      <span className="text-foreground font-medium">ROAS Geral: <span className="text-primary">{campaignsResumo.roasGeral}</span></span>
+                    )}
+                    {(campaignsResumo?.campanhasCriticas ?? 0) > 0 && (
+                      <span className="text-destructive font-medium">Campanhas Críticas: {campaignsResumo.campanhasCriticas}</span>
+                    )}
+                  </div>
+                )}
+
                 <MultiSelectDropdown
                   label="Campanhas"
                   placeholder="Selecione campanhas..."
-                  items={campaigns.map((c) => ({ id: c.id, label: `${c.accountName} — ${c.name}` }))}
+                  items={campaigns.map((c) => {
+                    const perfLabel = c.performance ? ` [${c.performance}]` : "";
+                    const roasLabel = c.roas ? ` • ROAS: ${c.roas}` : "";
+                    return { id: c.id, label: `${c.accountName} — ${c.name}${perfLabel}${roasLabel}` };
+                  })}
                   selectedIds={selectedCampaignIds}
                   onToggle={toggleCampaign}
                   onToggleAll={(ids) => ids.forEach(toggleCampaign)}
