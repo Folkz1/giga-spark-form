@@ -1021,9 +1021,10 @@ const OtimizarCampanha = () => {
                               </div>
 
                               {campaign.adGroups.map((adGroup) => {
-                                const filteredTerms = effectiveFilter
+                                const filteredTerms = (effectiveFilter
                                   ? adGroup.terms.filter((t) => t.prioridade === effectiveFilter)
-                                  : adGroup.terms;
+                                  : [...adGroup.terms]
+                                ).sort((a, b) => (b.impressoes ?? 0) - (a.impressoes ?? 0));
                                 if (filteredTerms.length === 0) return null;
                                 return (
                                   <div key={adGroup.adGroupId}>
