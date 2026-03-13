@@ -392,9 +392,11 @@ const OtimizarCampanha = () => {
         selectedCampaigns.map(async (camp) => {
           try {
             const realCampaignId = camp.id.split("__")[1];
-            const url = `https://appn8o2.gigainteligencia.com.br/webhook/google-ads-adgroups?customerId=${camp.customerId}&campaignId=${realCampaignId}`;
+            const url = `https://principaln8o.gigainteligencia.com.br/webhook/google-ads-adgroups?customerId=${camp.customerId}&campaignId=${realCampaignId}`;
             console.log(`[ADGROUPS] Buscando grupos para campanha: ${camp.name} (${camp.customerId}/${realCampaignId})`);
-            const res = await fetch(url);
+            const res = await fetch(url, {
+              headers: { "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" }
+            });
             console.log(`[ADGROUPS] Status para ${camp.customerId}/${realCampaignId}:`, res.status);
             const text = await res.text();
             console.log(`[ADGROUPS] Resposta raw para ${camp.customerId}/${realCampaignId}:`, text?.substring(0, 500));
