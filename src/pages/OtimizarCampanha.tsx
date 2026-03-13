@@ -1001,6 +1001,109 @@ const OtimizarCampanha = () => {
                   </p>
                 </div>
 
+                {/* ── Resumo da Análise ── */}
+                {resumoOtimizacao && (
+                  <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <Activity className="w-5 h-5 text-primary" />
+                      <h3 className="font-semibold text-foreground">Saúde do Grupo</h3>
+                      <Badge className={
+                        resumoOtimizacao.saudeDoGrupo === "boa"
+                          ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                          : resumoOtimizacao.saudeDoGrupo === "atencao"
+                          ? "bg-warning/20 text-warning border-warning/30"
+                          : "bg-destructive/20 text-destructive border-destructive/30"
+                      }>
+                        {resumoOtimizacao.saudeDoGrupo === "boa" ? "Boa" : resumoOtimizacao.saudeDoGrupo === "atencao" ? "Atenção" : "Crítica"}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-foreground">{resumoOtimizacao.totalSugestoes} termos para negativar</p>
+                    {resumoOtimizacao.potencialEconomia && (
+                      <p className="text-sm text-emerald-400">💰 Economia potencial: {resumoOtimizacao.potencialEconomia}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Benchmarks ── */}
+                {benchmarks && (
+                  <div className="rounded-xl border border-border bg-card p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BarChart3 className="w-5 h-5 text-primary" />
+                      <h3 className="font-semibold text-foreground">Benchmarks</h3>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {benchmarks.ctrMedio && (
+                        <div className="rounded-lg bg-secondary/60 p-3 text-center">
+                          <p className="text-xs text-muted-foreground">CTR Médio</p>
+                          <p className="text-sm font-bold text-foreground">{benchmarks.ctrMedio}%</p>
+                        </div>
+                      )}
+                      {benchmarks.cpcMedio && (
+                        <div className="rounded-lg bg-secondary/60 p-3 text-center">
+                          <p className="text-xs text-muted-foreground">CPC Médio</p>
+                          <p className="text-sm font-bold text-foreground">{benchmarks.cpcMedio}</p>
+                        </div>
+                      )}
+                      {benchmarks.cpaMedio && (
+                        <div className="rounded-lg bg-secondary/60 p-3 text-center">
+                          <p className="text-xs text-muted-foreground">CPA Médio</p>
+                          <p className="text-sm font-bold text-foreground">{benchmarks.cpaMedio}</p>
+                        </div>
+                      )}
+                      {benchmarks.taxaConversao && (
+                        <div className="rounded-lg bg-secondary/60 p-3 text-center">
+                          <p className="text-xs text-muted-foreground">Taxa Conversão</p>
+                          <p className="text-sm font-bold text-foreground">{benchmarks.taxaConversao}%</p>
+                        </div>
+                      )}
+                      {benchmarks.totalCusto && (
+                        <div className="rounded-lg bg-secondary/60 p-3 text-center">
+                          <p className="text-xs text-muted-foreground">Custo Total</p>
+                          <p className="text-sm font-bold text-foreground">{benchmarks.totalCusto}</p>
+                        </div>
+                      )}
+                      {benchmarks.totalConversoes != null && (
+                        <div className="rounded-lg bg-secondary/60 p-3 text-center">
+                          <p className="text-xs text-muted-foreground">Total Conversões</p>
+                          <p className="text-sm font-bold text-foreground">{benchmarks.totalConversoes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Padrões Detectados ── */}
+                {padroesSugeridos?.length > 0 && (
+                  <div className="rounded-xl border-2 border-warning/40 bg-warning/5 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-warning" />
+                      <div>
+                        <h3 className="font-semibold text-foreground">Padrões de Negativação Sugeridos</h3>
+                        <p className="text-xs text-muted-foreground">Palavras que aparecem repetidamente em termos sem conversão</p>
+                      </div>
+                    </div>
+                    <div className="grid gap-2">
+                      {padroesSugeridos.map((padrao, idx) => (
+                        <div key={idx} className="rounded-lg border border-warning/30 bg-card p-3 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-foreground text-sm">{padrao.padrao}</span>
+                            {padrao.matchType && (
+                              <Badge className={padrao.matchType === "EXACT" ? "bg-blue-500/20 text-blue-400 border-blue-500/30" : "bg-purple-500/20 text-purple-400 border-purple-500/30"}>
+                                {padrao.matchType}
+                              </Badge>
+                            )}
+                          </div>
+                          {padrao.motivo && <p className="text-xs text-muted-foreground">{padrao.motivo}</p>}
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            {padrao.termosAfetados != null && <span>{padrao.termosAfetados} termos afetados</span>}
+                            {padrao.custoTotal && <span>Custo total: {padrao.custoTotal}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* ── Global priority filter bar ── */}
                 <div className="flex items-center gap-3 px-5 py-3.5 rounded-xl bg-secondary/80 border-2 border-primary/20">
                   <span className="text-sm font-semibold text-foreground mr-1">Filtro:</span>
