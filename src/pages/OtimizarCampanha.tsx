@@ -943,7 +943,7 @@ const OtimizarCampanha = () => {
                             } else {
                               setGlobalFilter(null);
                               setOpenAccounts(new Set(hierarchy.map((a) => a.customerId)));
-                              setSelectedTerms(new Set(selectableTerms.map(termKey)));
+                              setSelectedTerms(new Set());
                             }
                           } else if (globalFilter === f) {
                             setGlobalFilter(null);
