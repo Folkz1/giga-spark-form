@@ -399,16 +399,23 @@ const OtimizarCampanha = () => {
             if (raw.length > 0) {
               console.log('[CAMPAIGNS] Primeiro objeto campanha:', JSON.stringify(raw[0]));
             }
+            // Capture resumo if present
+            if (data?.resumo) {
+              setCampaignsResumo(data.resumo);
+            }
             const enabled = raw.filter((c: any) => {
               const s = c.status || c.situacao || c.state || "";
               return s === "ENABLED" || s === "ATIVO";
             });
             console.log(`[CAMPAIGNS] ${acc.customerId}: ${raw.length} total, ${enabled.length} ENABLED`);
-            return enabled.map((c: any): CampaignEntry => ({
+            return enabled.map((c: any): CampaignEnriched => ({
                 id: `${acc.customerId}__${String(c.id)}`,
                 name: c.nome || c.name || "",
                 accountName: acc.name,
                 customerId: acc.customerId,
+                roas: c.roas,
+                performance: c.performance,
+                wasteSpend: c.wasteSpend,
               }));
           } catch (err) {
             console.error(`[CAMPAIGNS] Erro para ${acc.customerId}:`, err);
