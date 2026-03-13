@@ -943,7 +943,7 @@ const OtimizarCampanha = () => {
                             } else {
                               setGlobalFilter(null);
                               setOpenAccounts(new Set(hierarchy.map((a) => a.customerId)));
-                              setSelectedTerms(new Set(selectableTerms.map(termKey)));
+                              setSelectedTerms(new Set());
                             }
                           } else if (globalFilter === f) {
                             setGlobalFilter(null);
@@ -955,8 +955,7 @@ const OtimizarCampanha = () => {
                               suggestedTerms.filter((t) => t.prioridade === f).map((t) => t.customerId)
                             );
                             setOpenAccounts(accountsWithPriority);
-                            const keys = selectableTerms.filter((t) => t.prioridade === f).map(termKey);
-                            setSelectedTerms(new Set(keys));
+                            setSelectedTerms(new Set());
                           }
                         }}
                         className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all border ${styles[f]}`}
@@ -1072,8 +1071,9 @@ const OtimizarCampanha = () => {
                                           {filteredTerms.map((term) => {
                                             const hasConversions = term.conversoes > 0;
                                             const key = termKey(term);
+                                            const isSelected = selectedTerms.has(key);
                                             return (
-                                              <TableRow key={key} className={`${hasConversions ? "opacity-50" : "cursor-pointer"}`} onClick={() => !hasConversions && toggleTerm(term)}>
+                                              <TableRow key={key} className={`${hasConversions ? "opacity-50" : "cursor-pointer"} ${isSelected ? "bg-primary/10" : ""}`} onClick={() => !hasConversions && toggleTerm(term)}>
                                                 <TableCell>
                                                   <Checkbox
                                                     checked={selectedTerms.has(key)}
