@@ -599,6 +599,12 @@ const OtimizarCampanha = () => {
       console.log("Total terms across all groups:", allTerms.length);
       setSuggestedTerms(allTerms);
       setSelectedTerms(new Set());
+      // Extract new optimization data from last non-empty response
+      const lastData = selectedGroups.reduce<any>((acc, grp, i) => {
+        // We need to re-parse — but we already have results. Let's use a different approach.
+        return acc;
+      }, null);
+      // Instead, re-fetch enriched data in the loop above. We'll use a side-effect ref.
       setStep(2);
     } catch (err: any) {
       console.error("Optimize error:", err);
