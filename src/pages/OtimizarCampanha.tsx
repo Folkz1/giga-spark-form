@@ -955,8 +955,7 @@ const OtimizarCampanha = () => {
                               suggestedTerms.filter((t) => t.prioridade === f).map((t) => t.customerId)
                             );
                             setOpenAccounts(accountsWithPriority);
-                            const keys = selectableTerms.filter((t) => t.prioridade === f).map(termKey);
-                            setSelectedTerms(new Set(keys));
+                            setSelectedTerms(new Set());
                           }
                         }}
                         className={`px-3.5 py-1.5 rounded-lg text-sm font-semibold transition-all border ${styles[f]}`}
