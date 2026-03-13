@@ -1283,8 +1283,20 @@ const OtimizarCampanha = () => {
                                                 <TableCell className="text-center">{term.conversoes ?? 0}</TableCell>
                                                 <TableCell className="min-w-[200px]" style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
                                                   <span className="text-xs text-muted-foreground">{term.motivo || "—"}</span>
+                                                  {term.impactoEstimado && (
+                                                    <p className="text-xs text-emerald-400 mt-0.5">💰 {term.impactoEstimado}</p>
+                                                  )}
                                                 </TableCell>
-                                                <TableCell>{priorityBadge(term.prioridade)}</TableCell>
+                                                <TableCell>
+                                                  <div className="flex items-center gap-1 flex-wrap">
+                                                    {priorityBadge(term.prioridade)}
+                                                    {term.matchTypeRecomendado && (
+                                                      <Badge className={term.matchTypeRecomendado === "EXACT" ? "bg-blue-500/20 text-blue-400 border-blue-500/30 text-[10px] px-1.5 py-0" : "bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px] px-1.5 py-0"}>
+                                                        {term.matchTypeRecomendado}
+                                                      </Badge>
+                                                    )}
+                                                  </div>
+                                                </TableCell>
                                               </TableRow>
                                             );
                                           })}
