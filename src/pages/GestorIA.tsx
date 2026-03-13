@@ -298,7 +298,7 @@ const GestorIA = () => {
       setClickupListId("");
     };
     try {
-      await fetch("https://appn8o2.gigainteligencia.com.br/webhook/gestor-clickup", {
+      await fetch("https://principaln8o.gigainteligencia.com.br/webhook/gestor-clickup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
