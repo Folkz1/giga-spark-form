@@ -538,7 +538,7 @@ const OtimizarCampanha = () => {
 
     try {
       const results = await Promise.all(
-        selectedGroups.map(async (grp) => {
+        selectedGroups.map(async (grp): Promise<{ terms: SugestedTerm[]; rawData: any }> => {
           try {
             const body = {
               customerId: grp.customerId,
@@ -556,20 +556,20 @@ const OtimizarCampanha = () => {
             console.log(`[OPTIMIZE] Status para ${grp.name}:`, response.status);
             if (!response.ok) {
               console.error(`[OPTIMIZE] Erro HTTP para ${grp.name}:`, response.status);
-              return [];
+              return { terms: [], rawData: null };
             }
             const text = await response.text();
             console.log(`[OPTIMIZE] Resposta raw para ${grp.name}:`, text?.substring(0, 500));
             if (!text || text.trim() === '') {
               console.warn(`[OPTIMIZE] Resposta vazia para grupo ${grp.name}`);
-              return [];
+              return { terms: [], rawData: null };
             }
             let data: any;
             try {
               data = JSON.parse(text);
             } catch (e) {
               console.warn(`[OPTIMIZE] JSON inválido para grupo ${grp.name}:`, text);
-              return [];
+              return { terms: [], rawData: null };
             }
             console.log("[OPTIMIZE] Parsed response for", grp.name, ":", data);
             const terms: any[] = Array.isArray(data)
@@ -579,7 +579,7 @@ const OtimizarCampanha = () => {
               : Array.isArray(data?.termos)
               ? data.termos
               : [];
-            return terms.map((t: any): SugestedTerm => ({
+            const mapped = terms.map((t: any): SugestedTerm => ({
               ...t,
               custo: t.custo,
               grupo: grp.name,
@@ -589,22 +589,24 @@ const OtimizarCampanha = () => {
               campaignName: grp.campaignName,
               campaignId: grp.campaignId,
             }));
+            return { terms: mapped, rawData: data };
           } catch (err) {
             console.error(`[OPTIMIZE] Erro geral para grupo ${grp.name}:`, err);
-            return [];
+            return { terms: [], rawData: null };
           }
         })
       );
-      const allTerms = results.flat();
+      const allTerms = results.flatMap((r) => r.terms);
       console.log("Total terms across all groups:", allTerms.length);
       setSuggestedTerms(allTerms);
       setSelectedTerms(new Set());
-      // Extract new optimization data from last non-empty response
-      const lastData = selectedGroups.reduce<any>((acc, grp, i) => {
-        // We need to re-parse — but we already have results. Let's use a different approach.
-        return acc;
-      }, null);
-      // Instead, re-fetch enriched data in the loop above. We'll use a side-effect ref.
+      // Extract enrichment data from last response that has it
+      const lastRaw = [...results].reverse().find((r) => r.rawData && !Array.isArray(r.rawData))?.rawData;
+      if (lastRaw) {
+        setBenchmarks(lastRaw?.benchmarks || null);
+        setPadroesSugeridos(lastRaw?.padroesSugeridos || []);
+        setResumoOtimizacao(lastRaw?.resumo || null);
+      }
       setStep(2);
     } catch (err: any) {
       console.error("Optimize error:", err);
