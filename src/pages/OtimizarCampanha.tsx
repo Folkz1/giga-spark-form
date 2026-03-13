@@ -565,7 +565,7 @@ const OtimizarCampanha = () => {
     }
     await Promise.all(
       [...grouped.values()].map(async (g) => {
-        const res = await fetch("https://appn8o2.gigainteligencia.com.br/webhook/google-ads-negative", {
+        const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-negative", {
           method: "POST",
           headers: { "Content-Type": "application/json", "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" },
           body: JSON.stringify({ customerId: g.customerId, adGroupId: g.adGroupId, termos: g.termos }),
