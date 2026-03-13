@@ -1,11 +1,36 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Loader2, Pencil, Check, RefreshCw } from "lucide-react";
+import { Loader2, Pencil, Check, RefreshCw, Link, MessageSquare, List } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import type { CampaignStructure, Briefing } from "./types";
+
+interface PinSuggestions {
+  position1?: string;
+  position2?: string;
+  position3?: string;
+}
+
+interface Sitelink {
+  title: string;
+  description1: string;
+  description2: string;
+  url: string;
+}
+
+interface StructuredSnippet {
+  header: string;
+  values: string[];
+}
+
+interface AdExtensions {
+  sitelinks?: Sitelink[];
+  callouts?: string[];
+  structuredSnippet?: StructuredSnippet;
+}
 
 interface StepAdPreviewProps {
   structure: CampaignStructure;
@@ -21,6 +46,8 @@ const StepAdPreview = ({ structure, urls, customerId, briefing, onBriefingChange
   const [regeneratingGroup, setRegeneratingGroup] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<{ groupId: string; type: "headline" | "description"; index: number } | null>(null);
   const [adjustments, setAdjustments] = useState<Record<string, string>>({});
+  const [extensions, setExtensions] = useState<AdExtensions | null>(null);
+  const [pinSuggestions, setPinSuggestions] = useState<Record<string, PinSuggestions>>({});
 
   const isBriefingComplete = briefing.diferenciais.trim() !== "" && briefing.oferta.trim() !== "" && briefing.tom.trim() !== "" && briefing.proibidas.trim() !== "";
 
@@ -77,6 +104,21 @@ const StepAdPreview = ({ structure, urls, customerId, briefing, onBriefingChange
       } else {
         console.warn("Unexpected API response format:", data);
       }
+
+      // Extract extensions
+      if (data?.extensions) setExtensions(data.extensions);
+
+      // Extract pin suggestions
+      const pins: Record<string, PinSuggestions> = {};
+      if (data?.ads && Array.isArray(data.ads)) {
+        data.ads.forEach((ad: any, i: number) => {
+          const group = structure.adGroups[i];
+          if (group && ad?.pinSuggestions) {
+            pins[group.id] = ad.pinSuggestions;
+          }
+        });
+      }
+      setPinSuggestions(pins);
     } catch (err) {
       console.error("Error generating ads:", err);
     } finally {
@@ -140,6 +182,15 @@ const StepAdPreview = ({ structure, urls, customerId, briefing, onBriefingChange
         }
       }),
     });
+  };
+
+  const getPinBadge = (groupId: string, headline: string) => {
+    const groupPins = pinSuggestions?.[groupId];
+    if (!groupPins) return null;
+    if (groupPins.position1 === headline) return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-[10px] px-1.5 py-0">📌 Pos 1</Badge>;
+    if (groupPins.position2 === headline) return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-[10px] px-1.5 py-0">📌 Pos 2</Badge>;
+    if (groupPins.position3 === headline) return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30 text-[10px] px-1.5 py-0">📌 Pos 3</Badge>;
+    return null;
   };
 
   if (loading) {
@@ -229,6 +280,17 @@ const StepAdPreview = ({ structure, urls, customerId, briefing, onBriefingChange
             <p className="text-sm text-muted-foreground leading-relaxed">
               {group.descriptions?.[0]}
             </p>
+            {/* Extensions preview in ad card */}
+            {extensions?.sitelinks && extensions.sitelinks.length > 0 && (
+              <p className="text-xs text-primary">
+                {extensions.sitelinks.map((s) => s?.title).filter(Boolean).join(" · ")}
+              </p>
+            )}
+            {extensions?.callouts && extensions.callouts.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {extensions.callouts.join(" · ")}
+              </p>
+            )}
           </div>
 
           {/* Headlines */}
@@ -237,6 +299,7 @@ const StepAdPreview = ({ structure, urls, customerId, briefing, onBriefingChange
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {group.headlines?.map((h, i) => {
                 const isEditing = editingField?.groupId === group.id && editingField?.type === "headline" && editingField?.index === i;
+                const pinBadge = getPinBadge(group.id, h);
                 return (
                   <div key={i} className="flex items-center gap-1.5 rounded-lg bg-secondary px-3 py-2 group">
                     {isEditing ? (
@@ -254,6 +317,7 @@ const StepAdPreview = ({ structure, urls, customerId, briefing, onBriefingChange
                     ) : (
                       <>
                         <span className="flex-1 text-sm text-foreground truncate">{h}</span>
+                        {pinBadge}
                         <button onClick={() => setEditingField({ groupId: group.id, type: "headline", index: i })} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                           <Pencil className="w-3 h-3" />
                         </button>
@@ -326,6 +390,64 @@ const StepAdPreview = ({ structure, urls, customerId, briefing, onBriefingChange
           </div>
         </div>
       ))}
+
+      {/* Extensions Section */}
+      {extensions && (
+        <div className="rounded-xl border border-border bg-card p-5 space-y-5">
+          <div>
+            <h3 className="text-lg font-semibold text-foreground">Extensões de Anúncio</h3>
+            <p className="text-sm text-muted-foreground">Extensões são adicionadas a TODA a campanha e aumentam o espaço do anúncio.</p>
+          </div>
+
+          {/* Sitelinks */}
+          {extensions.sitelinks && extensions.sitelinks.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Link className="w-4 h-4 text-primary" />
+                <h4 className="font-medium text-foreground text-sm">Sitelinks</h4>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {extensions.sitelinks.map((sitelink, idx) => (
+                  <div key={idx} className="rounded-lg border border-border bg-secondary/40 p-3 space-y-1">
+                    <p className="text-sm font-medium text-primary">{sitelink?.title}</p>
+                    {sitelink?.description1 && <p className="text-xs text-muted-foreground">{sitelink.description1}</p>}
+                    {sitelink?.description2 && <p className="text-xs text-muted-foreground">{sitelink.description2}</p>}
+                    {sitelink?.url && <p className="text-xs text-emerald-400 truncate">{sitelink.url}</p>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Callouts */}
+          {extensions.callouts && extensions.callouts.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-primary" />
+                <h4 className="font-medium text-foreground text-sm">Callouts</h4>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {extensions.callouts.map((callout, idx) => (
+                  <Badge key={idx} variant="secondary" className="text-xs">{callout}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Structured Snippet */}
+          {extensions.structuredSnippet && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <List className="w-4 h-4 text-primary" />
+                <h4 className="font-medium text-foreground text-sm">{extensions.structuredSnippet?.header || "Snippet Estruturado"}:</h4>
+              </div>
+              {extensions.structuredSnippet?.values && extensions.structuredSnippet.values.length > 0 && (
+                <p className="text-sm text-muted-foreground">{extensions.structuredSnippet.values.join(" · ")}</p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 };
