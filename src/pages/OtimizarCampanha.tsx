@@ -1073,7 +1073,7 @@ const OtimizarCampanha = () => {
                                             const hasConversions = term.conversoes > 0;
                                             const key = termKey(term);
                                             return (
-                                              <TableRow key={key} className={hasConversions ? "opacity-50" : ""}>
+                                              <TableRow key={key} className={`${hasConversions ? "opacity-50" : "cursor-pointer"}`} onClick={() => !hasConversions && toggleTerm(term)}>
                                                 <TableCell>
                                                   <Checkbox
                                                     checked={selectedTerms.has(key)}
