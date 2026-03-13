@@ -392,9 +392,11 @@ const OtimizarCampanha = () => {
         selectedCampaigns.map(async (camp) => {
           try {
             const realCampaignId = camp.id.split("__")[1];
-            const url = `https://appn8o2.gigainteligencia.com.br/webhook/google-ads-adgroups?customerId=${camp.customerId}&campaignId=${realCampaignId}`;
+            const url = `https://principaln8o.gigainteligencia.com.br/webhook/google-ads-adgroups?customerId=${camp.customerId}&campaignId=${realCampaignId}`;
             console.log(`[ADGROUPS] Buscando grupos para campanha: ${camp.name} (${camp.customerId}/${realCampaignId})`);
-            const res = await fetch(url);
+            const res = await fetch(url, {
+              headers: { "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" }
+            });
             console.log(`[ADGROUPS] Status para ${camp.customerId}/${realCampaignId}:`, res.status);
             const text = await res.text();
             console.log(`[ADGROUPS] Resposta raw para ${camp.customerId}/${realCampaignId}:`, text?.substring(0, 500));
@@ -489,7 +491,7 @@ const OtimizarCampanha = () => {
               campaignName: grp.campaignName,
             };
             console.log("[OPTIMIZE] Enviando request para grupo:", grp.name, body);
-            const response = await fetch("https://appn8o2.gigainteligencia.com.br/webhook/google-ads-optimize", {
+            const response = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-optimize", {
               method: "POST",
               headers: { "Content-Type": "application/json", "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" },
               body: JSON.stringify(body),
@@ -563,7 +565,7 @@ const OtimizarCampanha = () => {
     }
     await Promise.all(
       [...grouped.values()].map(async (g) => {
-        const res = await fetch("https://appn8o2.gigainteligencia.com.br/webhook/google-ads-negative", {
+        const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-negative", {
           method: "POST",
           headers: { "Content-Type": "application/json", "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" },
           body: JSON.stringify({ customerId: g.customerId, adGroupId: g.adGroupId, termos: g.termos }),
