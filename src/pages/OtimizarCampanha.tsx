@@ -64,6 +64,42 @@ interface SugestedTerm {
   accountName: string;
   campaignName: string;
   campaignId: string;
+  matchTypeRecomendado?: string;
+  impactoEstimado?: string;
+}
+
+interface Benchmarks {
+  ctrMedio: string;
+  cpcMedio: string;
+  cpaMedio: string;
+  taxaConversao: string;
+  totalCusto: string;
+  totalConversoes: number;
+}
+
+interface PadraoSugerido {
+  padrao: string;
+  matchType: string;
+  motivo: string;
+  termosAfetados: number;
+  custoTotal: string;
+}
+
+interface ResumoOtimizacao {
+  totalSugestoes: number;
+  potencialEconomia: string;
+  saudeDoGrupo: "boa" | "atencao" | "critica";
+}
+
+interface CampaignEnriched extends CampaignEntry {
+  roas?: string;
+  performance?: string;
+  wasteSpend?: string;
+}
+
+interface CampaignsResumo {
+  roasGeral?: string;
+  campanhasCriticas?: number;
 }
 
 /* ── Multi-Select Dropdown ─────────────────────────── */
