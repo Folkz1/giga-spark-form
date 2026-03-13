@@ -1031,6 +1031,21 @@ const OtimizarCampanha = () => {
                                       <div className="w-1 h-4 rounded-full bg-muted-foreground/30" />
                                       <p className="text-sm text-muted-foreground font-medium">{adGroup.adGroupName}</p>
                                       <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{filteredTerms.length}</Badge>
+                                      <div className="ml-auto flex items-center gap-1.5">
+                                        <button
+                                          onClick={() => selectAllForGroup(adGroup.adGroupId)}
+                                          className="px-2 py-0.5 rounded text-[11px] font-medium text-primary hover:bg-primary/10 transition-colors"
+                                        >
+                                          Selecionar todos
+                                        </button>
+                                        <span className="text-border">|</span>
+                                        <button
+                                          onClick={() => deselectAllForGroup(adGroup.adGroupId)}
+                                          className="px-2 py-0.5 rounded text-[11px] font-medium text-muted-foreground hover:bg-muted/40 transition-colors"
+                                        >
+                                          Desmarcar
+                                        </button>
+                                      </div>
                                     </div>
 
                                     {/* Simplified table */}
