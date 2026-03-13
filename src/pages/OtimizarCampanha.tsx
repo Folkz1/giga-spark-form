@@ -491,7 +491,7 @@ const OtimizarCampanha = () => {
               campaignName: grp.campaignName,
             };
             console.log("[OPTIMIZE] Enviando request para grupo:", grp.name, body);
-            const response = await fetch("https://appn8o2.gigainteligencia.com.br/webhook/google-ads-optimize", {
+            const response = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-optimize", {
               method: "POST",
               headers: { "Content-Type": "application/json", "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" },
               body: JSON.stringify(body),
