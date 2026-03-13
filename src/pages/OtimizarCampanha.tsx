@@ -12,6 +12,13 @@ import {
   Sparkles,
   Brain,
   Check,
+  TrendingUp,
+  DollarSign,
+  Target,
+  BarChart3,
+  Activity,
+  Zap,
+  ShieldAlert,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
