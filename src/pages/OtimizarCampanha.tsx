@@ -12,6 +12,13 @@ import {
   Sparkles,
   Brain,
   Check,
+  TrendingUp,
+  DollarSign,
+  Target,
+  BarChart3,
+  Activity,
+  Zap,
+  ShieldAlert,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -57,6 +64,42 @@ interface SugestedTerm {
   accountName: string;
   campaignName: string;
   campaignId: string;
+  matchTypeRecomendado?: string;
+  impactoEstimado?: string;
+}
+
+interface Benchmarks {
+  ctrMedio: string;
+  cpcMedio: string;
+  cpaMedio: string;
+  taxaConversao: string;
+  totalCusto: string;
+  totalConversoes: number;
+}
+
+interface PadraoSugerido {
+  padrao: string;
+  matchType: string;
+  motivo: string;
+  termosAfetados: number;
+  custoTotal: string;
+}
+
+interface ResumoOtimizacao {
+  totalSugestoes: number;
+  potencialEconomia: string;
+  saudeDoGrupo: "boa" | "atencao" | "critica";
+}
+
+interface CampaignEnriched extends CampaignEntry {
+  roas?: string;
+  performance?: string;
+  wasteSpend?: string;
+}
+
+interface CampaignsResumo {
+  roasGeral?: string;
+  campanhasCriticas?: number;
 }
 
 /* ── Multi-Select Dropdown ─────────────────────────── */
@@ -263,10 +306,11 @@ const OtimizarCampanha = () => {
   const [accountsError, setAccountsError] = useState<string | null>(null);
   const [selectedAccountIds, setSelectedAccountIds] = useState<Set<string>>(new Set());
 
-  const [campaigns, setCampaigns] = useState<CampaignEntry[]>([]);
+  const [campaigns, setCampaigns] = useState<CampaignEnriched[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(false);
   const [campaignsError, setCampaignsError] = useState<string | null>(null);
   const [selectedCampaignIds, setSelectedCampaignIds] = useState<Set<string>>(new Set());
+  const [campaignsResumo, setCampaignsResumo] = useState<CampaignsResumo | null>(null);
 
   const [adGroups, setAdGroups] = useState<AdGroupEntry[]>([]);
   const [adGroupsLoading, setAdGroupsLoading] = useState(false);
@@ -287,6 +331,11 @@ const OtimizarCampanha = () => {
   // Step 4 state
   const [applyingLoading, setApplyingLoading] = useState(false);
   const [appliedCount, setAppliedCount] = useState(0);
+
+  // New optimization analysis states
+  const [benchmarks, setBenchmarks] = useState<Benchmarks | null>(null);
+  const [padroesSugeridos, setPadroesSugeridos] = useState<PadraoSugerido[]>([]);
+  const [resumoOtimizacao, setResumoOtimizacao] = useState<ResumoOtimizacao | null>(null);
 
   /* ── Fetch accounts ──────────────────────────────── */
   const fetchAccounts = useCallback(async () => {
@@ -350,16 +399,23 @@ const OtimizarCampanha = () => {
             if (raw.length > 0) {
               console.log('[CAMPAIGNS] Primeiro objeto campanha:', JSON.stringify(raw[0]));
             }
+            // Capture resumo if present
+            if (data?.resumo) {
+              setCampaignsResumo(data.resumo);
+            }
             const enabled = raw.filter((c: any) => {
               const s = c.status || c.situacao || c.state || "";
               return s === "ENABLED" || s === "ATIVO";
             });
             console.log(`[CAMPAIGNS] ${acc.customerId}: ${raw.length} total, ${enabled.length} ENABLED`);
-            return enabled.map((c: any): CampaignEntry => ({
+            return enabled.map((c: any): CampaignEnriched => ({
                 id: `${acc.customerId}__${String(c.id)}`,
                 name: c.nome || c.name || "",
                 accountName: acc.name,
                 customerId: acc.customerId,
+                roas: c.roas,
+                performance: c.performance,
+                wasteSpend: c.wasteSpend,
               }));
           } catch (err) {
             console.error(`[CAMPAIGNS] Erro para ${acc.customerId}:`, err);
@@ -482,7 +538,7 @@ const OtimizarCampanha = () => {
 
     try {
       const results = await Promise.all(
-        selectedGroups.map(async (grp) => {
+        selectedGroups.map(async (grp): Promise<{ terms: SugestedTerm[]; rawData: any }> => {
           try {
             const body = {
               customerId: grp.customerId,
@@ -500,20 +556,20 @@ const OtimizarCampanha = () => {
             console.log(`[OPTIMIZE] Status para ${grp.name}:`, response.status);
             if (!response.ok) {
               console.error(`[OPTIMIZE] Erro HTTP para ${grp.name}:`, response.status);
-              return [];
+              return { terms: [], rawData: null };
             }
             const text = await response.text();
             console.log(`[OPTIMIZE] Resposta raw para ${grp.name}:`, text?.substring(0, 500));
             if (!text || text.trim() === '') {
               console.warn(`[OPTIMIZE] Resposta vazia para grupo ${grp.name}`);
-              return [];
+              return { terms: [], rawData: null };
             }
             let data: any;
             try {
               data = JSON.parse(text);
             } catch (e) {
               console.warn(`[OPTIMIZE] JSON inválido para grupo ${grp.name}:`, text);
-              return [];
+              return { terms: [], rawData: null };
             }
             console.log("[OPTIMIZE] Parsed response for", grp.name, ":", data);
             const terms: any[] = Array.isArray(data)
@@ -523,7 +579,7 @@ const OtimizarCampanha = () => {
               : Array.isArray(data?.termos)
               ? data.termos
               : [];
-            return terms.map((t: any): SugestedTerm => ({
+            const mapped = terms.map((t: any): SugestedTerm => ({
               ...t,
               custo: t.custo,
               grupo: grp.name,
@@ -533,16 +589,24 @@ const OtimizarCampanha = () => {
               campaignName: grp.campaignName,
               campaignId: grp.campaignId,
             }));
+            return { terms: mapped, rawData: data };
           } catch (err) {
             console.error(`[OPTIMIZE] Erro geral para grupo ${grp.name}:`, err);
-            return [];
+            return { terms: [], rawData: null };
           }
         })
       );
-      const allTerms = results.flat();
+      const allTerms = results.flatMap((r) => r.terms);
       console.log("Total terms across all groups:", allTerms.length);
       setSuggestedTerms(allTerms);
       setSelectedTerms(new Set());
+      // Extract enrichment data from last response that has it
+      const lastRaw = [...results].reverse().find((r) => r.rawData && !Array.isArray(r.rawData))?.rawData;
+      if (lastRaw) {
+        setBenchmarks(lastRaw?.benchmarks || null);
+        setPadroesSugeridos(lastRaw?.padroesSugeridos || []);
+        setResumoOtimizacao(lastRaw?.resumo || null);
+      }
       setStep(2);
     } catch (err: any) {
       console.error("Optimize error:", err);
@@ -831,10 +895,26 @@ const OtimizarCampanha = () => {
                   onRetry={fetchAccounts}
                 />
 
+                {/* Campaigns resumo if available */}
+                {campaignsResumo && (
+                  <div className="flex items-center gap-4 px-4 py-2.5 rounded-xl bg-secondary/60 border border-border text-sm">
+                    {campaignsResumo?.roasGeral && (
+                      <span className="text-foreground font-medium">ROAS Geral: <span className="text-primary">{campaignsResumo.roasGeral}</span></span>
+                    )}
+                    {(campaignsResumo?.campanhasCriticas ?? 0) > 0 && (
+                      <span className="text-destructive font-medium">Campanhas Críticas: {campaignsResumo.campanhasCriticas}</span>
+                    )}
+                  </div>
+                )}
+
                 <MultiSelectDropdown
                   label="Campanhas"
                   placeholder="Selecione campanhas..."
-                  items={campaigns.map((c) => ({ id: c.id, label: `${c.accountName} — ${c.name}` }))}
+                  items={campaigns.map((c) => {
+                    const perfLabel = c.performance ? ` [${c.performance}]` : "";
+                    const roasLabel = c.roas ? ` • ROAS: ${c.roas}` : "";
+                    return { id: c.id, label: `${c.accountName} — ${c.name}${perfLabel}${roasLabel}` };
+                  })}
                   selectedIds={selectedCampaignIds}
                   onToggle={toggleCampaign}
                   onToggleAll={(ids) => ids.forEach(toggleCampaign)}
@@ -920,6 +1000,109 @@ const OtimizarCampanha = () => {
                     · {selectedTerms.size} selecionados
                   </p>
                 </div>
+
+                {/* ── Resumo da Análise ── */}
+                {resumoOtimizacao && (
+                  <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <Activity className="w-5 h-5 text-primary" />
+                      <h3 className="font-semibold text-foreground">Saúde do Grupo</h3>
+                      <Badge className={
+                        resumoOtimizacao.saudeDoGrupo === "boa"
+                          ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                          : resumoOtimizacao.saudeDoGrupo === "atencao"
+                          ? "bg-warning/20 text-warning border-warning/30"
+                          : "bg-destructive/20 text-destructive border-destructive/30"
+                      }>
+                        {resumoOtimizacao.saudeDoGrupo === "boa" ? "Boa" : resumoOtimizacao.saudeDoGrupo === "atencao" ? "Atenção" : "Crítica"}
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-foreground">{resumoOtimizacao.totalSugestoes} termos para negativar</p>
+                    {resumoOtimizacao.potencialEconomia && (
+                      <p className="text-sm text-emerald-400">💰 Economia potencial: {resumoOtimizacao.potencialEconomia}</p>
+                    )}
+                  </div>
+                )}
+
+                {/* ── Benchmarks ── */}
+                {benchmarks && (
+                  <div className="rounded-xl border border-border bg-card p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <BarChart3 className="w-5 h-5 text-primary" />
+                      <h3 className="font-semibold text-foreground">Benchmarks</h3>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {benchmarks.ctrMedio && (
+                        <div className="rounded-lg bg-secondary/60 p-3 text-center">
+                          <p className="text-xs text-muted-foreground">CTR Médio</p>
+                          <p className="text-sm font-bold text-foreground">{benchmarks.ctrMedio}%</p>
+                        </div>
+                      )}
+                      {benchmarks.cpcMedio && (
+                        <div className="rounded-lg bg-secondary/60 p-3 text-center">
+                          <p className="text-xs text-muted-foreground">CPC Médio</p>
+                          <p className="text-sm font-bold text-foreground">{benchmarks.cpcMedio}</p>
+                        </div>
+                      )}
+                      {benchmarks.cpaMedio && (
+                        <div className="rounded-lg bg-secondary/60 p-3 text-center">
+                          <p className="text-xs text-muted-foreground">CPA Médio</p>
+                          <p className="text-sm font-bold text-foreground">{benchmarks.cpaMedio}</p>
+                        </div>
+                      )}
+                      {benchmarks.taxaConversao && (
+                        <div className="rounded-lg bg-secondary/60 p-3 text-center">
+                          <p className="text-xs text-muted-foreground">Taxa Conversão</p>
+                          <p className="text-sm font-bold text-foreground">{benchmarks.taxaConversao}%</p>
+                        </div>
+                      )}
+                      {benchmarks.totalCusto && (
+                        <div className="rounded-lg bg-secondary/60 p-3 text-center">
+                          <p className="text-xs text-muted-foreground">Custo Total</p>
+                          <p className="text-sm font-bold text-foreground">{benchmarks.totalCusto}</p>
+                        </div>
+                      )}
+                      {benchmarks.totalConversoes != null && (
+                        <div className="rounded-lg bg-secondary/60 p-3 text-center">
+                          <p className="text-xs text-muted-foreground">Total Conversões</p>
+                          <p className="text-sm font-bold text-foreground">{benchmarks.totalConversoes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Padrões Detectados ── */}
+                {padroesSugeridos?.length > 0 && (
+                  <div className="rounded-xl border-2 border-warning/40 bg-warning/5 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-warning" />
+                      <div>
+                        <h3 className="font-semibold text-foreground">Padrões de Negativação Sugeridos</h3>
+                        <p className="text-xs text-muted-foreground">Palavras que aparecem repetidamente em termos sem conversão</p>
+                      </div>
+                    </div>
+                    <div className="grid gap-2">
+                      {padroesSugeridos.map((padrao, idx) => (
+                        <div key={idx} className="rounded-lg border border-warning/30 bg-card p-3 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-foreground text-sm">{padrao.padrao}</span>
+                            {padrao.matchType && (
+                              <Badge className={padrao.matchType === "EXACT" ? "bg-blue-500/20 text-blue-400 border-blue-500/30" : "bg-purple-500/20 text-purple-400 border-purple-500/30"}>
+                                {padrao.matchType}
+                              </Badge>
+                            )}
+                          </div>
+                          {padrao.motivo && <p className="text-xs text-muted-foreground">{padrao.motivo}</p>}
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            {padrao.termosAfetados != null && <span>{padrao.termosAfetados} termos afetados</span>}
+                            {padrao.custoTotal && <span>Custo total: {padrao.custoTotal}</span>}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* ── Global priority filter bar ── */}
                 <div className="flex items-center gap-3 px-5 py-3.5 rounded-xl bg-secondary/80 border-2 border-primary/20">
@@ -1100,8 +1283,20 @@ const OtimizarCampanha = () => {
                                                 <TableCell className="text-center">{term.conversoes ?? 0}</TableCell>
                                                 <TableCell className="min-w-[200px]" style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
                                                   <span className="text-xs text-muted-foreground">{term.motivo || "—"}</span>
+                                                  {term.impactoEstimado && (
+                                                    <p className="text-xs text-emerald-400 mt-0.5">💰 {term.impactoEstimado}</p>
+                                                  )}
                                                 </TableCell>
-                                                <TableCell>{priorityBadge(term.prioridade)}</TableCell>
+                                                <TableCell>
+                                                  <div className="flex items-center gap-1 flex-wrap">
+                                                    {priorityBadge(term.prioridade)}
+                                                    {term.matchTypeRecomendado && (
+                                                      <Badge className={term.matchTypeRecomendado === "EXACT" ? "bg-blue-500/20 text-blue-400 border-blue-500/30 text-[10px] px-1.5 py-0" : "bg-purple-500/20 text-purple-400 border-purple-500/30 text-[10px] px-1.5 py-0"}>
+                                                        {term.matchTypeRecomendado}
+                                                      </Badge>
+                                                    )}
+                                                  </div>
+                                                </TableCell>
                                               </TableRow>
                                             );
                                           })}
