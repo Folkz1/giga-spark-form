@@ -282,6 +282,7 @@ const OtimizarCampanha = () => {
   // Global filter: "alta"|"media"|"baixa"|null (toggle behavior)
   const [globalFilter, setGlobalFilter] = useState<string | null>(null);
   const [openAccounts, setOpenAccounts] = useState<Set<string>>(new Set());
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   // Step 4 state
   const [applyingLoading, setApplyingLoading] = useState(false);
