@@ -22,7 +22,7 @@ const StepReview = ({ data }: StepReviewProps) => {
     try {
       await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-submit", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" },
         body: JSON.stringify({
           accountName: data.selectedAccount?.name,
           customerId: data.selectedAccount?.customerId,

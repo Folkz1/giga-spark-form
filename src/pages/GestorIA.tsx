@@ -414,7 +414,8 @@ const GestorIA = () => {
     setLoadingAccounts(true);
     try {
       const res = await fetch(
-        "https://principaln8o.gigainteligencia.com.br/webhook/google-ads-accounts"
+        "https://principaln8o.gigainteligencia.com.br/webhook/google-ads-accounts",
+        { headers: { "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" } }
       );
       if (!res.ok) throw new Error("Erro");
       const data = await res.json();
