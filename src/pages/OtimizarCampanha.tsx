@@ -306,10 +306,11 @@ const OtimizarCampanha = () => {
   const [accountsError, setAccountsError] = useState<string | null>(null);
   const [selectedAccountIds, setSelectedAccountIds] = useState<Set<string>>(new Set());
 
-  const [campaigns, setCampaigns] = useState<CampaignEntry[]>([]);
+  const [campaigns, setCampaigns] = useState<CampaignEnriched[]>([]);
   const [campaignsLoading, setCampaignsLoading] = useState(false);
   const [campaignsError, setCampaignsError] = useState<string | null>(null);
   const [selectedCampaignIds, setSelectedCampaignIds] = useState<Set<string>>(new Set());
+  const [campaignsResumo, setCampaignsResumo] = useState<CampaignsResumo | null>(null);
 
   const [adGroups, setAdGroups] = useState<AdGroupEntry[]>([]);
   const [adGroupsLoading, setAdGroupsLoading] = useState(false);
@@ -330,6 +331,11 @@ const OtimizarCampanha = () => {
   // Step 4 state
   const [applyingLoading, setApplyingLoading] = useState(false);
   const [appliedCount, setAppliedCount] = useState(0);
+
+  // New optimization analysis states
+  const [benchmarks, setBenchmarks] = useState<Benchmarks | null>(null);
+  const [padroesSugeridos, setPadroesSugeridos] = useState<PadraoSugerido[]>([]);
+  const [resumoOtimizacao, setResumoOtimizacao] = useState<ResumoOtimizacao | null>(null);
 
   /* ── Fetch accounts ──────────────────────────────── */
   const fetchAccounts = useCallback(async () => {
