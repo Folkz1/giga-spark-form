@@ -36,7 +36,7 @@ const StepAdPreview = ({ structure, urls, customerId, briefing, onBriefingChange
       console.log("API Request Body (Generate Ads):", JSON.stringify(requestBody, null, 2));
       const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-ads", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" },
         body: JSON.stringify(requestBody),
       });
       if (!res.ok) {
@@ -101,7 +101,7 @@ const StepAdPreview = ({ structure, urls, customerId, briefing, onBriefingChange
       console.log("API Request Body (Regenerate Group):", JSON.stringify(requestBody, null, 2));
       const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-ads", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" },
         body: JSON.stringify(requestBody),
       });
       if (res.ok) {
