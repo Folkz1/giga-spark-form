@@ -282,6 +282,7 @@ const OtimizarCampanha = () => {
   // Global filter: "alta"|"media"|"baixa"|null (toggle behavior)
   const [globalFilter, setGlobalFilter] = useState<string | null>(null);
   const [openAccounts, setOpenAccounts] = useState<Set<string>>(new Set());
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   // Step 4 state
   const [applyingLoading, setApplyingLoading] = useState(false);
@@ -1026,12 +1027,15 @@ const OtimizarCampanha = () => {
                                 if (filteredTerms.length === 0) return null;
                                 return (
                                   <div key={adGroup.adGroupId}>
-                                    {/* Ad Group label */}
-                                    <div className="flex items-center gap-2 px-8 py-2 bg-muted/20 border-b border-border/30">
-                                      <div className="w-1 h-4 rounded-full bg-muted-foreground/30" />
+                                    {/* Ad Group label — clickable to collapse */}
+                                    <div
+                                      className="flex items-center gap-2 px-8 py-2 bg-muted/20 border-b border-border/30 cursor-pointer select-none"
+                                      onClick={() => setCollapsedGroups((prev) => { const next = new Set(prev); next.has(adGroup.adGroupId) ? next.delete(adGroup.adGroupId) : next.add(adGroup.adGroupId); return next; })}
+                                    >
+                                      <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${collapsedGroups.has(adGroup.adGroupId) ? "-rotate-90" : ""}`} />
                                       <p className="text-sm text-muted-foreground font-medium">{adGroup.adGroupName}</p>
                                       <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{filteredTerms.length}</Badge>
-                                      <div className="ml-auto flex items-center gap-1.5">
+                                      <div className="ml-auto flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                                         <button
                                           onClick={() => selectAllForGroup(adGroup.adGroupId)}
                                           className="px-2 py-0.5 rounded text-[11px] font-medium text-primary hover:bg-primary/10 transition-colors"
@@ -1048,7 +1052,8 @@ const OtimizarCampanha = () => {
                                       </div>
                                     </div>
 
-                                    {/* Simplified table */}
+                                    {/* Collapsible table */}
+                                    {!collapsedGroups.has(adGroup.adGroupId) && (
                                     <div className="overflow-x-auto">
                                       <Table>
                                         <TableHeader>
@@ -1102,6 +1107,7 @@ const OtimizarCampanha = () => {
                                         </TableBody>
                                       </Table>
                                     </div>
+                                    )}
                                   </div>
                                 );
                               })}
