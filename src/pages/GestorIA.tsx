@@ -269,7 +269,7 @@ const GestorIA = () => {
   const fetchClickupListas = async () => {
     setClickupListasLoading(true);
     try {
-      const res = await fetch("https://appn8o2.gigainteligencia.com.br/webhook/gestor-clickup-listas");
+      const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/gestor-clickup-listas");
       const data = await res.json();
       const listas = Array.isArray(data?.listas) ? data.listas : Array.isArray(data) ? data : [];
       setClickupListas(listas);
@@ -298,7 +298,7 @@ const GestorIA = () => {
       setClickupListId("");
     };
     try {
-      await fetch("https://appn8o2.gigainteligencia.com.br/webhook/gestor-clickup", {
+      await fetch("https://principaln8o.gigainteligencia.com.br/webhook/gestor-clickup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
