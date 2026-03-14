@@ -254,7 +254,8 @@ const GestorIA = () => {
   const [expandedAlertas, setExpandedAlertas] = useState<Set<number>>(new Set());
 
   // ClickUp modal state
-  const [clickupModal, setClickupModal] = useState<{ open: boolean; rec: Recomendacao | null }>({ open: false, rec: null });
+  const [clickupModal, setClickupModal] = useState<{ open: boolean; rec: Recomendacao | null; recIndex: number | null }>({ open: false, rec: null, recIndex: null });
+  const [clickupCreatedTasks, setClickupCreatedTasks] = useState<Set<number>>(new Set());
   const [clickupObs, setClickupObs] = useState("");
   const [clickupAssignee, setClickupAssignee] = useState("");
   const [clickupDueDate, setClickupDueDate] = useState<Date | undefined>(undefined);
@@ -290,7 +291,7 @@ const GestorIA = () => {
       : selectedIds.map((id) => savedNamesMap[id] ?? id).join(", ");
     const rec = clickupModal.rec;
     const resetModal = () => {
-      setClickupModal({ open: false, rec: null });
+      setClickupModal({ open: false, rec: null, recIndex: null });
       setClickupObs("");
       setClickupAssignee("");
       setClickupDueDate(undefined);
@@ -319,6 +320,9 @@ const GestorIA = () => {
         }),
       });
       setClickupSuccess(true);
+      if (clickupModal.recIndex !== null) {
+        setClickupCreatedTasks(prev => new Set(prev).add(clickupModal.recIndex!));
+      }
       resetModal();
       setTimeout(() => setClickupSuccess(false), 3000);
     } catch {
@@ -1424,11 +1428,25 @@ const GestorIA = () => {
               {/* ClickUp button */}
               <div className="pt-2 flex justify-end">
                 <button
-                  onClick={() => { setClickupModal({ open: true, rec }); setClickupObs(""); setClickupListId(""); fetchClickupListas(); }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 hover:border-violet-500/50 text-xs font-medium transition-all"
+                  onClick={() => { if (!clickupCreatedTasks.has(i)) { setClickupModal({ open: true, rec, recIndex: i }); setClickupObs(""); setClickupListId(""); fetchClickupListas(); } }}
+                  disabled={clickupCreatedTasks.has(i)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                    clickupCreatedTasks.has(i)
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 cursor-default"
+                      : "border-violet-500/30 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 hover:border-violet-500/50"
+                  }`}
                 >
-                  <ListTodo className="w-3.5 h-3.5" />
-                  Criar tarefa no ClickUp
+                  {clickupCreatedTasks.has(i) ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Tarefa criada
+                    </>
+                  ) : (
+                    <>
+                      <ListTodo className="w-3.5 h-3.5" />
+                      + ClickUp
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -2115,7 +2133,7 @@ const GestorIA = () => {
       </AnimatePresence>
 
       {/* ClickUp Modal */}
-      <Dialog open={clickupModal.open} onOpenChange={(open) => { if (!open) { setClickupModal({ open: false, rec: null }); setClickupCalendarOpen(false); } }}>
+      <Dialog open={clickupModal.open} onOpenChange={(open) => { if (!open) { setClickupModal({ open: false, rec: null, recIndex: null }); setClickupCalendarOpen(false); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -2224,7 +2242,7 @@ const GestorIA = () => {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setClickupModal({ open: false, rec: null })} disabled={clickupLoading}>
+            <Button variant="outline" onClick={() => setClickupModal({ open: false, rec: null, recIndex: null })} disabled={clickupLoading}>
               Cancelar
             </Button>
             <Button
