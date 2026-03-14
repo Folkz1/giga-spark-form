@@ -320,6 +320,9 @@ const GestorIA = () => {
         }),
       });
       setClickupSuccess(true);
+      if (clickupModal.recIndex !== null) {
+        setClickupCreatedTasks(prev => new Set(prev).add(clickupModal.recIndex!));
+      }
       resetModal();
       setTimeout(() => setClickupSuccess(false), 3000);
     } catch {
