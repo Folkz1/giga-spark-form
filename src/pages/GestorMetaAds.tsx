@@ -1457,6 +1457,11 @@ const GestorMetaAds = () => {
       <ClickUpTaskModal
         isOpen={!!clickupModal}
         onClose={() => setClickupModal(null)}
+        onSuccess={() => {
+          if (clickupModal) {
+            setClickupCreatedTasks(prev => new Set(prev).add(clickupModal.index));
+          }
+        }}
         taskTitle={clickupModal?.tarefa.nome || ""}
         taskDescription={clickupModal ? (() => {
           const t = clickupModal.tarefa;
