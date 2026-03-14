@@ -229,6 +229,7 @@ export function ClickUpTaskModal({
 
       if (!res.ok) throw new Error("Erro ao criar tarefa");
       setSucesso(true);
+      onSuccess?.();
       setTimeout(() => {
         onClose();
         setSucesso(false);
