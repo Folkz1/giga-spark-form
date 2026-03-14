@@ -2242,7 +2242,7 @@ const GestorIA = () => {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={() => setClickupModal({ open: false, rec: null })} disabled={clickupLoading}>
+            <Button variant="outline" onClick={() => setClickupModal({ open: false, rec: null, recIndex: null })} disabled={clickupLoading}>
               Cancelar
             </Button>
             <Button
