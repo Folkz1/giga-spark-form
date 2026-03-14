@@ -14,6 +14,7 @@ interface ClickUpTaskModalProps {
   onClose: () => void;
   taskTitle: string;        // Título já preenchido vindo da análise IA
   taskDescription?: string; // Descrição opcional vinda da análise
+  onSuccess?: () => void;   // Callback quando tarefa é criada com sucesso
 }
 
 interface ClickUpList {
