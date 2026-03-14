@@ -254,7 +254,8 @@ const GestorIA = () => {
   const [expandedAlertas, setExpandedAlertas] = useState<Set<number>>(new Set());
 
   // ClickUp modal state
-  const [clickupModal, setClickupModal] = useState<{ open: boolean; rec: Recomendacao | null }>({ open: false, rec: null });
+  const [clickupModal, setClickupModal] = useState<{ open: boolean; rec: Recomendacao | null; recIndex: number | null }>({ open: false, rec: null, recIndex: null });
+  const [clickupCreatedTasks, setClickupCreatedTasks] = useState<Set<number>>(new Set());
   const [clickupObs, setClickupObs] = useState("");
   const [clickupAssignee, setClickupAssignee] = useState("");
   const [clickupDueDate, setClickupDueDate] = useState<Date | undefined>(undefined);
