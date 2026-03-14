@@ -291,7 +291,7 @@ const GestorIA = () => {
       : selectedIds.map((id) => savedNamesMap[id] ?? id).join(", ");
     const rec = clickupModal.rec;
     const resetModal = () => {
-      setClickupModal({ open: false, rec: null });
+      setClickupModal({ open: false, rec: null, recIndex: null });
       setClickupObs("");
       setClickupAssignee("");
       setClickupDueDate(undefined);
