@@ -1428,11 +1428,25 @@ const GestorIA = () => {
               {/* ClickUp button */}
               <div className="pt-2 flex justify-end">
                 <button
-                  onClick={() => { setClickupModal({ open: true, rec }); setClickupObs(""); setClickupListId(""); fetchClickupListas(); }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-violet-500/30 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 hover:border-violet-500/50 text-xs font-medium transition-all"
+                  onClick={() => { if (!clickupCreatedTasks.has(i)) { setClickupModal({ open: true, rec, recIndex: i }); setClickupObs(""); setClickupListId(""); fetchClickupListas(); } }}
+                  disabled={clickupCreatedTasks.has(i)}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                    clickupCreatedTasks.has(i)
+                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400 cursor-default"
+                      : "border-violet-500/30 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 hover:border-violet-500/50"
+                  }`}
                 >
-                  <ListTodo className="w-3.5 h-3.5" />
-                  Criar tarefa no ClickUp
+                  {clickupCreatedTasks.has(i) ? (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Tarefa criada
+                    </>
+                  ) : (
+                    <>
+                      <ListTodo className="w-3.5 h-3.5" />
+                      + ClickUp
+                    </>
+                  )}
                 </button>
               </div>
             </div>
