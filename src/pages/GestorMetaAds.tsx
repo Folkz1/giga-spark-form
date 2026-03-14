@@ -269,6 +269,7 @@ const GestorMetaAds = () => {
   const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
   const [clickupModal, setClickupModal] = useState<{ tarefa: MetaTarefa; index: number } | null>(null);
+  const [clickupCreatedTasks, setClickupCreatedTasks] = useState<Set<number>>(new Set());
   const [historicoOpen, setHistoricoOpen] = useState(false);
   const [historicoBanner, setHistoricoBanner] = useState<string | null>(null);
 
