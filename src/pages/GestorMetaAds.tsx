@@ -269,6 +269,7 @@ const GestorMetaAds = () => {
   const [expandedTasks, setExpandedTasks] = useState<Set<number>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<Set<number>>(new Set());
   const [clickupModal, setClickupModal] = useState<{ tarefa: MetaTarefa; index: number } | null>(null);
+  const [clickupCreatedTasks, setClickupCreatedTasks] = useState<Set<number>>(new Set());
   const [historicoOpen, setHistoricoOpen] = useState(false);
   const [historicoBanner, setHistoricoBanner] = useState<string | null>(null);
 
@@ -1381,13 +1382,20 @@ const GestorMetaAds = () => {
                                   </div>
                                 )}
 
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 items-center">
                                   <Button variant="ghost" size="sm" onClick={() => toggleTask(i)} className="text-xs h-7 px-2">
                                     {expanded ? "Ocultar detalhes" : "Ver detalhes"}
                                   </Button>
-                                  <Button variant="outline" size="sm" onClick={() => openClickup(tarefa, i)} className="text-xs h-7 px-2">
-                                    + ClickUp
-                                  </Button>
+                                  {clickupCreatedTasks.has(i) ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs font-medium">
+                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                      Tarefa criada
+                                    </span>
+                                  ) : (
+                                    <Button variant="outline" size="sm" onClick={() => openClickup(tarefa, i)} className="text-xs h-7 px-2">
+                                      + ClickUp
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             </div>
@@ -1449,6 +1457,11 @@ const GestorMetaAds = () => {
       <ClickUpTaskModal
         isOpen={!!clickupModal}
         onClose={() => setClickupModal(null)}
+        onSuccess={() => {
+          if (clickupModal) {
+            setClickupCreatedTasks(prev => new Set(prev).add(clickupModal.index));
+          }
+        }}
         taskTitle={clickupModal?.tarefa.nome || ""}
         taskDescription={clickupModal ? (() => {
           const t = clickupModal.tarefa;

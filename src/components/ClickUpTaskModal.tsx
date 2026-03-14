@@ -14,6 +14,7 @@ interface ClickUpTaskModalProps {
   onClose: () => void;
   taskTitle: string;        // Título já preenchido vindo da análise IA
   taskDescription?: string; // Descrição opcional vinda da análise
+  onSuccess?: () => void;   // Callback quando tarefa é criada com sucesso
 }
 
 interface ClickUpList {
@@ -168,6 +169,7 @@ export function ClickUpTaskModal({
   onClose,
   taskTitle,
   taskDescription = "",
+  onSuccess,
 }: ClickUpTaskModalProps) {
   const [listas, setListas] = useState<ClickUpList[]>([]);
   const [membros, setMembros] = useState<ClickUpMember[]>([]);
@@ -227,6 +229,7 @@ export function ClickUpTaskModal({
 
       if (!res.ok) throw new Error("Erro ao criar tarefa");
       setSucesso(true);
+      onSuccess?.();
       setTimeout(() => {
         onClose();
         setSucesso(false);
