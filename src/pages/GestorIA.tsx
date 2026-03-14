@@ -2133,7 +2133,7 @@ const GestorIA = () => {
       </AnimatePresence>
 
       {/* ClickUp Modal */}
-      <Dialog open={clickupModal.open} onOpenChange={(open) => { if (!open) { setClickupModal({ open: false, rec: null }); setClickupCalendarOpen(false); } }}>
+      <Dialog open={clickupModal.open} onOpenChange={(open) => { if (!open) { setClickupModal({ open: false, rec: null, recIndex: null }); setClickupCalendarOpen(false); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
