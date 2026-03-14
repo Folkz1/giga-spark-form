@@ -1382,13 +1382,20 @@ const GestorMetaAds = () => {
                                   </div>
                                 )}
 
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 items-center">
                                   <Button variant="ghost" size="sm" onClick={() => toggleTask(i)} className="text-xs h-7 px-2">
                                     {expanded ? "Ocultar detalhes" : "Ver detalhes"}
                                   </Button>
-                                  <Button variant="outline" size="sm" onClick={() => openClickup(tarefa, i)} className="text-xs h-7 px-2">
-                                    + ClickUp
-                                  </Button>
+                                  {clickupCreatedTasks.has(i) ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-xs font-medium">
+                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                      Tarefa criada
+                                    </span>
+                                  ) : (
+                                    <Button variant="outline" size="sm" onClick={() => openClickup(tarefa, i)} className="text-xs h-7 px-2">
+                                      + ClickUp
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             </div>
