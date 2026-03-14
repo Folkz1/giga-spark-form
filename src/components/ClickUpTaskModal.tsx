@@ -169,6 +169,7 @@ export function ClickUpTaskModal({
   onClose,
   taskTitle,
   taskDescription = "",
+  onSuccess,
 }: ClickUpTaskModalProps) {
   const [listas, setListas] = useState<ClickUpList[]>([]);
   const [membros, setMembros] = useState<ClickUpMember[]>([]);
