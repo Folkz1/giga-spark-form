@@ -236,8 +236,8 @@ const ClientesMeta = () => {
                         </td>
                       </tr>
                     ))}
-                    {clientes.length === 0 && (
-                      <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Nenhum cliente cadastrado</td></tr>
+                    {filtered.length === 0 && (
+                      <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">{busca ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}</td></tr>
                     )}
                   </tbody>
                 </table>
