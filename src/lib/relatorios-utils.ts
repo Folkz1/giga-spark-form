@@ -306,7 +306,8 @@ export function formatPercent(value: number | string | null | undefined): string
   return `${num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 }
 
-export function formatDate(dateStr: string): string {
+export function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return "";
   // Handle "16/03/2026" format
   if (dateStr.includes("/")) {
     const parts = dateStr.split("/");
