@@ -234,6 +234,7 @@ const GestorIA = () => {
   const [resumoExpanded, setResumoExpanded] = useState(false);
   const [showFullAnalysis, setShowFullAnalysis] = useState(false);
   const [showAuditoria, setShowAuditoria] = useState(false);
+  const [pollingMsg, setPollingMsg] = useState("");
 
   const [selectedTermos, setSelectedTermos] = useState<Record<number, Set<string>>>({});
   const [negativados, setNegativados] = useState<Record<number, Set<string>>>(() => {
