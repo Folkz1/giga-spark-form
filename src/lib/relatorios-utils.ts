@@ -286,28 +286,28 @@ export function isRevisado(batchId: string, customerId: string, plataforma: stri
 
 // ─── Formatters ───
 export function formatCurrency(value: number | string | null | undefined): string {
-  if (value === null || value === undefined) return "R$ 0,00";
+  if (value === null || value === undefined || value === "") return "R$ 0,00";
   const num = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(num)) return "R$ 0,00";
+  if (Number.isNaN(num)) return "R$ 0,00";
   return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 export function formatNumber(value: number | string | null | undefined): string {
-  if (value === null || value === undefined) return "0";
+  if (value === null || value === undefined || value === "") return "0";
   const num = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(num)) return "0";
+  if (Number.isNaN(num)) return "0";
   return num.toLocaleString("pt-BR");
 }
 
 export function formatPercent(value: number | string | null | undefined): string {
-  if (value === null || value === undefined) return "0%";
+  if (value === null || value === undefined || value === "") return "0%";
   const num = typeof value === "string" ? parseFloat(value) : value;
-  if (isNaN(num)) return "0%";
+  if (Number.isNaN(num)) return "0%";
   return `${num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
 }
 
 export function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return "";
+  if (dateStr === null || dateStr === undefined || dateStr === "") return "—";
   // Handle "16/03/2026" format
   if (dateStr.includes("/")) {
     const parts = dateStr.split("/");
@@ -317,7 +317,7 @@ export function formatDate(dateStr: string | null | undefined): string {
   }
   // Handle ISO format
   const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return dateStr;
+  if (Number.isNaN(d.getTime())) return dateStr;
   const dias = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
   const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
   return `${dias[d.getDay()]}, ${d.getDate()} ${meses[d.getMonth()]} ${d.getFullYear()}`;
