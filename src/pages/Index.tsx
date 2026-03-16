@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Rocket, TrendingUp, Brain, BarChart2, MessageSquareText } from "lucide-react";
+import { Rocket, TrendingUp, Brain, BarChart2, MessageSquareText, FileBarChart } from "lucide-react";
+import { useState, useEffect } from "react";
+import { fetchBatches, getRevisados, type Batch } from "@/lib/relatorios-utils";
 
 const channels = [
   {
@@ -48,6 +50,23 @@ const channels = [
     ],
   },
   {
+    channel: "Relatórios",
+    color: "#8b5cf6",
+    borderColor: "border-[#8b5cf6]/30",
+    bgAccent: "bg-[#8b5cf6]",
+    glowClass: "hover:shadow-[0_0_30px_rgba(139,92,246,0.15)]",
+    labelBg: "bg-[#8b5cf6]/10 text-[#8b5cf6]",
+    cards: [
+      {
+        title: "Relatórios Semanais",
+        description: "Análises automáticas de todos os clientes",
+        icon: FileBarChart,
+        path: "/relatorios",
+        hasBadge: true,
+      },
+    ],
+  },
+  {
     channel: "CRM",
     color: "#10b981",
     borderColor: "border-emerald-500/30",
@@ -67,6 +86,19 @@ const channels = [
 
 const Index = () => {
   const navigate = useNavigate();
+  const [pendentes, setPendentes] = useState(0);
+
+  useEffect(() => {
+    fetchBatches().then(batches => {
+      if (!Array.isArray(batches)) return;
+      let total = 0;
+      batches.forEach(b => {
+        const rev = getRevisados(b.batchId).length;
+        total += Math.max(0, b.totalClientes - b.concluidos - rev - b.erros);
+      });
+      setPendentes(total);
+    }).catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center px-4 pt-16 pb-12">
@@ -130,6 +162,11 @@ const Index = () => {
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {card.description}
                   </p>
+                  {"hasBadge" in card && (card as any).hasBadge && pendentes > 0 && (
+                    <span className="absolute top-4 right-4 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 text-xs font-bold border border-amber-500/25">
+                      {pendentes} pendentes
+                    </span>
+                  )}
                 </motion.button>
               ))}
             </div>
