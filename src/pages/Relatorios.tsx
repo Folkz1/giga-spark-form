@@ -1,28 +1,24 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { FileBarChart, CheckCircle2, Clock, AlertTriangle, ChevronRight, RefreshCw, Inbox } from "lucide-react";
+import { FileBarChart, AlertTriangle, ChevronRight, RefreshCw, Inbox, DollarSign, Users, Activity } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
-import { fetchBatches, getRevisados, formatDate, type Batch } from "@/lib/relatorios-utils";
-
-type StatusFilter = "todos" | "pendentes" | "revisados" | "erros";
+import { fetchBatches, formatCurrency, formatNumber, formatDate, type Batch } from "@/lib/relatorios-utils";
 
 const Relatorios = () => {
   const navigate = useNavigate();
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [filter, setFilter] = useState<StatusFilter>("todos");
 
   const load = async () => {
     setLoading(true);
     setError("");
     try {
       const data = await fetchBatches();
-      setBatches(Array.isArray(data) ? data.sort((a, b) => new Date(b.dataGeracao).getTime() - new Date(a.dataGeracao).getTime()) : []);
+      setBatches(Array.isArray(data) ? data : []);
     } catch (e: any) {
       setError(e.message || "Erro ao carregar relatórios");
     } finally {
@@ -32,24 +28,19 @@ const Relatorios = () => {
 
   useEffect(() => { load(); }, []);
 
-  const filtered = useMemo(() => {
-    if (filter === "todos") return batches;
-    return batches.filter(b => {
-      const revisados = getRevisados(b.batchId);
-      const revisadosCount = revisados.length;
-      if (filter === "revisados") return revisadosCount >= b.totalClientes && b.erros === 0;
-      if (filter === "pendentes") return revisadosCount < b.totalClientes;
-      if (filter === "erros") return b.erros > 0;
-      return true;
-    });
-  }, [batches, filter]);
-
-  const filters: { label: string; value: StatusFilter }[] = [
-    { label: "Todos", value: "todos" },
-    { label: "Pendentes de Revisão", value: "pendentes" },
-    { label: "Revisados", value: "revisados" },
-    { label: "Com Erros", value: "erros" },
-  ];
+  const scoreBadge = (label: string, count: number, color: string) => {
+    if (count === 0) return null;
+    const colors: Record<string, string> = {
+      red: "bg-red-500/15 text-red-400 border-red-500/25",
+      yellow: "bg-amber-500/15 text-amber-400 border-amber-500/25",
+      green: "bg-emerald-500/15 text-emerald-400 border-emerald-500/25",
+    };
+    return (
+      <Badge className={`text-xs px-2.5 py-1 ${colors[color]} font-semibold`}>
+        {count} {label}
+      </Badge>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background px-4 pt-8 pb-12">
@@ -62,23 +53,6 @@ const Relatorios = () => {
             <h1 className="text-2xl font-bold text-foreground">Relatórios Semanais</h1>
             <p className="text-sm text-muted-foreground">Análises automáticas geradas toda segunda-feira</p>
           </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-wrap gap-2 mb-6">
-          {filters.map(f => (
-            <button
-              key={f.value}
-              onClick={() => setFilter(f.value)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                filter === f.value
-                  ? "bg-primary/20 text-primary border border-primary/30"
-                  : "bg-secondary/50 text-muted-foreground hover:bg-secondary border border-transparent"
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
         </div>
 
         {/* Loading */}
@@ -115,61 +89,56 @@ const Relatorios = () => {
         {!loading && !error && (
           <AnimatePresence mode="popLayout">
             <div className="space-y-4">
-              {filtered.map((batch, idx) => {
-                const revisadosLocal = getRevisados(batch.batchId).length;
-                const totalRevisados = batch.concluidos + revisadosLocal;
-                const capped = Math.min(totalRevisados, batch.totalClientes);
-                const pct = batch.totalClientes > 0 ? (capped / batch.totalClientes) * 100 : 0;
-
-                return (
-                  <motion.div
-                    key={batch.batchId}
-                    initial={{ opacity: 0, y: 16 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ delay: idx * 0.05, duration: 0.3 }}
-                    className="glass-card rounded-2xl p-6 hover:shadow-lg transition-shadow cursor-pointer group"
-                    onClick={() => navigate(`/relatorios/${batch.batchId}`)}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-foreground font-semibold text-base mb-1">{formatDate(batch.dataGeracao)}</p>
-                        <p className="text-muted-foreground text-sm">{batch.totalClientes} clientes processados</p>
-
-                        <div className="flex flex-wrap gap-3 mt-3">
-                          <span className="inline-flex items-center gap-1.5 text-xs font-medium">
-                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                            <span className="text-emerald-400">{capped} revisados</span>
-                          </span>
-                          {(batch.totalClientes - capped - batch.erros) > 0 && (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-medium">
-                              <Clock className="w-3.5 h-3.5 text-amber-400" />
-                              <span className="text-amber-400">{batch.totalClientes - capped - batch.erros} pendentes</span>
-                            </span>
-                          )}
-                          {batch.erros > 0 && (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-medium">
-                              <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
-                              <span className="text-red-400">{batch.erros} erros</span>
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="mt-3">
-                          <Progress value={pct} className="h-2 bg-secondary" />
-                        </div>
+              {batches.map((batch, idx) => (
+                <motion.div
+                  key={batch.batchId}
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ delay: idx * 0.05, duration: 0.3 }}
+                  className="glass-card rounded-2xl p-6 hover:shadow-lg transition-shadow cursor-pointer group"
+                  onClick={() => navigate(`/relatorios/${batch.batchId}`)}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-2">
+                        <p className="text-foreground font-semibold text-base">{formatDate(batch.dataExecucao)}</p>
+                        <Badge className="text-[10px] px-2 py-0.5 bg-blue-500/15 text-blue-400 border-blue-500/25">
+                          {batch.plataforma === "meta_ads" ? "Meta Ads" : batch.plataforma === "google_ads" ? "Google Ads" : batch.plataforma}
+                        </Badge>
                       </div>
 
-                      <div className="flex items-center gap-3 shrink-0">
-                        <Badge className="text-sm px-3 py-1 bg-primary/15 text-primary border-primary/25 font-semibold">
-                          {capped} de {batch.totalClientes}
-                        </Badge>
-                        <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5" />
+                          {batch.totalClientes} clientes
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <DollarSign className="w-3.5 h-3.5" />
+                          {formatCurrency(batch.investimentoTotal)}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5">
+                          <Activity className="w-3.5 h-3.5" />
+                          {formatNumber(batch.totalLeads)} leads
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {scoreBadge("saudáveis", batch.saudaveis, "green")}
+                        {scoreBadge("atenção", batch.atencao, "yellow")}
+                        {scoreBadge("críticos", batch.criticos, "red")}
                       </div>
                     </div>
-                  </motion.div>
-                );
-              })}
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <Badge className="text-sm px-3 py-1 bg-primary/15 text-primary border-primary/25 font-semibold">
+                        {batch.totalClientes} clientes
+                      </Badge>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
             </div>
           </AnimatePresence>
         )}

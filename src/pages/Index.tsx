@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Rocket, TrendingUp, Brain, BarChart2, MessageSquareText, FileBarChart } from "lucide-react";
 import { useState, useEffect } from "react";
-import { fetchBatches, getRevisados, type Batch } from "@/lib/relatorios-utils";
+import { fetchBatches, type Batch } from "@/lib/relatorios-utils";
 
 const channels = [
   {
@@ -13,24 +13,9 @@ const channels = [
     glowClass: "hover:shadow-[0_0_30px_rgba(52,168,83,0.15)]",
     labelBg: "bg-[#34a853]/10 text-[#34a853]",
     cards: [
-      {
-        title: "Criar Campanha",
-        description: "Crie campanhas Google Ads com IA em minutos",
-        icon: Rocket,
-        path: "/criar-campanha",
-      },
-      {
-        title: "Otimizar Campanha",
-        description: "Otimizações inteligentes nas suas campanhas ativas",
-        icon: TrendingUp,
-        path: "/otimizar-campanha",
-      },
-      {
-        title: "Gestor Google Ads",
-        description: "Alertas, oportunidades e recomendações com IA",
-        icon: Brain,
-        path: "/gestor-ia",
-      },
+      { title: "Criar Campanha", description: "Crie campanhas Google Ads com IA em minutos", icon: Rocket, path: "/criar-campanha" },
+      { title: "Otimizar Campanha", description: "Otimizações inteligentes nas suas campanhas ativas", icon: TrendingUp, path: "/otimizar-campanha" },
+      { title: "Gestor Google Ads", description: "Alertas, oportunidades e recomendações com IA", icon: Brain, path: "/gestor-ia" },
     ],
   },
   {
@@ -41,12 +26,7 @@ const channels = [
     glowClass: "hover:shadow-[0_0_30px_rgba(24,119,242,0.15)]",
     labelBg: "bg-[#1877F2]/10 text-[#1877F2]",
     cards: [
-      {
-        title: "Gestor Meta Ads",
-        description: "Análise e otimização das suas campanhas no Facebook e Instagram",
-        icon: BarChart2,
-        path: "/gestor-meta",
-      },
+      { title: "Gestor Meta Ads", description: "Análise e otimização das suas campanhas no Facebook e Instagram", icon: BarChart2, path: "/gestor-meta" },
     ],
   },
   {
@@ -57,13 +37,7 @@ const channels = [
     glowClass: "hover:shadow-[0_0_30px_rgba(139,92,246,0.15)]",
     labelBg: "bg-[#8b5cf6]/10 text-[#8b5cf6]",
     cards: [
-      {
-        title: "Relatórios Semanais",
-        description: "Análises automáticas de todos os clientes",
-        icon: FileBarChart,
-        path: "/relatorios",
-        hasBadge: true,
-      },
+      { title: "Relatórios Semanais", description: "Análises automáticas de todos os clientes", icon: FileBarChart, path: "/relatorios", hasBadge: true },
     ],
   },
   {
@@ -74,12 +48,7 @@ const channels = [
     glowClass: "hover:shadow-[0_0_30px_rgba(16,185,129,0.15)]",
     labelBg: "bg-emerald-500/10 text-emerald-400",
     cards: [
-      {
-        title: "Gestor CRM IA",
-        description: "Consultoria de vendas e análise de dados em tempo real",
-        icon: MessageSquareText,
-        path: "/gestor-crm",
-      },
+      { title: "Gestor CRM IA", description: "Consultoria de vendas e análise de dados em tempo real", icon: MessageSquareText, path: "/gestor-crm" },
     ],
   },
 ];
@@ -91,10 +60,10 @@ const Index = () => {
   useEffect(() => {
     fetchBatches().then(batches => {
       if (!Array.isArray(batches)) return;
+      // Count criticos + atencao as "pendentes" needing review
       let total = 0;
       batches.forEach(b => {
-        const rev = getRevisados(b.batchId).length;
-        total += Math.max(0, b.totalClientes - b.concluidos - rev - b.erros);
+        total += b.criticos + b.atencao;
       });
       setPendentes(total);
     }).catch(() => {});
@@ -121,23 +90,17 @@ const Index = () => {
             transition={{ delay: ci * 0.12, duration: 0.4 }}
           >
             <div className="flex items-center gap-3 mb-4">
-              <span
-                className={`text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full ${ch.labelBg}`}
-              >
+              <span className={`text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full ${ch.labelBg}`}>
                 {ch.channel}
               </span>
               <div className="flex-1 h-px bg-border/50" />
             </div>
 
-            <div
-              className={`grid gap-5 ${
-                ch.cards.length === 1
-                  ? "grid-cols-1 max-w-md"
-                  : ch.cards.length === 2
-                  ? "grid-cols-1 sm:grid-cols-2"
-                  : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-              }`}
-            >
+            <div className={`grid gap-5 ${
+              ch.cards.length === 1 ? "grid-cols-1 max-w-md"
+                : ch.cards.length === 2 ? "grid-cols-1 sm:grid-cols-2"
+                : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+            }`}>
               {ch.cards.map((card, i) => (
                 <motion.button
                   key={card.title}
@@ -149,19 +112,12 @@ const Index = () => {
                 >
                   <div
                     className={`w-12 h-12 rounded-xl flex items-center justify-center mb-4 ${ch.bgAccent} shadow-lg`}
-                    style={{
-                      boxShadow: `0 0 20px ${ch.color}30`,
-                    }}
+                    style={{ boxShadow: `0 0 20px ${ch.color}30` }}
                   >
                     <card.icon className="w-6 h-6 text-white" />
                   </div>
-
-                  <h2 className="text-lg font-bold text-foreground mb-1.5">
-                    {card.title}
-                  </h2>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {card.description}
-                  </p>
+                  <h2 className="text-lg font-bold text-foreground mb-1.5">{card.title}</h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{card.description}</p>
                   {"hasBadge" in card && (card as any).hasBadge && pendentes > 0 && (
                     <span className="absolute top-4 right-4 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 text-xs font-bold border border-amber-500/25">
                       {pendentes} pendentes
