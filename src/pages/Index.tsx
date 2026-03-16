@@ -50,6 +50,23 @@ const channels = [
     ],
   },
   {
+    channel: "Relatórios",
+    color: "#8b5cf6",
+    borderColor: "border-[#8b5cf6]/30",
+    bgAccent: "bg-[#8b5cf6]",
+    glowClass: "hover:shadow-[0_0_30px_rgba(139,92,246,0.15)]",
+    labelBg: "bg-[#8b5cf6]/10 text-[#8b5cf6]",
+    cards: [
+      {
+        title: "Relatórios Semanais",
+        description: "Análises automáticas de todos os clientes",
+        icon: FileBarChart,
+        path: "/relatorios",
+        hasBadge: true,
+      },
+    ],
+  },
+  {
     channel: "CRM",
     color: "#10b981",
     borderColor: "border-emerald-500/30",
