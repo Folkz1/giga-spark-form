@@ -822,7 +822,7 @@ const RelatoriosBatch = () => {
                       )}
 
                       {/* Section 13 — Campanhas */}
-                      {ac.campanhas?.length > 0 && (
+                      {!isHistorico && ac.campanhas?.length > 0 && (
                         <AccordionItem value="campanhas" className="rounded-xl overflow-hidden border-none glass-card">
                           <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
                             <span>📣 Campanhas ({ac.campanhas.length})</span>
