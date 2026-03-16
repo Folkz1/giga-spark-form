@@ -69,6 +69,19 @@ const channels = [
 
 const Index = () => {
   const navigate = useNavigate();
+  const [pendentes, setPendentes] = useState(0);
+
+  useEffect(() => {
+    fetchBatches().then(batches => {
+      if (!Array.isArray(batches)) return;
+      let total = 0;
+      batches.forEach(b => {
+        const rev = getRevisados(b.batchId).length;
+        total += Math.max(0, b.totalClientes - b.concluidos - rev - b.erros);
+      });
+      setPendentes(total);
+    }).catch(() => {});
+  }, []);
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center px-4 pt-16 pb-12">
