@@ -312,7 +312,7 @@ const RelatoriosBatch = () => {
 
                 return (
                   <motion.div
-                    key={c.customerId}
+                    key={`${c.customerId}_${c.meta_ads ? 'meta' : 'google'}_${idx}`}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
