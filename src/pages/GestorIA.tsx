@@ -444,8 +444,82 @@ const GestorIA = () => {
     );
   };
 
+  /** Parse the final analysis data object into state */
+  const applyAnalysisData = (data: any, accountNames: Record<string, string>) => {
+    console.log("[GESTOR-IA] Final data to use:", JSON.stringify(data, null, 2));
+
+    const rawResumo = typeof data.resumo === "object" && data.resumo !== null ? data.resumo : {};
+    const pick = (...keys: string[]): any => {
+      for (const k of keys) {
+        const v = data[k] ?? rawResumo[k];
+        if (v !== undefined && v !== null && v !== "") return v;
+      }
+      return undefined;
+    };
+    const custo7Raw = pick("custo7dias", "custo_7dias", "investido_7d", "investido7d", "custo_7d", "spend_7d", "cost_7d", "gasto_7d") ?? data.campanhas?.[0]?.['7dias']?.custo ?? "0";
+    const custo30Raw = pick("custo30dias", "custo_30dias", "investido_30d", "investido30d", "custo_30d", "spend_30d", "cost_30d", "gasto_30d") ?? data.campanhas?.[0]?.['30dias']?.custo ?? "0";
+    const conv7Raw = pick("conversoes7dias", "conversoes_7dias", "conversoes_7d", "conversions_7d", "conv_7d", "conversoes7d") ?? data.campanhas?.[0]?.['7dias']?.conversoes ?? 0;
+    const conv30Raw = pick("conversoes30dias", "conversoes_30dias", "conversoes_30d", "conversions_30d", "conv_30d", "conversoes30d") ?? data.campanhas?.[0]?.['30dias']?.conversoes ?? 0;
+
+    const resumoData: Resumo = {
+      totalCampanhas: pick("totalCampanhas", "total_campanhas", "totalCampaigns") ?? rawResumo.totalCampanhas ?? 0,
+      custo7dias: String(custo7Raw),
+      custo30dias: String(custo30Raw),
+      conversoes7dias: Number(conv7Raw) || 0,
+      conversoes30dias: Number(conv30Raw) || 0,
+    };
+
+    const rawCards = data.resumo_cards;
+    const cardsObj: ResumoCards | null = typeof rawCards === "object" && rawCards !== null ? rawCards : null;
+    const rawExec = data.resumo_executivo;
+    const execTexto = typeof rawExec === "string"
+      ? rawExec
+      : typeof rawExec === "object" && rawExec !== null
+        ? [rawExec.visao_geral, rawExec.problema_principal, rawExec.destaques, rawExec.oportunidade_principal].filter(Boolean).join("\n\n")
+        : "";
+    const rawAuditoria = data._relatorio_auditoria;
+    const auditoriaObj: RelatorioAuditoria | null =
+      typeof rawAuditoria === "object" && rawAuditoria !== null && rawAuditoria.texto
+        ? rawAuditoria
+        : null;
+
+    setRelatorio({
+      resumo: resumoData,
+      alertas: Array.isArray(data.alertas_criticos) ? data.alertas_criticos : [],
+      oportunidades: Array.isArray(data.oportunidades) ? data.oportunidades : [],
+      recomendacoes: Array.isArray(data.recomendacoes) ? data.recomendacoes : [],
+      resumo_cards: cardsObj,
+      resumo_executivo: execTexto,
+      adGroups: Array.isArray(data.adGroups) ? data.adGroups : [],
+      relatorio_auditoria: auditoriaObj,
+    });
+    setStep(3);
+  };
+
+  /** Robustly parse raw response text into a data object */
+  const parseResponseData = (rawText: string): any => {
+    const parsed = JSON.parse(rawText);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      if (parsed.data && typeof parsed.data === "object") return parsed.data;
+      if (parsed.data && typeof parsed.data === "string") return JSON.parse(parsed.data);
+      return parsed;
+    }
+    if (typeof parsed === "string") return JSON.parse(parsed);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      const firstEl = parsed[0];
+      if (firstEl?.content && Array.isArray(firstEl.content) && firstEl.content[0]?.text) {
+        let innerText = firstEl.content[0].text;
+        innerText = innerText.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+        return JSON.parse(innerText);
+      }
+      return firstEl;
+    }
+    return parsed;
+  };
+
   const handleAnalyze = async () => {
     setStep(2);
+    setPollingMsg("");
     // Save context to Google Sheets before analyzing
     if (selectedIds.length === 1) {
       fetch("https://appn8o2.gigainteligencia.com.br/webhook/gestor-contexto-salvar", {
@@ -478,136 +552,73 @@ const GestorIA = () => {
       if (!res.ok) throw new Error("Erro na análise");
       const rawText = await res.text();
       console.log("[GESTOR-IA] Raw response (text):", rawText);
-      console.log("[GESTOR-IA] Response status:", res.status, "Content-Type:", res.headers.get("content-type"));
 
-      // Robust parser — try multiple formats in order
       let data: any = null;
       try {
-        // Tentativa 1 e 4: parse do rawText como JSON (pode ser objeto ou string JSON)
-        const parsed = JSON.parse(rawText);
-        console.log("[GESTOR-IA] Parsed (attempt 1):", typeof parsed, parsed);
-
-        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-          // Tentativa 2: parsed.data como objeto
-          if (parsed.data && typeof parsed.data === "object") {
-            console.log("[GESTOR-IA] Using parsed.data (object)");
-            data = parsed.data;
-          }
-          // Tentativa 3: parsed.data como string JSON
-          else if (parsed.data && typeof parsed.data === "string") {
-            console.log("[GESTOR-IA] Parsing parsed.data (string)");
-            data = JSON.parse(parsed.data);
-          }
-          // Tentativa 4: usa o próprio objeto parseado
-          else {
-            console.log("[GESTOR-IA] Using parsed directly");
-            data = parsed;
-          }
-        } else if (typeof parsed === "string") {
-          // Tentativa 5: resultado do parse ainda é string — parse duplo
-          console.log("[GESTOR-IA] Double-parsing string result");
-          data = JSON.parse(parsed);
-        } else if (Array.isArray(parsed) && parsed.length > 0) {
-          console.log("[GESTOR-IA] Response is array, using first element");
-          const firstEl = parsed[0];
-          // n8n MCP format: [{ content: [{ type: "text", text: "```json\n{...}\n```" }] }]
-          if (firstEl?.content && Array.isArray(firstEl.content) && firstEl.content[0]?.text) {
-            let innerText = firstEl.content[0].text;
-            // Strip markdown code fences if present
-            innerText = innerText.replace(/^```(?:json)?\s*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
-            console.log("[GESTOR-IA] Extracted inner text from content[0].text:", innerText.substring(0, 200));
-            data = JSON.parse(innerText);
-          } else {
-            data = firstEl;
-          }
-        } else {
-          data = parsed;
-        }
-        console.log('[CARDS-DEBUG] Tipo de data:', typeof data);
-        console.log('[CARDS-DEBUG] Chaves de data:', Object.keys(data));
-        console.log('[CARDS-DEBUG] resumo_cards raw:', JSON.stringify(data.resumo_cards));
-        console.log('[CARDS-DEBUG] typeof resumo_cards:', typeof data.resumo_cards);
+        data = parseResponseData(rawText);
       } catch (parseErr) {
         console.error("[GESTOR-IA] Failed to parse JSON. Raw text was:", JSON.stringify(rawText));
         throw new Error(`Resposta inválida do servidor. Raw: ${rawText.substring(0, 300)}`);
       }
- 
-      console.log("[GESTOR-IA] Final data to use:", JSON.stringify(data, null, 2));
 
-      // Ler métricas direto da raiz do objeto (API não retorna campo resumo)
-      console.log("[GESTOR-IA][RESUMO] Chaves raiz do data:", Object.keys(data));
-      console.log("[GESTOR-IA][RESUMO] custo7dias →", data.custo7dias);
-      console.log("[GESTOR-IA][RESUMO] custo30dias →", data.custo30dias);
-      console.log("[GESTOR-IA][RESUMO] conversoes7dias →", data.conversoes7dias);
-      console.log("[GESTOR-IA][RESUMO] conversoes30dias →", data.conversoes30dias);
+      // Check if response is async (polling needed)
+      if (data && data.status === "processing" && data.pollUrl) {
+        console.log("[GESTOR-IA] Received processing status, starting polling at:", data.pollUrl);
+        setPollingMsg("Análise em processamento...");
+        const pollUrl = data.pollUrl;
+        const POLL_INTERVAL = 15_000; // 15 seconds
+        const POLL_TIMEOUT = 10 * 60 * 1000; // 10 minutes
+        const startTime = Date.now();
 
-      // pick: busca na raiz do data, com fallback em data.resumo (legado)
-      const rawResumo = typeof data.resumo === "object" && data.resumo !== null ? data.resumo : {};
-      const pick = (...keys: string[]): any => {
-        for (const k of keys) {
-          const v = data[k] ?? rawResumo[k];
-          if (v !== undefined && v !== null && v !== "") return v;
-        }
-        return undefined;
-      };
-      const custo7Raw = pick(
-        "custo7dias", "custo_7dias", "investido_7d", "investido7d",
-        "custo_7d", "spend_7d", "cost_7d", "gasto_7d"
-      ) ?? data.campanhas?.[0]?.['7dias']?.custo ?? "0";
-      const custo30Raw = pick(
-        "custo30dias", "custo_30dias", "investido_30d", "investido30d",
-        "custo_30d", "spend_30d", "cost_30d", "gasto_30d"
-      ) ?? data.campanhas?.[0]?.['30dias']?.custo ?? "0";
-      const conv7Raw = pick(
-        "conversoes7dias", "conversoes_7dias", "conversoes_7d", "conversions_7d",
-        "conv_7d", "conversoes7d"
-      ) ?? data.campanhas?.[0]?.['7dias']?.conversoes ?? 0;
-      const conv30Raw = pick(
-        "conversoes30dias", "conversoes_30dias", "conversoes_30d", "conversions_30d",
-        "conv_30d", "conversoes30d"
-      ) ?? data.campanhas?.[0]?.['30dias']?.conversoes ?? 0;
+        const poll = async (): Promise<void> => {
+          if (Date.now() - startTime > POLL_TIMEOUT) {
+            throw new Error("Timeout: a análise demorou mais de 10 minutos.");
+          }
+          const elapsed = Math.floor((Date.now() - startTime) / 1000);
+          const mins = Math.floor(elapsed / 60);
+          const secs = elapsed % 60;
+          setPollingMsg(`Analisando... ${mins > 0 ? `${mins}min ` : ""}${secs}s`);
 
-      console.log("[GESTOR-IA] Resumo mapeado:", { custo7Raw, custo30Raw, conv7Raw, conv30Raw });
+          await new Promise((r) => setTimeout(r, POLL_INTERVAL));
 
-      const resumoData: Resumo = {
-        totalCampanhas: pick("totalCampanhas", "total_campanhas", "totalCampaigns") ?? rawResumo.totalCampanhas ?? 0,
-        custo7dias: String(custo7Raw),
-        custo30dias: String(custo30Raw),
-        conversoes7dias: Number(conv7Raw) || 0,
-        conversoes30dias: Number(conv30Raw) || 0,
-      };
-      console.log("[GESTOR-IA] data bruto da API:", JSON.stringify(data, null, 2));
-      // resumo_cards: structured 4-card data (may not exist in old analyses)
-      const rawCards = data.resumo_cards;
-      console.log("[GESTOR-IA] data.resumo_cards:", rawCards);
-      console.log("[GESTOR-IA] data.resumo_executivo:", data.resumo_executivo);
-      const cardsObj: ResumoCards | null = typeof rawCards === "object" && rawCards !== null ? rawCards : null;
-      // resumo_executivo: full text string for "Ver análise completa"
-      const rawExec = data.resumo_executivo;
-      const execTexto = typeof rawExec === "string"
-        ? rawExec
-        : typeof rawExec === "object" && rawExec !== null
-          ? [rawExec.visao_geral, rawExec.problema_principal, rawExec.destaques, rawExec.oportunidade_principal].filter(Boolean).join("\n\n")
-          : "";
-      const rawAuditoria = data._relatorio_auditoria;
-      const auditoriaObj: RelatorioAuditoria | null =
-        typeof rawAuditoria === "object" && rawAuditoria !== null && rawAuditoria.texto
-          ? rawAuditoria
-          : null;
-      setRelatorio({
-        resumo: resumoData,
-        alertas: Array.isArray(data.alertas_criticos) ? data.alertas_criticos : [],
-        oportunidades: Array.isArray(data.oportunidades) ? data.oportunidades : [],
-        recomendacoes: Array.isArray(data.recomendacoes) ? data.recomendacoes : [],
-        resumo_cards: cardsObj,
-        resumo_executivo: execTexto,
-        adGroups: Array.isArray(data.adGroups) ? data.adGroups : [],
-        relatorio_auditoria: auditoriaObj,
-      });
-      setStep(3);
+          const pollRes = await fetch(pollUrl, {
+            headers: { "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" },
+          });
+          if (!pollRes.ok) throw new Error(`Erro no polling: ${pollRes.status}`);
+          const pollRaw = await pollRes.text();
+          console.log("[GESTOR-IA] Poll response:", pollRaw.substring(0, 300));
+
+          let pollData: any;
+          try {
+            pollData = parseResponseData(pollRaw);
+          } catch {
+            throw new Error(`Resposta de polling inválida: ${pollRaw.substring(0, 300)}`);
+          }
+
+          if (pollData.status === "processing") {
+            return poll(); // keep polling
+          }
+          if (pollData.status === "success" || pollData.resumo_cards || pollData.alertas_criticos || pollData.recomendacoes) {
+            // Final data received — may be nested in pollData.data
+            const finalData = pollData.data && typeof pollData.data === "object" ? pollData.data : pollData;
+            setPollingMsg("");
+            applyAnalysisData(finalData, accountNames);
+            return;
+          }
+          // Unknown status, treat as still processing
+          return poll();
+        };
+
+        await poll();
+        return;
+      }
+
+      // Immediate result (no polling needed)
+      applyAnalysisData(data, accountNames);
     } catch (err: any) {
       console.error("[GESTOR-IA] Erro na análise:", err);
       setStep(1);
+      setPollingMsg("");
       alert(`Erro ao analisar: ${err?.message || String(err)}`);
     }
   };
