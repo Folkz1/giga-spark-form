@@ -231,6 +231,10 @@ const RelatoriosBatch = () => {
   const demographicInsights = ac?.demographic_insights || an?.demographic_insights || [];
   const alertasTecnicos = ac?.alertas_tecnicos || an?.alertas_tecnicos || [];
 
+  const drawerScore = an?.score_conta || currentP?.data.score_fiscal || "";
+  const canGoPrev = drawerIdx > 0;
+  const canGoNext = drawerIdx < filtered.length - 1;
+
   return (
     <div className="min-h-screen bg-background px-4 pt-8 pb-12">
       <div className="max-w-6xl mx-auto">
@@ -406,14 +410,11 @@ const RelatoriosBatch = () => {
                         <Badge className="text-[10px] px-1.5 py-0.5 bg-blue-500/15 text-blue-400 border-blue-500/25">
                           {currentP.plataforma === "meta_ads" ? "Meta Ads" : "Google Ads"}
                         </Badge>
-                        {(() => {
-                          const score = an?.score_conta || currentP.data.score_fiscal;
-                          return score ? (
-                            <Badge className={`text-[10px] px-2 py-0.5 ${scoreBadgeStyle(score)} font-bold`}>
-                              {score}
-                            </Badge>
-                          ) : null;
-                        })()}
+                        {drawerScore && (
+                          <Badge className={`text-[10px] px-2 py-0.5 ${scoreBadgeStyle(drawerScore)} font-bold`}>
+                            {drawerScore}
+                          </Badge>
+                        )}
                       </div>
                     )}
                   </div>
@@ -452,13 +453,14 @@ const RelatoriosBatch = () => {
 
                 {!analiseLoading && ac && an && (
                   <>
+                    {/* Historico banner */}
                     {isHistorico && (
                       <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-400 text-sm">
                         <AlertTriangle className="w-4 h-4 shrink-0" />
                         <span>Análise resumida. Execute o gestor para ver campanhas e criativos detalhados.</span>
                       </div>
                     )}
-                  <>
+
                     {/* Section 1 — Header info */}
                     {an.score_justificativa && (
                       <div className="glass-card rounded-xl p-4">
@@ -622,7 +624,7 @@ const RelatoriosBatch = () => {
                                     {clickupCreated.has(`rec-${i}`) ? (
                                       <span className="inline-flex items-center gap-1 text-xs text-emerald-400 font-semibold"><CheckCircle2 className="w-3.5 h-3.5" /> Tarefa criada</span>
                                     ) : (
-                                      <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => { openClickup(rec, i); }}>
+                                      <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => openClickup(rec, i)}>
                                         <Zap className="w-3.5 h-3.5" /> Criar tarefa ClickUp
                                       </Button>
                                     )}
@@ -669,7 +671,7 @@ const RelatoriosBatch = () => {
                         </AccordionItem>
                       )}
 
-                      {/* Section 8 — Criativos */}
+                      {/* Section 8 — Criativos (hidden for historico) */}
                       {!isHistorico && an.diagnostico_criativos && (
                         <AccordionItem value="criativos" className="rounded-xl overflow-hidden border-none glass-card">
                           <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
@@ -821,7 +823,7 @@ const RelatoriosBatch = () => {
                         </AccordionItem>
                       )}
 
-                      {/* Section 13 — Campanhas */}
+                      {/* Section 13 — Campanhas (hidden for historico) */}
                       {!isHistorico && ac.campanhas?.length > 0 && (
                         <AccordionItem value="campanhas" className="rounded-xl overflow-hidden border-none glass-card">
                           <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
@@ -888,12 +890,12 @@ const RelatoriosBatch = () => {
 
               {/* Footer navigation */}
               <div className="p-4 border-t border-border flex items-center justify-between shrink-0">
-                <Button size="sm" variant="outline" disabled={drawerIdx <= 0} onClick={() => navDrawer(-1)} className="gap-1 text-xs">
+                <Button size="sm" variant="outline" disabled={!canGoPrev} onClick={() => navDrawer(-1)} className="gap-1 text-xs">
                   <ChevronLeft className="w-3.5 h-3.5" /> Anterior
                 </Button>
                 <span className="text-xs text-muted-foreground">{drawerIdx + 1} de {filtered.length}</span>
-                <Button size="sm" variant="outline" disabled={drawerIdx >= filtered.length - 1} onClick={() => navDrawer(1)} className="gap-1 text-xs">
-                  Próximo <ChevronRight className="w-3.5 h-3.5" />
+                <Button size="sm" variant="outline" disabled={!canGoNext} onClick={() => navDrawer(1)} className="gap-1 text-xs">
+                  {"Próximo"} <ChevronRight className="w-3.5 h-3.5" />
                 </Button>
               </div>
             </>
@@ -907,9 +909,7 @@ const RelatoriosBatch = () => {
         onClose={() => setClickupOpen(false)}
         taskTitle={clickupTitle}
         taskDescription={clickupDesc}
-        onSuccess={() => {
-          // Mark as created (we track by the last opened rec index through clickupTitle)
-        }}
+        onSuccess={() => {}}
       />
     </div>
   );
