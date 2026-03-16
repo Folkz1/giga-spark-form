@@ -183,6 +183,12 @@ const ClientesMeta = () => {
           </Button>
           <h1 className="text-2xl font-bold text-foreground">Clientes Meta Ads</h1>
           <div className="flex-1" />
+          <Input
+            placeholder="Buscar cliente..."
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            className="max-w-xs"
+          />
           <Button onClick={openNew} className="bg-[#1877F2] hover:bg-[#1565c0] text-white">
             <Plus className="w-4 h-4 mr-1" /> Novo Cliente
           </Button>
