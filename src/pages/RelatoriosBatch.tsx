@@ -392,7 +392,7 @@ const RelatoriosBatch = () => {
 
       {/* ─── Analysis Drawer ─── */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent side="right" className="w-full sm:w-[70vw] sm:max-w-[70vw] p-0 flex flex-col">
+        <SheetContent side="right" className="w-full sm:w-[70vw] sm:max-w-[70vw] p-0 flex flex-col [&>button.absolute]:hidden">
           {currentCliente && (
             <>
               <SheetHeader className="p-5 border-b border-border shrink-0">
@@ -406,11 +406,14 @@ const RelatoriosBatch = () => {
                         <Badge className="text-[10px] px-1.5 py-0.5 bg-blue-500/15 text-blue-400 border-blue-500/25">
                           {currentP.plataforma === "meta_ads" ? "Meta Ads" : "Google Ads"}
                         </Badge>
-                        {an?.score_conta && (
-                          <Badge className={`text-[10px] px-2 py-0.5 ${scoreBadgeStyle(an.score_conta)} font-bold`}>
-                            {an.score_conta}
-                          </Badge>
-                        )}
+                        {(() => {
+                          const score = an?.score_conta || currentP.data.score_fiscal;
+                          return score ? (
+                            <Badge className={`text-[10px] px-2 py-0.5 ${scoreBadgeStyle(score)} font-bold`}>
+                              {score}
+                            </Badge>
+                          ) : null;
+                        })()}
                       </div>
                     )}
                   </div>
@@ -423,6 +426,14 @@ const RelatoriosBatch = () => {
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       {currentRevisado ? "Revisado ✓" : "Marcar Revisado"}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setDrawerOpen(false)}
+                      className="w-8 h-8 p-0 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
