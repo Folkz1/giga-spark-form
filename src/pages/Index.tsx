@@ -162,6 +162,11 @@ const Index = () => {
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {card.description}
                   </p>
+                  {"hasBadge" in card && (card as any).hasBadge && pendentes > 0 && (
+                    <span className="absolute top-4 right-4 inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 text-xs font-bold border border-amber-500/25">
+                      {pendentes} pendentes
+                    </span>
+                  )}
                 </motion.button>
               ))}
             </div>
