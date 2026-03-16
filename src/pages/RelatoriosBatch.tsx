@@ -392,7 +392,7 @@ const RelatoriosBatch = () => {
 
       {/* ─── Analysis Drawer ─── */}
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent side="right" className="w-full sm:w-[70vw] sm:max-w-[70vw] p-0 flex flex-col [&_button.absolute]:hidden">
+        <SheetContent side="right" hideCloseButton className="w-full sm:w-[70vw] sm:max-w-[70vw] p-0 flex flex-col">
           {currentCliente && (
             <>
               <SheetHeader className="p-5 border-b border-border shrink-0">
