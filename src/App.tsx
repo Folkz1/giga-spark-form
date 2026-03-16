@@ -11,6 +11,8 @@ import GestorIA from "./pages/GestorIA";
 import GestorMetaAds from "./pages/GestorMetaAds";
 import ClientesMeta from "./pages/ClientesMeta";
 import GestorCRM from "./pages/GestorCRM";
+import Relatorios from "./pages/Relatorios";
+import RelatoriosBatch from "./pages/RelatoriosBatch";
 import NotFound from "./pages/NotFound";
 import AuthGuard from "./components/AuthGuard";
 import Header from "./components/Header";
