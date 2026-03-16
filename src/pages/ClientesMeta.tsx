@@ -80,6 +80,11 @@ const ClientesMeta = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ClienteMeta | null>(null);
   const [form, setForm] = useState<Omit<ClienteMeta, "id">>(emptyForm);
+  const [busca, setBusca] = useState("");
+
+  const filtered = clientes
+    .filter(c => c.nome.toLowerCase().includes(busca.toLowerCase()))
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 
   const loadClientes = async () => {
     setLoading(true);
@@ -178,6 +183,12 @@ const ClientesMeta = () => {
           </Button>
           <h1 className="text-2xl font-bold text-foreground">Clientes Meta Ads</h1>
           <div className="flex-1" />
+          <Input
+            placeholder="Buscar cliente..."
+            value={busca}
+            onChange={e => setBusca(e.target.value)}
+            className="max-w-xs"
+          />
           <Button onClick={openNew} className="bg-[#1877F2] hover:bg-[#1565c0] text-white">
             <Plus className="w-4 h-4 mr-1" /> Novo Cliente
           </Button>
@@ -204,7 +215,7 @@ const ClientesMeta = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {clientes.map(c => (
+                    {filtered.map(c => (
                       <tr key={c.adAccountId} className="border-b border-border/50 hover:bg-muted/30">
                         <td className="p-3 font-medium text-foreground">{c.nome}</td>
                         <td className="p-3 text-muted-foreground font-mono text-xs">{c.adAccountId}</td>
@@ -225,8 +236,8 @@ const ClientesMeta = () => {
                         </td>
                       </tr>
                     ))}
-                    {clientes.length === 0 && (
-                      <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">Nenhum cliente cadastrado</td></tr>
+                    {filtered.length === 0 && (
+                      <tr><td colSpan={6} className="p-6 text-center text-muted-foreground">{busca ? "Nenhum cliente encontrado" : "Nenhum cliente cadastrado"}</td></tr>
                     )}
                   </tbody>
                 </table>
