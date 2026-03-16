@@ -215,7 +215,7 @@ const ClientesMeta = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {clientes.map(c => (
+                    {filtered.map(c => (
                       <tr key={c.adAccountId} className="border-b border-border/50 hover:bg-muted/30">
                         <td className="p-3 font-medium text-foreground">{c.nome}</td>
                         <td className="p-3 text-muted-foreground font-mono text-xs">{c.adAccountId}</td>
