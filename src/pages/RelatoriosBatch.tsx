@@ -1,10 +1,10 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, Search, CheckCircle2, AlertTriangle, RefreshCw, X, ChevronLeft, ChevronRight,
   BarChart3, Target, DollarSign, TrendingUp, ExternalLink, Zap, Eye, Crosshair,
-  LayoutGrid, FileText, Shield, BarChart2, Users, Lightbulb, Clock,
+  LayoutGrid, FileText, Shield, BarChart2, Users, Lightbulb, Clock, Loader2, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,6 +63,68 @@ const placementStatusBadge = (s: string) => {
   return map[s] || "bg-secondary text-muted-foreground";
 };
 
+// Generic placeholder for historico resumo
+const HISTORICO_PLACEHOLDER = "Analise resumida. Para analise completa com campanhas e criativos, execute o gestor novamente.";
+
+function generateAutoResumo(analise: AnaliseCompleta): string {
+  const ac = analise.analiseCompleta;
+  const an = ac?.analise;
+  const resumo = ac?.resumo;
+  const p = getPlataformaData({ accountName: analise.accountName, customerId: analise.customerId, google_ads: null, meta_ads: null, statusGeral: "success" });
+  const score = an?.score_conta || "";
+  const parts: string[] = [];
+  if (score) parts.push(`Conta com score **${score}**.`);
+  if (resumo) {
+    if (resumo.total_investimento && resumo.total_investimento !== "0") parts.push(`Investimento de ${formatCurrency(resumo.total_investimento)}`);
+    if (resumo.cpl_geral && resumo.cpl_geral !== "0") parts.push(`CPL de ${formatCurrency(resumo.cpl_geral)}`);
+    if (resumo.roas_geral && resumo.roas_geral !== "0") parts.push(`ROAS de ${resumo.roas_geral}x`);
+  }
+  const alertCount = an?.alertas_criticos?.length || 0;
+  const recCount = an?.recomendacoes?.length || 0;
+  if (alertCount > 0) parts.push(`${alertCount} alertas críticos identificados`);
+  if (recCount > 0) parts.push(`${recCount} recomendações prioritárias`);
+  return parts.length > 0 ? parts.join(". ") + "." : "";
+}
+
+// Alert text: extract campaign tag prefix
+function parseAlertText(text: string): { tag: string | null; body: string } {
+  const match = text.match(/^(\[[\[\]\w\s\.\-\/\(\)]+\])\s*(.+)$/s);
+  if (match) return { tag: match[1], body: match[2] };
+  // Try matching multiple bracket groups at start
+  const multiMatch = text.match(/^((?:\[[^\]]*\]\s*)+)(.+)$/s);
+  if (multiMatch) return { tag: multiMatch[1].trim(), body: multiMatch[2].trim() };
+  return { tag: null, body: text };
+}
+
+// Expandable alert card
+const AlertCard = ({ text, variant }: { text: string; variant: "red" | "amber" | "emerald" }) => {
+  const [expanded, setExpanded] = useState(false);
+  const { tag, body } = parseAlertText(text);
+  const colors = {
+    red: { bg: "bg-red-500/10", border: "border-red-500/20", text: "text-red-300", tag: "text-red-400/70" },
+    amber: { bg: "bg-amber-500/10", border: "border-amber-500/20", text: "text-amber-300", tag: "text-amber-400/70" },
+    emerald: { bg: "bg-emerald-500/10", border: "border-emerald-500/20", text: "text-emerald-300", tag: "text-emerald-400/70" },
+  };
+  const c = colors[variant];
+  const Icon = variant === "red" ? AlertTriangle : variant === "emerald" ? TrendingUp : AlertTriangle;
+
+  return (
+    <div
+      className={`p-3 rounded-lg ${c.bg} border ${c.border} cursor-pointer transition-all`}
+      onClick={() => setExpanded(!expanded)}
+    >
+      {tag && <p className={`text-[10px] font-mono ${c.tag} mb-1`}>{tag}</p>}
+      <div className="flex gap-2">
+        <Icon className={`w-4 h-4 ${c.text} shrink-0 mt-0.5`} />
+        <p className={`text-sm ${c.text} ${expanded ? "" : "line-clamp-3"}`}>{body}</p>
+      </div>
+      {!expanded && body.length > 150 && (
+        <p className={`text-[10px] ${c.tag} mt-1 text-right`}>ver mais ▾</p>
+      )}
+    </div>
+  );
+};
+
 const RelatoriosBatch = () => {
   const { batchId } = useParams<{ batchId: string }>();
   const navigate = useNavigate();
@@ -72,13 +134,17 @@ const RelatoriosBatch = () => {
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<StatusFilter>("todos");
   const [search, setSearch] = useState("");
-  const [revisadosState, setRevisadosState] = useState(0);
+  const [revisadosVersion, setRevisadosVersion] = useState(0);
 
-  // Drawer
+  // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [drawerNavList, setDrawerNavList] = useState<ClienteResumo[]>([]); // snapshot of list at open time
   const [drawerIdx, setDrawerIdx] = useState(0);
   const [analise, setAnalise] = useState<AnaliseCompleta | null>(null);
   const [analiseLoading, setAnaliseLoading] = useState(false);
+  const [navLoading, setNavLoading] = useState(false); // loading during nav
+  const [drawerContentKey, setDrawerContentKey] = useState(0); // for fade transitions
+  const drawerScrollRef = useRef<HTMLDivElement>(null);
 
   // ClickUp
   const [clickupOpen, setClickupOpen] = useState(false);
@@ -134,6 +200,7 @@ const RelatoriosBatch = () => {
     return list;
   }, [sorted, search, filter]);
 
+  // Revisados count - reads from localStorage, re-triggers on version bump
   const revisadosCount = useMemo(() => {
     if (!batchId) return 0;
     return clientes.filter(c => {
@@ -141,14 +208,15 @@ const RelatoriosBatch = () => {
       return p && isRevisado(batchId, c.customerId, p.plataforma);
     }).length;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [clientes, batchId, revisadosState]);
+  }, [clientes, batchId, revisadosVersion]);
 
-  const openDrawer = async (idx: number) => {
-    setDrawerIdx(idx);
-    setDrawerOpen(true);
-    setClickupCreated(new Set());
-    await loadAnalise(filtered[idx]);
-  };
+  // Check if a specific client is reviewed
+  const isClientRevisado = useCallback((c: ClienteResumo) => {
+    if (!batchId) return false;
+    const p = getPlataformaData(c);
+    return p ? isRevisado(batchId, c.customerId, p.plataforma) : false;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batchId, revisadosVersion]);
 
   const loadAnalise = async (c: ClienteResumo) => {
     if (!batchId) return;
@@ -166,24 +234,62 @@ const RelatoriosBatch = () => {
     }
   };
 
-  const navDrawer = (dir: -1 | 1) => {
-    const next = drawerIdx + dir;
-    if (next >= 0 && next < filtered.length) {
-      setDrawerIdx(next);
-      setClickupCreated(new Set());
-      loadAnalise(filtered[next]);
+  // BUG FIX 1 & 2: Snapshot the filtered list when opening drawer, decouple from live filter
+  const openDrawer = async (idx: number) => {
+    const snapshot = [...filtered]; // freeze current list
+    setDrawerNavList(snapshot);
+    setDrawerIdx(idx);
+    setDrawerOpen(true);
+    setClickupCreated(new Set());
+    setDrawerContentKey(k => k + 1);
+    await loadAnalise(snapshot[idx]);
+  };
+
+  // BUG FIX 1: Navigation that actually works - uses drawerNavList (snapshot)
+  const navDrawer = async (dir: -1 | 1) => {
+    const nextIdx = drawerIdx + dir;
+    if (nextIdx < 0 || nextIdx >= drawerNavList.length) return;
+    const nextCliente = drawerNavList[nextIdx];
+    if (!nextCliente) return;
+
+    setNavLoading(true);
+    setDrawerIdx(nextIdx);
+    setClickupCreated(new Set());
+
+    // Scroll to top
+    if (drawerScrollRef.current) {
+      drawerScrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    const p = getPlataformaData(nextCliente);
+    if (!p || !batchId) {
+      setNavLoading(false);
+      return;
+    }
+
+    setAnalise(null);
+    setAnaliseLoading(true);
+    try {
+      const data = await fetchAnaliseCliente(batchId, nextCliente.customerId, p.plataforma);
+      setAnalise(data);
+      setDrawerContentKey(k => k + 1);
+    } catch {
+      setAnalise(null);
+    } finally {
+      setAnaliseLoading(false);
+      setNavLoading(false);
     }
   };
 
   const toggleRevisado = () => {
     if (!batchId) return;
-    const c = filtered[drawerIdx];
+    const c = drawerNavList[drawerIdx];
     if (!c) return;
     const p = getPlataformaData(c);
     if (!p) return;
     const cur = isRevisado(batchId, c.customerId, p.plataforma);
     setRevisado(batchId, c.customerId, p.plataforma, !cur);
-    setRevisadosState(s => s + 1);
+    setRevisadosVersion(v => v + 1); // triggers re-render of revisadosCount & isClientRevisado
   };
 
   const handleRetry = async (c: ClienteResumo) => {
@@ -210,9 +316,14 @@ const RelatoriosBatch = () => {
     setClickupOpen(true);
   };
 
-  const currentCliente = filtered[drawerIdx];
+  // Current drawer client from snapshot list
+  const currentCliente = drawerNavList[drawerIdx] || null;
   const currentP = currentCliente ? getPlataformaData(currentCliente) : null;
-  const currentRevisado = batchId && currentCliente && currentP ? isRevisado(batchId, currentCliente.customerId, currentP.plataforma) : false;
+  const currentRevisado = batchId && currentCliente && currentP
+    ? isRevisado(batchId, currentCliente.customerId, currentP.plataforma)
+    : false;
+  // Force re-eval on version change
+  void revisadosVersion;
 
   const filters: { label: string; value: StatusFilter }[] = [
     { label: "Todos", value: "todos" },
@@ -233,7 +344,16 @@ const RelatoriosBatch = () => {
 
   const drawerScore = an?.score_conta || currentP?.data.score_fiscal || "";
   const canGoPrev = drawerIdx > 0;
-  const canGoNext = drawerIdx < filtered.length - 1;
+  const canGoNext = drawerIdx < drawerNavList.length - 1;
+
+  // MELHORIA 4: Auto-generate resumo for historico
+  const resumoExecutivo = useMemo(() => {
+    if (!an?.resumo_executivo) return "";
+    if (isHistorico && (an.resumo_executivo === HISTORICO_PLACEHOLDER || an.resumo_executivo.includes("Analise resumida"))) {
+      return analise ? generateAutoResumo(analise) : "";
+    }
+    return an.resumo_executivo;
+  }, [an, isHistorico, analise]);
 
   return (
     <div className="min-h-screen bg-background px-4 pt-8 pb-12">
@@ -308,7 +428,10 @@ const RelatoriosBatch = () => {
                 const p = getPlataformaData(c);
                 const score = p?.data.score_fiscal || "";
                 const isError = p?.data.status === "error" || c.statusGeral === "error";
-                const borderColor = isError ? "border-red-500/30" : score === "CRITICO" ? "border-red-500/30" : score === "ATENCAO" ? "border-amber-500/30" : "border-emerald-500/30";
+                const reviewed = isClientRevisado(c);
+                const borderColor = reviewed
+                  ? "border-l-[3px] border-l-emerald-500 border-t border-r border-b border-t-border/30 border-r-border/30 border-b-border/30"
+                  : isError ? "border border-red-500/30" : score === "CRITICO" ? "border border-red-500/30" : score === "ATENCAO" ? "border border-amber-500/30" : "border border-emerald-500/30";
 
                 return (
                   <motion.div
@@ -317,11 +440,14 @@ const RelatoriosBatch = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
                     transition={{ delay: idx * 0.03, duration: 0.25 }}
-                    className={`glass-card rounded-2xl p-5 border ${borderColor} hover:shadow-lg transition-all group`}
+                    className={`glass-card rounded-2xl p-5 ${borderColor} hover:shadow-lg transition-all group ${reviewed ? "opacity-80" : ""}`}
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-base font-bold text-foreground truncate">{c.accountName}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-base font-bold text-foreground truncate">{c.accountName}</h3>
+                          {reviewed && <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />}
+                        </div>
                         <div className="flex gap-1.5 mt-1">
                           {c.meta_ads && <Badge className="text-[10px] px-1.5 py-0.5 bg-blue-500/15 text-blue-400 border-blue-500/25">Meta Ads</Badge>}
                           {c.google_ads && <Badge className="text-[10px] px-1.5 py-0.5 bg-emerald-500/15 text-emerald-400 border-emerald-500/25">Google Ads</Badge>}
@@ -399,8 +525,9 @@ const RelatoriosBatch = () => {
         <SheetContent side="right" hideCloseButton className="w-full sm:w-[70vw] sm:max-w-[70vw] p-0 flex flex-col">
           {currentCliente && (
             <>
+              {/* MELHORIA 1: Better header layout with proper spacing */}
               <SheetHeader className="p-5 border-b border-border shrink-0">
-                <div className="flex items-center justify-between gap-3">
+                <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <SheetTitle className="text-lg font-bold truncate">
                       {currentCliente.accountName}
@@ -418,7 +545,7 @@ const RelatoriosBatch = () => {
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-4 shrink-0">
                     <Button
                       size="sm"
                       variant={currentRevisado ? "default" : "outline"}
@@ -432,470 +559,494 @@ const RelatoriosBatch = () => {
                       size="sm"
                       variant="ghost"
                       onClick={() => setDrawerOpen(false)}
-                      className="w-8 h-8 p-0 text-muted-foreground hover:text-foreground"
+                      className="w-9 h-9 p-0 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="w-5 h-5" />
                     </Button>
                   </div>
                 </div>
               </SheetHeader>
 
-              <div className="flex-1 overflow-y-auto p-5 space-y-4">
-                {analiseLoading && (
-                  <div className="space-y-4">
-                    {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}
-                  </div>
-                )}
-
-                {!analiseLoading && !ac && (
-                  <div className="text-center py-12 text-muted-foreground">Erro ao carregar análise. Tente novamente.</div>
-                )}
-
-                {!analiseLoading && ac && an && (
-                  <>
-                    {/* Historico banner */}
-                    {isHistorico && (
-                      <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-400 text-sm">
-                        <AlertTriangle className="w-4 h-4 shrink-0" />
-                        <span>Análise resumida. Execute o gestor para ver campanhas e criativos detalhados.</span>
+              <div ref={drawerScrollRef} className="flex-1 overflow-y-auto p-5 space-y-4">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={drawerContentKey}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {(analiseLoading || navLoading) && (
+                      <div className="flex flex-col items-center justify-center py-16 gap-3">
+                        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                        <p className="text-sm text-muted-foreground">Carregando análise...</p>
                       </div>
                     )}
 
-                    {/* Section 1 — Header info */}
-                    {an.score_justificativa && (
-                      <div className="glass-card rounded-xl p-4">
-                        <p className="text-sm text-muted-foreground">{an.score_justificativa}</p>
-                        <p className="text-xs text-muted-foreground/60 mt-2">{ac.data_analise} • Período: {ac.periodo}</p>
-                      </div>
+                    {!analiseLoading && !navLoading && !ac && (
+                      <div className="text-center py-12 text-muted-foreground">Erro ao carregar análise. Tente novamente.</div>
                     )}
 
-                    <Accordion
-                      type="multiple"
-                      defaultValue={["resumo_executivo", "metricas", "alertas_criticos", "recomendacoes"]}
-                      className="space-y-3"
-                    >
-                      {/* Section 2 — Resumo Executivo */}
-                      {an.resumo_executivo && (
-                        <AccordionItem value="resumo_executivo" className="rounded-xl overflow-hidden border-none glass-card">
-                          <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                            <span>📋 Resumo Executivo</span>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-4">
-                            <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{an.resumo_executivo}</p>
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
+                    {!analiseLoading && !navLoading && ac && an && (
+                      <>
+                        {/* Historico banner */}
+                        {isHistorico && (
+                          <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-400 text-sm">
+                            <AlertTriangle className="w-4 h-4 shrink-0" />
+                            <span>Análise resumida. Execute o gestor para ver campanhas e criativos detalhados.</span>
+                          </div>
+                        )}
 
-                      {/* Section 3 — Métricas */}
-                      {ac.resumo && (
-                        <AccordionItem value="metricas" className="rounded-xl overflow-hidden border-none glass-card">
-                          <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                            <span>📊 Métricas</span>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-4">
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                              {[
-                                { label: "Investimento", value: formatCurrency(ac.resumo.total_investimento), icon: DollarSign },
-                                { label: "Leads", value: formatNumber(ac.resumo.total_leads), icon: Users },
-                                { label: "CPL", value: formatCurrency(ac.resumo.cpl_geral), icon: Target },
-                                { label: "ROAS", value: `${ac.resumo.roas_geral}x`, icon: TrendingUp },
-                                { label: "CPA", value: formatCurrency(ac.resumo.cpa_geral), icon: Target },
-                                { label: "CTR", value: formatPercent(ac.resumo.ctr_medio), icon: Crosshair },
-                                { label: "Frequência", value: ac.resumo.frequencia_media, icon: RefreshCw },
-                                { label: "CPM", value: formatCurrency(ac.resumo.cpm_medio), icon: DollarSign },
-                              ].map(m => (
-                                <div key={m.label} className="bg-secondary/50 rounded-lg p-3">
-                                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1"><m.icon className="w-3 h-3" />{m.label}</div>
-                                  <p className="text-sm font-bold text-foreground">{m.value}</p>
-                                </div>
-                              ))}
-                              <div className="bg-secondary/50 rounded-lg p-3">
-                                <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1"><LayoutGrid className="w-3 h-3" />Campanhas</div>
-                                <p className="text-sm font-bold text-foreground">{ac.resumo.total_campanhas}</p>
-                                <div className="flex gap-1 mt-1 text-[9px]">
-                                  <span className="text-red-400">{ac.resumo.campanhas_criticas}c</span>
-                                  <span className="text-amber-400">{ac.resumo.campanhas_atencao}a</span>
-                                  <span className="text-emerald-400">{ac.resumo.campanhas_saudaveis}s</span>
-                                </div>
-                              </div>
-                              <div className="bg-secondary/50 rounded-lg p-3">
-                                <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1"><Eye className="w-3 h-3" />Anúncios</div>
-                                <p className="text-sm font-bold text-foreground">{ac.resumo.total_anuncios}</p>
-                                <p className="text-[9px] text-amber-400 mt-1">{ac.resumo.anuncios_fatigados} fatigados</p>
-                              </div>
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
+                        {/* Section 1 — Header info */}
+                        {an.score_justificativa && (
+                          <div className="glass-card rounded-xl p-4">
+                            <p className="text-sm text-muted-foreground">{an.score_justificativa}</p>
+                            <p className="text-xs text-muted-foreground/60 mt-2">{ac.data_analise} • Período: {ac.periodo}</p>
+                          </div>
+                        )}
 
-                      {/* Section 4 — Alertas Críticos */}
-                      {an.alertas_criticos?.length > 0 && (
-                        <AccordionItem value="alertas_criticos" className="rounded-xl overflow-hidden border-none bg-red-500/5 border border-red-500/20">
-                          <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                            <span>🚨 Alertas Críticos ({an.alertas_criticos.length})</span>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-4 space-y-2">
-                            {an.alertas_criticos.map((a, i) => (
-                              <div key={i} className="flex gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                                <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                                <p className="text-sm text-red-300">{a}</p>
-                              </div>
-                            ))}
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
+                        <Accordion
+                          type="multiple"
+                          defaultValue={["resumo_executivo", "metricas", "alertas_criticos", "recomendacoes"]}
+                          className="space-y-3"
+                        >
+                          {/* Section 2 — Resumo Executivo (MELHORIA 4) */}
+                          {resumoExecutivo && (
+                            <AccordionItem value="resumo_executivo" className="rounded-xl overflow-hidden border-none glass-card">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
+                                <span>📋 Resumo Executivo</span>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4">
+                                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{resumoExecutivo}</p>
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
 
-                      {/* Section 5 — Oportunidades */}
-                      {an.oportunidades?.length > 0 && (
-                        <AccordionItem value="oportunidades" className="rounded-xl overflow-hidden border-none bg-emerald-500/5 border border-emerald-500/20">
-                          <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                            <span>💡 Oportunidades ({an.oportunidades.length})</span>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-4 space-y-2">
-                            {an.oportunidades.map((o, i) => (
-                              <div key={i} className="flex gap-2 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                                <TrendingUp className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                                <p className="text-sm text-emerald-300">{o}</p>
-                              </div>
-                            ))}
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
-
-                      {/* Section 6 — Recomendações */}
-                      {an.recomendacoes?.length > 0 && (
-                        <AccordionItem value="recomendacoes" className="rounded-xl overflow-hidden border-none bg-blue-500/5 border border-blue-500/20">
-                          <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                            <span>🎯 Recomendações ({an.recomendacoes.length})</span>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-4">
-                            <Accordion type="multiple" className="space-y-2">
-                              {an.recomendacoes.map((rec, i) => (
-                                <AccordionItem key={i} value={`rec-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
-                                  <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
-                                    <div className="flex items-center gap-2 flex-wrap flex-1 text-left">
-                                      <Badge className={`text-[9px] px-1.5 py-0 ${prioridadeBadge(rec.prioridade)}`}>{rec.prioridade}</Badge>
-                                      <Badge className={`text-[9px] px-1.5 py-0 ${tipoBadge(rec.tipo)}`}>{rec.tipo}</Badge>
-                                      <span className="font-medium text-foreground">{rec.titulo}</span>
-                                      {rec.urgencia && <span className="text-[9px] text-red-400 font-bold">{rec.urgencia}</span>}
+                          {/* Section 3 — Métricas */}
+                          {ac.resumo && (
+                            <AccordionItem value="metricas" className="rounded-xl overflow-hidden border-none glass-card">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
+                                <span>📊 Métricas</span>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                  {[
+                                    { label: "Investimento", value: formatCurrency(ac.resumo.total_investimento), icon: DollarSign },
+                                    { label: "Leads", value: formatNumber(ac.resumo.total_leads), icon: Users },
+                                    { label: "CPL", value: formatCurrency(ac.resumo.cpl_geral), icon: Target },
+                                    { label: "ROAS", value: `${ac.resumo.roas_geral}x`, icon: TrendingUp },
+                                    { label: "CPA", value: formatCurrency(ac.resumo.cpa_geral), icon: Target },
+                                    { label: "CTR", value: formatPercent(ac.resumo.ctr_medio), icon: Crosshair },
+                                    { label: "Frequência", value: ac.resumo.frequencia_media, icon: RefreshCw },
+                                    { label: "CPM", value: formatCurrency(ac.resumo.cpm_medio), icon: DollarSign },
+                                  ].map(m => (
+                                    <div key={m.label} className="bg-secondary/50 rounded-lg p-3">
+                                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1"><m.icon className="w-3 h-3" />{m.label}</div>
+                                      <p className="text-sm font-bold text-foreground">{m.value}</p>
                                     </div>
-                                  </AccordionTrigger>
-                                  <AccordionContent className="px-3 pb-3 space-y-3">
-                                    {rec.diagnostico && (
-                                      <div>
-                                        <p className="text-[10px] text-muted-foreground font-semibold mb-1">Diagnóstico</p>
-                                        <p className="text-sm text-muted-foreground">{rec.diagnostico}</p>
-                                      </div>
-                                    )}
-                                    {rec.acao && (
-                                      <div>
-                                        <p className="text-[10px] text-muted-foreground font-semibold mb-1">Ação</p>
-                                        <p className="text-sm text-muted-foreground">{rec.acao}</p>
-                                      </div>
-                                    )}
-                                    {rec.como_executar && (
-                                      <div>
-                                        <p className="text-[10px] text-muted-foreground font-semibold mb-1">Como executar</p>
-                                        <ol className="list-decimal list-inside space-y-1">
-                                          {rec.como_executar.split(";").map((step, si) => (
-                                            <li key={si} className="text-sm text-muted-foreground">{step.trim()}</li>
-                                          ))}
-                                        </ol>
-                                      </div>
-                                    )}
-                                    {rec.impacto_esperado && (
-                                      <div>
-                                        <p className="text-[10px] text-muted-foreground font-semibold mb-1">Impacto esperado</p>
-                                        <p className="text-sm text-emerald-400">{rec.impacto_esperado}</p>
-                                      </div>
-                                    )}
-                                    {rec.angulos_criativo && (
-                                      <div>
-                                        <p className="text-[10px] text-muted-foreground font-semibold mb-1">Ângulos de criativo</p>
-                                        <p className="text-sm text-muted-foreground">{rec.angulos_criativo}</p>
-                                      </div>
-                                    )}
-                                    {rec.prerequisito && (
-                                      <div>
-                                        <p className="text-[10px] text-muted-foreground font-semibold mb-1">Pré-requisito</p>
-                                        <p className="text-sm text-amber-400">{rec.prerequisito}</p>
-                                      </div>
-                                    )}
-                                    {clickupCreated.has(`rec-${i}`) ? (
-                                      <span className="inline-flex items-center gap-1 text-xs text-emerald-400 font-semibold"><CheckCircle2 className="w-3.5 h-3.5" /> Tarefa criada</span>
-                                    ) : (
-                                      <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => openClickup(rec, i)}>
-                                        <Zap className="w-3.5 h-3.5" /> Criar tarefa ClickUp
-                                      </Button>
-                                    )}
-                                  </AccordionContent>
-                                </AccordionItem>
-                              ))}
-                            </Accordion>
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
-
-                      {/* Section 7 — Diagnóstico por Campanha */}
-                      {an.diagnostico_por_campanha?.length > 0 && (
-                        <AccordionItem value="diag_campanha" className="rounded-xl overflow-hidden border-none glass-card">
-                          <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                            <span>📈 Diagnóstico por Campanha ({an.diagnostico_por_campanha.length})</span>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-4">
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-xs">
-                                <thead>
-                                  <tr className="border-b border-border text-muted-foreground">
-                                    <th className="text-left py-2 pr-3">Campanha</th>
-                                    <th className="text-left py-2 pr-3">Objetivo</th>
-                                    <th className="text-left py-2 pr-3">Status</th>
-                                    <th className="text-left py-2 pr-3">Causa raiz</th>
-                                    <th className="text-left py-2">Ação</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {an.diagnostico_por_campanha.map((d, i) => (
-                                    <tr key={i} className="border-b border-border/50">
-                                      <td className="py-2 pr-3 font-medium text-foreground max-w-[200px] truncate">{d.nome}</td>
-                                      <td className="py-2 pr-3 text-muted-foreground">{d.objetivo}</td>
-                                      <td className="py-2 pr-3"><Badge className={`text-[9px] px-1.5 py-0 ${scoreBadgeStyle(d.status)}`}>{d.status}</Badge></td>
-                                      <td className="py-2 pr-3 text-muted-foreground max-w-[200px]">{d.causa_raiz}</td>
-                                      <td className="py-2 text-muted-foreground max-w-[200px]">{d.acao_principal}</td>
-                                    </tr>
                                   ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
+                                  {/* MELHORIA 3: Hide Campanhas/Anúncios metric cards for historico */}
+                                  {!isHistorico && (
+                                    <>
+                                      <div className="bg-secondary/50 rounded-lg p-3">
+                                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1"><LayoutGrid className="w-3 h-3" />Campanhas</div>
+                                        <p className="text-sm font-bold text-foreground">{ac.resumo.total_campanhas}</p>
+                                        <div className="flex gap-1 mt-1 text-[9px]">
+                                          <span className="text-red-400">{ac.resumo.campanhas_criticas} crít.</span>
+                                          <span className="text-amber-400">{ac.resumo.campanhas_atencao} aten.</span>
+                                          <span className="text-emerald-400">{ac.resumo.campanhas_saudaveis} saud.</span>
+                                        </div>
+                                      </div>
+                                      <div className="bg-secondary/50 rounded-lg p-3">
+                                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1"><Eye className="w-3 h-3" />Anúncios</div>
+                                        <p className="text-sm font-bold text-foreground">{ac.resumo.total_anuncios}</p>
+                                        <p className="text-[9px] text-amber-400 mt-1">{ac.resumo.anuncios_fatigados} fatigados</p>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
 
-                      {/* Section 8 — Criativos (hidden for historico) */}
-                      {!isHistorico && an.diagnostico_criativos && (
-                        <AccordionItem value="criativos" className="rounded-xl overflow-hidden border-none glass-card">
-                          <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                            <span>🎨 Criativos</span>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-4 space-y-3">
-                            {an.diagnostico_criativos.resumo && (
-                              <p className="text-sm text-muted-foreground">{an.diagnostico_criativos.resumo}</p>
-                            )}
-                            {an.diagnostico_criativos.fatigados?.length > 0 && (
-                              <div>
-                                <p className="text-xs font-semibold text-amber-400 mb-1">⚠️ Fatigados</p>
-                                {an.diagnostico_criativos.fatigados.map((f, i) => (
-                                  <div key={i} className="text-xs text-muted-foreground pl-3 mb-1">• <strong>{f.nome}</strong>: {f.motivo}</div>
+                          {/* Section 4 — Alertas Críticos (MELHORIA 5: expandable alerts) */}
+                          {an.alertas_criticos?.length > 0 && (
+                            <AccordionItem value="alertas_criticos" className="rounded-xl overflow-hidden border-none bg-red-500/5 border border-red-500/20">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
+                                <span>🚨 Alertas Críticos ({an.alertas_criticos.length})</span>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4 space-y-2">
+                                {an.alertas_criticos.map((a, i) => (
+                                  <AlertCard key={i} text={a} variant="red" />
                                 ))}
-                              </div>
-                            )}
-                            {an.diagnostico_criativos.winners?.length > 0 && (
-                              <div>
-                                <p className="text-xs font-semibold text-emerald-400 mb-1">🏆 Winners</p>
-                                {an.diagnostico_criativos.winners.map((w, i) => (
-                                  <div key={i} className="text-xs text-muted-foreground pl-3 mb-1">• <strong>{w.nome}</strong>: {w.motivo}</div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
+
+                          {/* Section 5 — Oportunidades */}
+                          {an.oportunidades?.length > 0 && (
+                            <AccordionItem value="oportunidades" className="rounded-xl overflow-hidden border-none bg-emerald-500/5 border border-emerald-500/20">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
+                                <span>💡 Oportunidades ({an.oportunidades.length})</span>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4 space-y-2">
+                                {an.oportunidades.map((o, i) => (
+                                  <AlertCard key={i} text={o} variant="emerald" />
                                 ))}
-                              </div>
-                            )}
-                            {an.diagnostico_criativos.proximos_testes && (
-                              <div>
-                                <p className="text-xs font-semibold text-blue-400 mb-1">🧪 Próximos testes</p>
-                                <p className="text-sm text-muted-foreground">{an.diagnostico_criativos.proximos_testes}</p>
-                              </div>
-                            )}
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
 
-                      {/* Section 9 — Posicionamento */}
-                      {placementInsights.length > 0 && (
-                        <AccordionItem value="placement" className="rounded-xl overflow-hidden border-none glass-card">
-                          <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                            <span>📍 Posicionamento ({placementInsights.length})</span>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-4">
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-xs">
-                                <thead>
-                                  <tr className="border-b border-border text-muted-foreground">
-                                    <th className="text-left py-2 pr-3">Posicionamento</th>
-                                    <th className="text-left py-2 pr-3">Status</th>
-                                    <th className="text-left py-2 pr-3">CPA</th>
-                                    <th className="text-left py-2 pr-3">Conversões</th>
-                                    <th className="text-left py-2">Recomendação</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {placementInsights.map((p, i) => (
-                                    <tr key={i} className="border-b border-border/50">
-                                      <td className="py-2 pr-3 text-foreground">{p.posicionamento}</td>
-                                      <td className="py-2 pr-3"><Badge className={`text-[9px] px-1.5 py-0 ${placementStatusBadge(p.status)}`}>{p.status}</Badge></td>
-                                      <td className="py-2 pr-3 text-muted-foreground">{formatCurrency(p.cpa)}</td>
-                                      <td className="py-2 pr-3 text-muted-foreground">{p.conversoes}</td>
-                                      <td className="py-2 text-muted-foreground max-w-[200px]">{p.recomendacao}</td>
-                                    </tr>
+                          {/* Section 6 — Recomendações */}
+                          {an.recomendacoes?.length > 0 && (
+                            <AccordionItem value="recomendacoes" className="rounded-xl overflow-hidden border-none bg-blue-500/5 border border-blue-500/20">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
+                                <span>🎯 Recomendações ({an.recomendacoes.length})</span>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4">
+                                <Accordion type="multiple" className="space-y-2">
+                                  {an.recomendacoes.map((rec, i) => (
+                                    <AccordionItem key={i} value={`rec-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
+                                      <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
+                                        <div className="flex items-center gap-2 flex-wrap flex-1 text-left">
+                                          <Badge className={`text-[9px] px-1.5 py-0 ${prioridadeBadge(rec.prioridade)}`}>{rec.prioridade}</Badge>
+                                          <Badge className={`text-[9px] px-1.5 py-0 ${tipoBadge(rec.tipo)}`}>{rec.tipo}</Badge>
+                                          <span className="font-medium text-foreground">{rec.titulo}</span>
+                                          {rec.urgencia && <span className="text-[9px] text-red-400 font-bold">{rec.urgencia}</span>}
+                                        </div>
+                                      </AccordionTrigger>
+                                      <AccordionContent className="px-3 pb-3 space-y-3">
+                                        {rec.diagnostico && (
+                                          <div>
+                                            <p className="text-[10px] text-muted-foreground font-semibold mb-1">Diagnóstico</p>
+                                            <p className="text-sm text-muted-foreground">{rec.diagnostico}</p>
+                                          </div>
+                                        )}
+                                        {rec.acao && (
+                                          <div>
+                                            <p className="text-[10px] text-muted-foreground font-semibold mb-1">Ação</p>
+                                            <p className="text-sm text-muted-foreground">{rec.acao}</p>
+                                          </div>
+                                        )}
+                                        {rec.como_executar && (
+                                          <div>
+                                            <p className="text-[10px] text-muted-foreground font-semibold mb-1">Como executar</p>
+                                            <ol className="list-decimal list-inside space-y-1">
+                                              {rec.como_executar.split(";").map((step, si) => (
+                                                <li key={si} className="text-sm text-muted-foreground">{step.trim()}</li>
+                                              ))}
+                                            </ol>
+                                          </div>
+                                        )}
+                                        {rec.impacto_esperado && (
+                                          <div>
+                                            <p className="text-[10px] text-muted-foreground font-semibold mb-1">Impacto esperado</p>
+                                            <p className="text-sm text-emerald-400">{rec.impacto_esperado}</p>
+                                          </div>
+                                        )}
+                                        {rec.angulos_criativo && (
+                                          <div>
+                                            <p className="text-[10px] text-muted-foreground font-semibold mb-1">Ângulos de criativo</p>
+                                            <p className="text-sm text-muted-foreground">{rec.angulos_criativo}</p>
+                                          </div>
+                                        )}
+                                        {rec.prerequisito && (
+                                          <div>
+                                            <p className="text-[10px] text-muted-foreground font-semibold mb-1">Pré-requisito</p>
+                                            <p className="text-sm text-amber-400">{rec.prerequisito}</p>
+                                          </div>
+                                        )}
+                                        {clickupCreated.has(`rec-${i}`) ? (
+                                          <span className="inline-flex items-center gap-1 text-xs text-emerald-400 font-semibold"><CheckCircle2 className="w-3.5 h-3.5" /> Tarefa criada</span>
+                                        ) : (
+                                          <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => openClickup(rec, i)}>
+                                            <Zap className="w-3.5 h-3.5" /> Criar tarefa ClickUp
+                                          </Button>
+                                        )}
+                                      </AccordionContent>
+                                    </AccordionItem>
                                   ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
+                                </Accordion>
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
 
-                      {/* Section 10 — Demográficos */}
-                      {demographicInsights.length > 0 && (
-                        <AccordionItem value="demographics" className="rounded-xl overflow-hidden border-none glass-card">
-                          <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                            <span>👥 Demográficos ({demographicInsights.length})</span>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-4">
-                            <div className="overflow-x-auto">
-                              <table className="w-full text-xs">
-                                <thead>
-                                  <tr className="border-b border-border text-muted-foreground">
-                                    <th className="text-left py-2 pr-3">Segmento</th>
-                                    <th className="text-left py-2 pr-3">Status</th>
-                                    <th className="text-left py-2 pr-3">CPA</th>
-                                    <th className="text-left py-2">Recomendação</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {demographicInsights.map((d, i) => (
-                                    <tr key={i} className="border-b border-border/50">
-                                      <td className="py-2 pr-3 text-foreground">{d.segmento}</td>
-                                      <td className="py-2 pr-3"><Badge className={`text-[9px] px-1.5 py-0 ${placementStatusBadge(d.status)}`}>{d.status}</Badge></td>
-                                      <td className="py-2 pr-3 text-muted-foreground">{formatCurrency(d.cpa)}</td>
-                                      <td className="py-2 text-muted-foreground max-w-[250px]">{d.recomendacao}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
-
-                      {/* Section 11 — Alertas Técnicos */}
-                      {alertasTecnicos.length > 0 && (
-                        <AccordionItem value="alertas_tec" className="rounded-xl overflow-hidden border-none bg-amber-500/5 border border-amber-500/20">
-                          <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                            <span>⚙️ Alertas Técnicos ({alertasTecnicos.length})</span>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-4 space-y-2">
-                            {alertasTecnicos.map((a, i) => (
-                              <div key={i} className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <Badge className="text-[9px] px-1.5 py-0 bg-amber-500/15 text-amber-400">{a.tipo}</Badge>
-                                  <span className="text-xs text-foreground font-medium">{a.campanha}</span>
+                          {/* Section 7 — Diagnóstico por Campanha */}
+                          {an.diagnostico_por_campanha?.length > 0 && (
+                            <AccordionItem value="diag_campanha" className="rounded-xl overflow-hidden border-none glass-card">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
+                                <span>📈 Diagnóstico por Campanha ({an.diagnostico_por_campanha.length})</span>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4">
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-xs">
+                                    <thead>
+                                      <tr className="border-b border-border text-muted-foreground">
+                                        <th className="text-left py-2 pr-3">Campanha</th>
+                                        <th className="text-left py-2 pr-3">Objetivo</th>
+                                        <th className="text-left py-2 pr-3">Status</th>
+                                        <th className="text-left py-2 pr-3">Causa raiz</th>
+                                        <th className="text-left py-2">Ação</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {an.diagnostico_por_campanha.map((d, i) => (
+                                        <tr key={i} className="border-b border-border/50">
+                                          <td className="py-2 pr-3 font-medium text-foreground max-w-[200px] truncate">{d.nome}</td>
+                                          <td className="py-2 pr-3 text-muted-foreground">{d.objetivo}</td>
+                                          <td className="py-2 pr-3"><Badge className={`text-[9px] px-1.5 py-0 ${scoreBadgeStyle(d.status)}`}>{d.status}</Badge></td>
+                                          <td className="py-2 pr-3 text-muted-foreground max-w-[200px]">{d.causa_raiz}</td>
+                                          <td className="py-2 text-muted-foreground max-w-[200px]">{d.acao_principal}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
                                 </div>
-                                <p className="text-xs text-muted-foreground">{a.descricao}</p>
-                                <p className="text-xs text-amber-400">🔧 {a.acao_imediata}</p>
-                              </div>
-                            ))}
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
 
-                      {/* Section 12 — Projeção */}
-                      {an.projecao && (
-                        <AccordionItem value="projecao" className="rounded-xl overflow-hidden border-none glass-card">
-                          <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                            <span>🔮 Projeção</span>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-4">
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                              <div className="p-3 rounded-lg bg-secondary/50 border border-border">
-                                <p className="text-[10px] text-muted-foreground font-semibold mb-1">Cenário Atual</p>
-                                <p className="text-sm text-muted-foreground">{an.projecao.cenario_atual}</p>
-                              </div>
-                              <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                                <p className="text-[10px] text-emerald-400 font-semibold mb-1">Com Otimizações</p>
-                                <p className="text-sm text-muted-foreground">{an.projecao.com_otimizacoes}</p>
-                              </div>
-                            </div>
-                            {(an.projecao.roas_esperado || an.projecao.reducao_cpa_estimada) && (
-                              <div className="flex gap-4 mt-3 text-xs text-muted-foreground">
-                                {an.projecao.roas_esperado && <span>ROAS esperado: <strong className="text-emerald-400">{an.projecao.roas_esperado}</strong></span>}
-                                {an.projecao.reducao_cpa_estimada && <span>Redução CPA: <strong className="text-emerald-400">{an.projecao.reducao_cpa_estimada}</strong></span>}
-                              </div>
-                            )}
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
+                          {/* Section 8 — Criativos (hidden for historico - MELHORIA 3) */}
+                          {!isHistorico && an.diagnostico_criativos && (
+                            <AccordionItem value="criativos" className="rounded-xl overflow-hidden border-none glass-card">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
+                                <span>🎨 Criativos</span>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4 space-y-3">
+                                {an.diagnostico_criativos.resumo && (
+                                  <p className="text-sm text-muted-foreground">{an.diagnostico_criativos.resumo}</p>
+                                )}
+                                {an.diagnostico_criativos.fatigados?.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-amber-400 mb-1">⚠️ Fatigados</p>
+                                    {an.diagnostico_criativos.fatigados.map((f, i) => (
+                                      <div key={i} className="text-xs text-muted-foreground pl-3 mb-1">• <strong>{f.nome}</strong>: {f.motivo}</div>
+                                    ))}
+                                  </div>
+                                )}
+                                {an.diagnostico_criativos.winners?.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-emerald-400 mb-1">🏆 Winners</p>
+                                    {an.diagnostico_criativos.winners.map((w, i) => (
+                                      <div key={i} className="text-xs text-muted-foreground pl-3 mb-1">• <strong>{w.nome}</strong>: {w.motivo}</div>
+                                    ))}
+                                  </div>
+                                )}
+                                {an.diagnostico_criativos.proximos_testes && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-blue-400 mb-1">🧪 Próximos testes</p>
+                                    <p className="text-sm text-muted-foreground">{an.diagnostico_criativos.proximos_testes}</p>
+                                  </div>
+                                )}
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
 
-                      {/* Section 13 — Campanhas (hidden for historico) */}
-                      {!isHistorico && ac.campanhas?.length > 0 && (
-                        <AccordionItem value="campanhas" className="rounded-xl overflow-hidden border-none glass-card">
-                          <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                            <span>📣 Campanhas ({ac.campanhas.length})</span>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-4">
-                            <Accordion type="multiple" className="space-y-2">
-                              {ac.campanhas.map((camp, i) => (
-                                <AccordionItem key={i} value={`camp-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
-                                  <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
-                                    <div className="flex items-center gap-2 flex-1 text-left">
-                                      <Badge className={`text-[9px] px-1.5 py-0 ${scoreBadgeStyle(camp.status_performance)}`}>{camp.status_performance}</Badge>
-                                      <span className="font-medium text-foreground truncate">{camp.nome}</span>
-                                      <span className="text-muted-foreground">{camp.tipo_campanha}</span>
+                          {/* Section 9 — Posicionamento */}
+                          {placementInsights.length > 0 && (
+                            <AccordionItem value="placement" className="rounded-xl overflow-hidden border-none glass-card">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
+                                <span>📍 Posicionamento ({placementInsights.length})</span>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4">
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-xs">
+                                    <thead>
+                                      <tr className="border-b border-border text-muted-foreground">
+                                        <th className="text-left py-2 pr-3">Posicionamento</th>
+                                        <th className="text-left py-2 pr-3">Status</th>
+                                        <th className="text-left py-2 pr-3">CPA</th>
+                                        <th className="text-left py-2 pr-3">Conversões</th>
+                                        <th className="text-left py-2">Recomendação</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {placementInsights.map((p, i) => (
+                                        <tr key={i} className="border-b border-border/50">
+                                          <td className="py-2 pr-3 text-foreground">{p.posicionamento}</td>
+                                          <td className="py-2 pr-3"><Badge className={`text-[9px] px-1.5 py-0 ${placementStatusBadge(p.status)}`}>{p.status}</Badge></td>
+                                          <td className="py-2 pr-3 text-muted-foreground">{formatCurrency(p.cpa)}</td>
+                                          <td className="py-2 pr-3 text-muted-foreground">{p.conversoes}</td>
+                                          <td className="py-2 text-muted-foreground max-w-[200px]">{p.recomendacao}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
+
+                          {/* Section 10 — Demográficos */}
+                          {demographicInsights.length > 0 && (
+                            <AccordionItem value="demographics" className="rounded-xl overflow-hidden border-none glass-card">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
+                                <span>👥 Demográficos ({demographicInsights.length})</span>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4">
+                                <div className="overflow-x-auto">
+                                  <table className="w-full text-xs">
+                                    <thead>
+                                      <tr className="border-b border-border text-muted-foreground">
+                                        <th className="text-left py-2 pr-3">Segmento</th>
+                                        <th className="text-left py-2 pr-3">Status</th>
+                                        <th className="text-left py-2 pr-3">CPA</th>
+                                        <th className="text-left py-2">Recomendação</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {demographicInsights.map((d, i) => (
+                                        <tr key={i} className="border-b border-border/50">
+                                          <td className="py-2 pr-3 text-foreground">{d.segmento}</td>
+                                          <td className="py-2 pr-3"><Badge className={`text-[9px] px-1.5 py-0 ${placementStatusBadge(d.status)}`}>{d.status}</Badge></td>
+                                          <td className="py-2 pr-3 text-muted-foreground">{formatCurrency(d.cpa)}</td>
+                                          <td className="py-2 text-muted-foreground max-w-[250px]">{d.recomendacao}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
+
+                          {/* Section 11 — Alertas Técnicos */}
+                          {alertasTecnicos.length > 0 && (
+                            <AccordionItem value="alertas_tec" className="rounded-xl overflow-hidden border-none bg-amber-500/5 border border-amber-500/20">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
+                                <span>⚙️ Alertas Técnicos ({alertasTecnicos.length})</span>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4 space-y-2">
+                                {alertasTecnicos.map((a, i) => (
+                                  <div key={i} className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-1">
+                                    <div className="flex items-center gap-2">
+                                      <Badge className="text-[9px] px-1.5 py-0 bg-amber-500/15 text-amber-400">{a.tipo}</Badge>
+                                      <span className="text-xs text-foreground font-medium">{a.campanha}</span>
                                     </div>
-                                  </AccordionTrigger>
-                                  <AccordionContent className="px-3 pb-3 space-y-2">
-                                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-xs">
-                                      <div><span className="text-muted-foreground">Gasto:</span> <strong>{formatCurrency(camp.metricas.spend)}</strong></div>
-                                      <div><span className="text-muted-foreground">Leads:</span> <strong>{camp.metricas.leads}</strong></div>
-                                      <div><span className="text-muted-foreground">CPM:</span> <strong>{formatCurrency(camp.metricas.cpm)}</strong></div>
-                                      <div><span className="text-muted-foreground">CTR:</span> <strong>{camp.metricas.ctr}%</strong></div>
-                                      <div><span className="text-muted-foreground">Alcance:</span> <strong>{formatNumber(camp.metricas.reach)}</strong></div>
-                                      <div><span className="text-muted-foreground">Freq:</span> <strong>{camp.metricas.frequency}</strong></div>
-                                      <div><span className="text-muted-foreground">Budget:</span> <strong>{camp.budget_utilization}%</strong></div>
-                                    </div>
-                                    {camp.alertas?.length > 0 && (
-                                      <div className="space-y-1">
-                                        {camp.alertas.map((a, ai) => (
-                                          <p key={ai} className="text-xs text-amber-400">⚠️ {a}</p>
-                                        ))}
-                                      </div>
-                                    )}
-                                    {camp.gerenciador_url && (
-                                      <a href={camp.gerenciador_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-400 hover:underline">
-                                        <ExternalLink className="w-3 h-3" /> Abrir no Gerenciador
-                                      </a>
-                                    )}
-                                  </AccordionContent>
-                                </AccordionItem>
-                              ))}
-                            </Accordion>
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
+                                    <p className="text-xs text-muted-foreground">{a.descricao}</p>
+                                    <p className="text-xs text-amber-400">🔧 {a.acao_imediata}</p>
+                                  </div>
+                                ))}
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
 
-                      {/* Section 14 — Relatório Fiscal */}
-                      {an.relatorio_fiscal && (
-                        <AccordionItem value="fiscal" className="rounded-xl overflow-hidden border-none glass-card">
-                          <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                            <span>📑 Relatório Fiscal</span>
-                          </AccordionTrigger>
-                          <AccordionContent className="px-4 pb-4">
-                            <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono bg-secondary/50 p-4 rounded-lg overflow-x-auto">
-                              {an.relatorio_fiscal}
-                            </pre>
-                          </AccordionContent>
-                        </AccordionItem>
-                      )}
-                    </Accordion>
-                  </>
-                )}
+                          {/* Section 12 — Projeção */}
+                          {an.projecao && (
+                            <AccordionItem value="projecao" className="rounded-xl overflow-hidden border-none glass-card">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
+                                <span>🔮 Projeção</span>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div className="p-3 rounded-lg bg-secondary/50 border border-border">
+                                    <p className="text-[10px] text-muted-foreground font-semibold mb-1">Cenário Atual</p>
+                                    <p className="text-sm text-muted-foreground">{an.projecao.cenario_atual}</p>
+                                  </div>
+                                  <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                                    <p className="text-[10px] text-emerald-400 font-semibold mb-1">Com Otimizações</p>
+                                    <p className="text-sm text-muted-foreground">{an.projecao.com_otimizacoes}</p>
+                                  </div>
+                                </div>
+                                {(an.projecao.roas_esperado || an.projecao.reducao_cpa_estimada) && (
+                                  <div className="flex gap-4 mt-3 text-xs text-muted-foreground">
+                                    {an.projecao.roas_esperado && <span>ROAS esperado: <strong className="text-emerald-400">{an.projecao.roas_esperado}</strong></span>}
+                                    {an.projecao.reducao_cpa_estimada && <span>Redução CPA: <strong className="text-emerald-400">{an.projecao.reducao_cpa_estimada}</strong></span>}
+                                  </div>
+                                )}
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
+
+                          {/* Section 13 — Campanhas (hidden for historico - MELHORIA 3) */}
+                          {!isHistorico && ac.campanhas?.length > 0 && (
+                            <AccordionItem value="campanhas" className="rounded-xl overflow-hidden border-none glass-card">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
+                                <span>📣 Campanhas ({ac.campanhas.length})</span>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4">
+                                <Accordion type="multiple" className="space-y-2">
+                                  {ac.campanhas.map((camp, i) => (
+                                    <AccordionItem key={i} value={`camp-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
+                                      <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
+                                        <div className="flex items-center gap-2 flex-1 text-left">
+                                          <Badge className={`text-[9px] px-1.5 py-0 ${scoreBadgeStyle(camp.status_performance)}`}>{camp.status_performance}</Badge>
+                                          <span className="font-medium text-foreground truncate">{camp.nome}</span>
+                                          <span className="text-muted-foreground">{camp.tipo_campanha}</span>
+                                        </div>
+                                      </AccordionTrigger>
+                                      <AccordionContent className="px-3 pb-3 space-y-2">
+                                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-xs">
+                                          <div><span className="text-muted-foreground">Gasto:</span> <strong>{formatCurrency(camp.metricas.spend)}</strong></div>
+                                          <div><span className="text-muted-foreground">Leads:</span> <strong>{camp.metricas.leads}</strong></div>
+                                          <div><span className="text-muted-foreground">CPM:</span> <strong>{formatCurrency(camp.metricas.cpm)}</strong></div>
+                                          <div><span className="text-muted-foreground">CTR:</span> <strong>{camp.metricas.ctr}%</strong></div>
+                                          <div><span className="text-muted-foreground">Alcance:</span> <strong>{formatNumber(camp.metricas.reach)}</strong></div>
+                                          <div><span className="text-muted-foreground">Freq:</span> <strong>{camp.metricas.frequency}</strong></div>
+                                          <div><span className="text-muted-foreground">Budget:</span> <strong>{camp.budget_utilization}%</strong></div>
+                                        </div>
+                                        {camp.alertas?.length > 0 && (
+                                          <div className="space-y-1">
+                                            {camp.alertas.map((a, ai) => (
+                                              <p key={ai} className="text-xs text-amber-400">⚠️ {a}</p>
+                                            ))}
+                                          </div>
+                                        )}
+                                        {camp.gerenciador_url && (
+                                          <a href={camp.gerenciador_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-400 hover:underline">
+                                            <ExternalLink className="w-3 h-3" /> Abrir no Gerenciador
+                                          </a>
+                                        )}
+                                      </AccordionContent>
+                                    </AccordionItem>
+                                  ))}
+                                </Accordion>
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
+
+                          {/* Section 14 — Relatório Fiscal */}
+                          {an.relatorio_fiscal && (
+                            <AccordionItem value="fiscal" className="rounded-xl overflow-hidden border-none glass-card">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
+                                <span>📑 Relatório Fiscal</span>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4">
+                                <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono bg-secondary/50 p-4 rounded-lg overflow-x-auto">
+                                  {an.relatorio_fiscal}
+                                </pre>
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
+                        </Accordion>
+                      </>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
               </div>
 
-              {/* Footer navigation */}
+              {/* Footer navigation — MELHORIA 6: loading spinners & disabled during load */}
               <div className="p-4 border-t border-border flex items-center justify-between shrink-0">
-                <Button size="sm" variant="outline" disabled={!canGoPrev} onClick={() => navDrawer(-1)} className="gap-1 text-xs">
-                  <ChevronLeft className="w-3.5 h-3.5" /> Anterior
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!canGoPrev || navLoading || analiseLoading}
+                  onClick={() => navDrawer(-1)}
+                  className="gap-1 text-xs"
+                >
+                  {navLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+                  Anterior
                 </Button>
-                <span className="text-xs text-muted-foreground">{drawerIdx + 1} de {filtered.length}</span>
-                <Button size="sm" variant="outline" disabled={!canGoNext} onClick={() => navDrawer(1)} className="gap-1 text-xs">
-                  {"Próximo"} <ChevronRight className="w-3.5 h-3.5" />
+                <span className="text-xs text-muted-foreground">{drawerIdx + 1} de {drawerNavList.length}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={!canGoNext || navLoading || analiseLoading}
+                  onClick={() => navDrawer(1)}
+                  className="gap-1 text-xs"
+                >
+                  Próximo
+                  {navLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ChevronRight className="w-3.5 h-3.5" />}
                 </Button>
               </div>
             </>
