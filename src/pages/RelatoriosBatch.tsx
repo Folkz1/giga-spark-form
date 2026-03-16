@@ -224,6 +224,7 @@ const RelatoriosBatch = () => {
 
   const ac = analise?.analiseCompleta;
   const an = ac?.analise;
+  const isHistorico = (analise as any)?.fonte === "historico";
 
   // Use root-level insights (more complete per spec)
   const placementInsights = ac?.placement_insights || an?.placement_insights || [];
