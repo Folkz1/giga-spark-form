@@ -1858,7 +1858,7 @@ const GestorIA = () => {
                   Gestor IA analisando suas campanhas...
                 </h2>
                 <p className="text-muted-foreground">
-                  Isso pode levar alguns segundos
+                  {pollingMsg || "Isso pode levar alguns segundos"}
                 </p>
               </div>
               <Loader2 className="w-6 h-6 text-primary animate-spin" />
