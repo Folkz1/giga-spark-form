@@ -80,6 +80,11 @@ const ClientesMeta = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ClienteMeta | null>(null);
   const [form, setForm] = useState<Omit<ClienteMeta, "id">>(emptyForm);
+  const [busca, setBusca] = useState("");
+
+  const filtered = clientes
+    .filter(c => c.nome.toLowerCase().includes(busca.toLowerCase()))
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
 
   const loadClientes = async () => {
     setLoading(true);
