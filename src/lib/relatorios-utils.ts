@@ -285,19 +285,22 @@ export function isRevisado(batchId: string, customerId: string, plataforma: stri
 }
 
 // ─── Formatters ───
-export function formatCurrency(value: number | string): string {
+export function formatCurrency(value: number | string | null | undefined): string {
+  if (value === null || value === undefined) return "R$ 0,00";
   const num = typeof value === "string" ? parseFloat(value) : value;
   if (isNaN(num)) return "R$ 0,00";
   return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-export function formatNumber(value: number | string): string {
+export function formatNumber(value: number | string | null | undefined): string {
+  if (value === null || value === undefined) return "0";
   const num = typeof value === "string" ? parseFloat(value) : value;
   if (isNaN(num)) return "0";
   return num.toLocaleString("pt-BR");
 }
 
-export function formatPercent(value: number | string): string {
+export function formatPercent(value: number | string | null | undefined): string {
+  if (value === null || value === undefined) return "0%";
   const num = typeof value === "string" ? parseFloat(value) : value;
   if (isNaN(num)) return "0%";
   return `${num.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
