@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Rocket, TrendingUp, Brain, BarChart2, MessageSquareText } from "lucide-react";
+import { Rocket, TrendingUp, Brain, BarChart2, MessageSquareText, FileBarChart } from "lucide-react";
+import { useState, useEffect } from "react";
+import { fetchBatches, getRevisados, type Batch } from "@/lib/relatorios-utils";
 
 const channels = [
   {
