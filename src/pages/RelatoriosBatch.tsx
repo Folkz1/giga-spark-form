@@ -452,6 +452,13 @@ const RelatoriosBatch = () => {
 
                 {!analiseLoading && ac && an && (
                   <>
+                    {isHistorico && (
+                      <div className="flex items-center gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-400 text-sm">
+                        <AlertTriangle className="w-4 h-4 shrink-0" />
+                        <span>Análise resumida. Execute o gestor para ver campanhas e criativos detalhados.</span>
+                      </div>
+                    )}
+                  <>
                     {/* Section 1 — Header info */}
                     {an.score_justificativa && (
                       <div className="glass-card rounded-xl p-4">
