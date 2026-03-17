@@ -13,6 +13,7 @@ import ClientesMeta from "./pages/ClientesMeta";
 import GestorCRM from "./pages/GestorCRM";
 import Relatorios from "./pages/Relatorios";
 import RelatoriosBatch from "./pages/RelatoriosBatch";
+import Configuracoes from "./pages/Configuracoes";
 import NotFound from "./pages/NotFound";
 import AuthGuard from "./components/AuthGuard";
 import Header from "./components/Header";
@@ -43,6 +44,7 @@ const App = () => (
           <Route path="/gestor-crm" element={<ProtectedRoute><GestorCRM /></ProtectedRoute>} />
           <Route path="/relatorios" element={<ProtectedRoute><Relatorios /></ProtectedRoute>} />
           <Route path="/relatorios/:batchId" element={<ProtectedRoute><RelatoriosBatch /></ProtectedRoute>} />
+          <Route path="/configuracoes" element={<ProtectedRoute><Configuracoes /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

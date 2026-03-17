@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Rocket, TrendingUp, Brain, BarChart2, MessageSquareText, FileBarChart } from "lucide-react";
+import { Rocket, TrendingUp, Brain, BarChart2, MessageSquareText, FileBarChart, Settings2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { fetchBatches, type Batch } from "@/lib/relatorios-utils";
 
@@ -49,6 +49,17 @@ const channels = [
     labelBg: "bg-emerald-500/10 text-emerald-400",
     cards: [
       { title: "Gestor CRM IA", description: "Consultoria de vendas e análise de dados em tempo real", icon: MessageSquareText, path: "/gestor-crm" },
+    ],
+  },
+  {
+    channel: "Tracking API",
+    color: "#f59e0b",
+    borderColor: "border-amber-500/30",
+    bgAccent: "bg-amber-500",
+    glowClass: "hover:shadow-[0_0_30px_rgba(245,158,11,0.15)]",
+    labelBg: "bg-amber-500/10 text-amber-400",
+    cards: [
+      { title: "Configurações", description: "Clientes, pixels Meta/Google, mapeamentos CRM", icon: Settings2, path: "/configuracoes" },
     ],
   },
 ];
