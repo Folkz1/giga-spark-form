@@ -260,9 +260,7 @@ const RelatoriosBatch = () => {
     setAnaliseLoading(true);
     try {
       const data = await fetchAnaliseCliente(batchId, c.customerId, p.plataforma);
-      console.log("[DEBUG] analise raw response:", JSON.stringify(data, null, 2).slice(0, 2000));
-      console.log("[DEBUG] analiseCompleta keys:", data?.analiseCompleta ? Object.keys(data.analiseCompleta) : "NO analiseCompleta");
-      console.log("[DEBUG] analiseCompleta.analise keys:", data?.analiseCompleta?.analise ? Object.keys(data.analiseCompleta.analise) : "NO analise nested");
+      console.log("[DEBUG] Google Ads?", data?.plataforma, "| analiseCompleta keys:", data?.analiseCompleta ? Object.keys(data.analiseCompleta) : "NONE", "| analise type:", typeof data?.analiseCompleta?.analise);
       setAnalise(data);
     } catch (err) {
       console.error("[DEBUG] loadAnalise error:", err);
@@ -395,15 +393,79 @@ const RelatoriosBatch = () => {
   ];
 
   const ac = analise?.analiseCompleta;
-  // Google Ads may put analise data directly in ac (no nested .analise)
-  const an = ac?.analise || (ac && !ac.analise ? ac as unknown as typeof ac.analise : null);
+  const isGoogleAds = analise?.plataforma === "google_ads";
+  // Meta Ads: ac.analise is an object with all fields
+  // Google Ads: ac.analise is a STRING (narrative), fields are at ac root level
+  const anMeta = ac?.analise && typeof ac.analise === "object" ? ac.analise : null;
+  // For Google Ads, we use ac itself as the source for top-level fields
+  const an = anMeta || (ac && typeof ac.analise !== "object" ? ac as unknown as typeof ac.analise : null);
   const isHistorico = (analise as any)?.fonte === "historico";
 
-  const placementInsights = ac?.placement_insights || an?.placement_insights || [];
-  const demographicInsights = ac?.demographic_insights || an?.demographic_insights || [];
-  const alertasTecnicos = ac?.alertas_tecnicos || an?.alertas_tecnicos || [];
+  // Google Ads alertas_criticos are objects {alerta, campanha, grupo, ...}, Meta are strings
+  const alertasCriticosRaw: any[] = an?.alertas_criticos || (ac as any)?.alertas_criticos || [];
+  const alertasCriticos: string[] = alertasCriticosRaw.map((a: any) => {
+    if (typeof a === "string") return a;
+    // Google Ads object format
+    const parts: string[] = [];
+    if (a.campanha) parts.push(`[${a.campanha}${a.grupo ? ` / ${a.grupo}` : ""}]`);
+    if (a.alerta) parts.push(a.alerta);
+    if (a.dado) parts.push(`Dado: ${a.dado}`);
+    if (a.causa_provavel) parts.push(`Causa: ${a.causa_provavel}`);
+    if (a.orcamento_diario_sugerido) parts.push(`Orçamento sugerido: ${a.orcamento_diario_sugerido}`);
+    return parts.join(" ");
+  });
 
-  const drawerScore = an?.score_conta || currentP?.data.score_fiscal || "";
+  // Google Ads oportunidades are objects {titulo, descricao, tipo, impacto, campanha, grupo}, Meta are strings
+  const oportunidadesRaw: any[] = an?.oportunidades || (ac as any)?.oportunidades || [];
+  const oportunidades: string[] = oportunidadesRaw.map((o: any) => {
+    if (typeof o === "string") return o;
+    const parts: string[] = [];
+    if (o.campanha) parts.push(`[${o.campanha}${o.grupo ? ` / ${o.grupo}` : ""}]`);
+    if (o.titulo) parts.push(o.titulo);
+    if (o.descricao) parts.push(o.descricao);
+    if (o.impacto) parts.push(`Impacto: ${o.impacto}`);
+    return parts.join(" — ");
+  });
+
+  // Google Ads uses recomendacoes_sugeridas, Meta uses recomendacoes
+  const recomendacoes: Recomendacao[] = an?.recomendacoes || (ac as any)?.recomendacoes_sugeridas || (ac as any)?.recomendacoes || [];
+
+  // Normalize resumo — Google Ads has different fields
+  const resumoNormalized = useMemo(() => {
+    const r = ac?.resumo;
+    if (!r) return null;
+    // If it already has Meta fields, return as-is
+    if (r.total_investimento !== undefined) return r;
+    // Google Ads resumo: custo7dias, custo30dias, totalCampanhas, conversoes7dias, conversoes30dias
+    const gR = r as any;
+    return {
+      total_investimento: gR.custo7dias || gR.custo30dias || "0",
+      total_leads: gR.conversoes7dias || gR.conversoes30dias || 0,
+      cpl_geral: "0",
+      roas_geral: gR.roas_geral || "0",
+      cpa_geral: gR.cpa_geral || "0",
+      ctr_medio: gR.ctr_medio || "0",
+      frequencia_media: gR.frequencia_media || "—",
+      cpm_medio: gR.cpm_medio || "0",
+      total_campanhas: gR.totalCampanhas || 0,
+      campanhas_criticas: gR.campanhas_criticas || 0,
+      campanhas_atencao: gR.campanhas_atencao || 0,
+      campanhas_saudaveis: gR.campanhas_saudaveis || 0,
+      total_anuncios: gR.total_anuncios || 0,
+      anuncios_fatigados: gR.anuncios_fatigados || 0,
+      total_compras: gR.total_compras || 0,
+      total_conversas: gR.total_conversas || 0,
+    } as any;
+  }, [ac]);
+
+  const placementInsights = ac?.placement_insights || an?.placement_insights || (ac as any)?.placement_insights || [];
+  const demographicInsights = ac?.demographic_insights || an?.demographic_insights || (ac as any)?.demographic_insights || [];
+  const alertasTecnicos = ac?.alertas_tecnicos || an?.alertas_tecnicos || (ac as any)?.alertas_tecnicos || [];
+
+  // Google Ads: narrative analise text
+  const analiseNarrativa = isGoogleAds && ac?.analise && typeof ac.analise === "string" ? ac.analise as string : null;
+
+  const drawerScore = an?.score_conta || (ac as any)?.score_conta || currentP?.data.score_fiscal || "";
   const canGoPrev = drawerIdx > 0;
   const canGoNext = drawerIdx < drawerNavList.length - 1;
 
@@ -714,7 +776,7 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 3 — Métricas */}
-                          {ac.resumo && (
+                          {resumoNormalized && (
                             <AccordionItem value="metricas" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
                                 <span>📊 Métricas</span>
@@ -722,35 +784,35 @@ const RelatoriosBatch = () => {
                               <AccordionContent className="px-4 pb-4">
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                   {[
-                                    { label: "Investimento", value: formatCurrency(ac.resumo.total_investimento), icon: DollarSign },
-                                    { label: "Leads", value: formatNumber(ac.resumo.total_leads), icon: Users },
-                                    { label: "CPL", value: formatCurrency(ac.resumo.cpl_geral), icon: Target },
-                                    { label: "ROAS", value: `${ac.resumo.roas_geral}x`, icon: TrendingUp },
-                                    { label: "CPA", value: formatCurrency(ac.resumo.cpa_geral), icon: Target },
-                                    { label: "CTR", value: formatPercent(ac.resumo.ctr_medio), icon: Crosshair },
-                                    { label: "Frequência", value: ac.resumo.frequencia_media, icon: RefreshCw },
-                                    { label: "CPM", value: formatCurrency(ac.resumo.cpm_medio), icon: DollarSign },
+                                    { label: "Investimento", value: formatCurrency(resumoNormalized.total_investimento), icon: DollarSign },
+                                    { label: "Leads", value: formatNumber(resumoNormalized.total_leads), icon: Users },
+                                    { label: "CPL", value: formatCurrency(resumoNormalized.cpl_geral), icon: Target },
+                                    { label: "ROAS", value: `${resumoNormalized.roas_geral}x`, icon: TrendingUp },
+                                    { label: "CPA", value: formatCurrency(resumoNormalized.cpa_geral), icon: Target },
+                                    { label: "CTR", value: formatPercent(resumoNormalized.ctr_medio), icon: Crosshair },
+                                    { label: "Frequência", value: resumoNormalized.frequencia_media, icon: RefreshCw },
+                                    { label: "CPM", value: formatCurrency(resumoNormalized.cpm_medio), icon: DollarSign },
                                   ].map(m => (
                                     <div key={m.label} className="bg-secondary/50 rounded-lg p-3">
                                       <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1"><m.icon className="w-3 h-3" />{m.label}</div>
                                       <p className="text-sm font-bold text-foreground">{m.value}</p>
                                     </div>
                                   ))}
-                                  {!isHistorico && (
+                                  {!isHistorico && resumoNormalized.total_campanhas > 0 && (
                                     <>
                                       <div className="bg-secondary/50 rounded-lg p-3">
                                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1"><LayoutGrid className="w-3 h-3" />Campanhas</div>
-                                        <p className="text-sm font-bold text-foreground">{ac.resumo.total_campanhas}</p>
+                                        <p className="text-sm font-bold text-foreground">{resumoNormalized.total_campanhas}</p>
                                         <div className="flex gap-1 mt-1 text-[9px]">
-                                          <span className="text-red-400">{ac.resumo.campanhas_criticas} crít.</span>
-                                          <span className="text-amber-400">{ac.resumo.campanhas_atencao} aten.</span>
-                                          <span className="text-emerald-400">{ac.resumo.campanhas_saudaveis} saud.</span>
+                                          <span className="text-red-400">{resumoNormalized.campanhas_criticas} crít.</span>
+                                          <span className="text-amber-400">{resumoNormalized.campanhas_atencao} aten.</span>
+                                          <span className="text-emerald-400">{resumoNormalized.campanhas_saudaveis} saud.</span>
                                         </div>
                                       </div>
                                       <div className="bg-secondary/50 rounded-lg p-3">
                                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1"><Eye className="w-3 h-3" />Anúncios</div>
-                                        <p className="text-sm font-bold text-foreground">{ac.resumo.total_anuncios}</p>
-                                        <p className="text-[9px] text-amber-400 mt-1">{ac.resumo.anuncios_fatigados} fatigados</p>
+                                        <p className="text-sm font-bold text-foreground">{resumoNormalized.total_anuncios}</p>
+                                        <p className="text-[9px] text-amber-400 mt-1">{resumoNormalized.anuncios_fatigados} fatigados</p>
                                       </div>
                                     </>
                                   )}
@@ -760,13 +822,13 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 4 — Alertas Críticos */}
-                          {(an?.alertas_criticos?.length ?? 0) > 0 && (
+                          {alertasCriticos.length > 0 && (
                             <AccordionItem value="alertas_criticos" className="rounded-xl overflow-hidden border-none bg-red-500/5 border border-red-500/20">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                                <span>🚨 Alertas Críticos ({an?.alertas_criticos?.length || 0})</span>
+                                <span>🚨 Alertas Críticos ({alertasCriticos.length})</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4 space-y-2">
-                                {(an?.alertas_criticos || []).map((a, i) => (
+                                {alertasCriticos.map((a, i) => (
                                   <AlertCard key={i} text={a} variant="red" />
                                 ))}
                               </AccordionContent>
@@ -774,13 +836,13 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 5 — Oportunidades */}
-                          {(an?.oportunidades?.length ?? 0) > 0 && (
+                          {oportunidades.length > 0 && (
                             <AccordionItem value="oportunidades" className="rounded-xl overflow-hidden border-none bg-emerald-500/5 border border-emerald-500/20">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                                <span>💡 Oportunidades ({an?.oportunidades?.length || 0})</span>
+                                <span>💡 Oportunidades ({oportunidades.length})</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4 space-y-2">
-                                {(an?.oportunidades || []).map((o, i) => (
+                                {oportunidades.map((o, i) => (
                                   <AlertCard key={i} text={o} variant="emerald" />
                                 ))}
                               </AccordionContent>
@@ -788,28 +850,28 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 6 — Recomendações */}
-                          {(an?.recomendacoes?.length ?? 0) > 0 && (
+                          {recomendacoes.length > 0 && (
                             <AccordionItem value="recomendacoes" className="rounded-xl overflow-hidden border-none bg-blue-500/5 border border-blue-500/20">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                                <span>🎯 Recomendações ({an?.recomendacoes?.length || 0})</span>
+                                <span>🎯 Recomendações ({recomendacoes.length})</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <Accordion type="multiple" className="space-y-2">
-                                  {(an?.recomendacoes || []).map((rec, i) => (
+                                  {recomendacoes.map((rec: any, i: number) => (
                                     <AccordionItem key={i} value={`rec-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
                                       <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
                                         <div className="flex items-center gap-2 flex-wrap flex-1 text-left">
-                                          <Badge className={`text-[9px] px-1.5 py-0 ${prioridadeBadge(rec.prioridade)}`}>{rec.prioridade}</Badge>
-                                          <Badge className={`text-[9px] px-1.5 py-0 ${tipoBadge(rec.tipo)}`}>{rec.tipo}</Badge>
-                                          <span className="font-medium text-foreground">{rec.titulo}</span>
+                                          {rec.prioridade && <Badge className={`text-[9px] px-1.5 py-0 ${prioridadeBadge(rec.prioridade)}`}>{rec.prioridade}</Badge>}
+                                          {rec.tipo && <Badge className={`text-[9px] px-1.5 py-0 ${tipoBadge(rec.tipo)}`}>{rec.tipo}</Badge>}
+                                          <span className="font-medium text-foreground">{rec.titulo || rec.nome || `Recomendação ${i + 1}`}</span>
                                           {rec.urgencia && <span className="text-[9px] text-red-400 font-bold">{rec.urgencia}</span>}
                                         </div>
                                       </AccordionTrigger>
                                       <AccordionContent className="px-3 pb-3 space-y-3">
-                                        {rec.diagnostico && (
+                                        {(rec.diagnostico || rec.descricao) && (
                                           <div>
                                             <p className="text-[10px] text-muted-foreground font-semibold mb-1">Diagnóstico</p>
-                                            <p className="text-sm text-muted-foreground">{rec.diagnostico}</p>
+                                            <p className="text-sm text-muted-foreground">{rec.diagnostico || rec.descricao}</p>
                                           </div>
                                         )}
                                         {rec.acao && (
@@ -822,16 +884,16 @@ const RelatoriosBatch = () => {
                                           <div>
                                             <p className="text-[10px] text-muted-foreground font-semibold mb-1">Como executar</p>
                                             <ol className="list-decimal list-inside space-y-1">
-                                              {rec.como_executar.split(";").map((step, si) => (
+                                              {rec.como_executar.split(";").map((step: string, si: number) => (
                                                 <li key={si} className="text-sm text-muted-foreground">{step.trim()}</li>
                                               ))}
                                             </ol>
                                           </div>
                                         )}
-                                        {rec.impacto_esperado && (
+                                        {(rec.impacto_esperado || rec.impacto) && (
                                           <div>
                                             <p className="text-[10px] text-muted-foreground font-semibold mb-1">Impacto esperado</p>
-                                            <p className="text-sm text-emerald-400">{rec.impacto_esperado}</p>
+                                            <p className="text-sm text-emerald-400">{rec.impacto_esperado || rec.impacto}</p>
                                           </div>
                                         )}
                                         {rec.angulos_criativo && (
@@ -849,7 +911,7 @@ const RelatoriosBatch = () => {
                                         {clickupCreated.has(`rec-${i}`) ? (
                                           <span className="inline-flex items-center gap-1 text-xs text-emerald-400 font-semibold"><CheckCircle2 className="w-3.5 h-3.5" /> Tarefa criada</span>
                                         ) : (
-                                          <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => openClickup(rec, i)}>
+                                          <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => openClickup(rec as Recomendacao, i)}>
                                             <Zap className="w-3.5 h-3.5" /> Criar tarefa ClickUp
                                           </Button>
                                         )}
@@ -861,7 +923,17 @@ const RelatoriosBatch = () => {
                             </AccordionItem>
                           )}
 
-                          {/* Section 7 — Diagnóstico por Campanha */}
+                          {/* Section 6.5 — Análise Narrativa (Google Ads) */}
+                          {analiseNarrativa && (
+                            <AccordionItem value="analise_narrativa" className="rounded-xl overflow-hidden border-none glass-card">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
+                                <span>📝 Análise Detalhada</span>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4">
+                                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{analiseNarrativa}</p>
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
                           {(an?.diagnostico_por_campanha?.length ?? 0) > 0 && (
                             <AccordionItem value="diag_campanha" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
