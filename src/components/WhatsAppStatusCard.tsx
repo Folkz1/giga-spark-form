@@ -24,15 +24,22 @@ interface WhatsAppStatus {
 export function WhatsAppStatusCard() {
   const [data, setData] = useState<WhatsAppStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const fetchStatus = useCallback(async () => {
+  const fetchStatus = useCallback(async (isInitial = false) => {
     try {
-      const res = await fetch(API_URL);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10_000);
+      const res = await fetch(API_URL, { signal: controller.signal });
+      clearTimeout(timeout);
       if (!res.ok) throw new Error();
-      setData(await res.json());
+      const json = await res.json();
+      setData(json);
+      setError(false);
     } catch {
-      setData(null);
+      // Only show error if we have no data yet
+      if (isInitial) setError(true);
     } finally {
       setLoading(false);
     }
