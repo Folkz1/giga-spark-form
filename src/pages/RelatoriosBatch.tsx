@@ -676,7 +676,7 @@ const RelatoriosBatch = () => {
                       <div className="text-center py-12 text-muted-foreground">Erro ao carregar análise. Tente novamente.</div>
                     )}
 
-                    {!analiseLoading && !navLoading && ac && an && (
+                    {!analiseLoading && !navLoading && ac && (
                       <>
                         {/* Historico banner */}
                         {isHistorico && (
