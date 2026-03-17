@@ -1,6 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, CheckSquare, ChevronDown, Loader2, Calendar, User, List, Flag, MessageSquare, Search } from "lucide-react";
+import { X, CheckSquare, Loader2, Calendar, User, List, Flag, MessageSquare, Check, ChevronsUpDown } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 // ─── CONFIGURAÇÃO ────────────────────────────────────────────────
 // Substitua pela URL do seu webhook n8n de busca de dados do ClickUp
