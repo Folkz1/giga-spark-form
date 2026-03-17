@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, CheckSquare, ChevronDown, Loader2, Calendar, User, List, Flag, MessageSquare, Search } from "lucide-react";
 
@@ -65,6 +65,7 @@ function CustomSelect({
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const selected = options.find((o) => o.id === value || o.value === value);
 
   const filtered = searchable && search.trim()
@@ -81,8 +82,27 @@ function CustomSelect({
     if (!newOpen) setSearch("");
   };
 
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!(event.target instanceof Node)) return;
+      if (!wrapperRef.current?.contains(event.target)) {
+        handleOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [open]);
+
   return (
-    <div className="relative">
+    <div ref={wrapperRef} className="relative">
       <button
         type="button"
         onClick={() => handleOpen(!open)}
@@ -156,9 +176,6 @@ function CustomSelect({
         )}
       </AnimatePresence>
 
-      {open && (
-        <div className="fixed inset-0 z-[105]" onClick={() => handleOpen(false)} />
-      )}
     </div>
   );
 }
