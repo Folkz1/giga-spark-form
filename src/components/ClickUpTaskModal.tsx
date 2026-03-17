@@ -65,6 +65,7 @@ function CustomSelect({
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const selected = options.find((o) => o.id === value || o.value === value);
 
   const filtered = searchable && search.trim()
