@@ -71,16 +71,18 @@ export function WhatsAppStatusCard() {
     );
   }
 
-  if (!data) {
+  if (!data && error) {
     return (
       <div className="rounded-2xl border border-border bg-card p-6 text-center">
         <p className="text-sm text-muted-foreground">Não foi possível carregar o status do WhatsApp.</p>
-        <Button variant="outline" size="sm" className="mt-3 gap-1.5" onClick={() => { setLoading(true); fetchStatus(); }}>
+        <Button variant="outline" size="sm" className="mt-3 gap-1.5" onClick={() => { setLoading(true); setError(false); fetchStatus(true); }}>
           <RefreshCw className="w-3.5 h-3.5" /> Tentar novamente
         </Button>
       </div>
     );
   }
+
+  if (!data) return null;
 
   const allOnline = data.offline === 0;
 
