@@ -783,7 +783,7 @@ const RelatoriosBatch = () => {
 
                         <Accordion
                           type="multiple"
-                          defaultValue={["resumo_executivo", "metricas", "alertas_criticos", "recomendacoes"]}
+                          defaultValue={["metricas"]}
                           className="space-y-3"
                         >
                           {/* Section 2 — Resumo Executivo */}
