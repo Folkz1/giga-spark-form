@@ -1038,10 +1038,10 @@ const RelatoriosBatch = () => {
                                     <p className="text-sm text-muted-foreground">{an?.projecao?.com_otimizacoes}</p>
                                   </div>
                                 </div>
-                                {(an.projecao.roas_esperado || an.projecao.reducao_cpa_estimada) && (
+                                {(an?.projecao?.roas_esperado || an?.projecao?.reducao_cpa_estimada) && (
                                   <div className="flex gap-4 mt-3 text-xs text-muted-foreground">
-                                    {an.projecao.roas_esperado && <span>ROAS esperado: <strong className="text-emerald-400">{an.projecao.roas_esperado}</strong></span>}
-                                    {an.projecao.reducao_cpa_estimada && <span>Redução CPA: <strong className="text-emerald-400">{an.projecao.reducao_cpa_estimada}</strong></span>}
+                                    {an?.projecao?.roas_esperado && <span>ROAS esperado: <strong className="text-emerald-400">{an.projecao.roas_esperado}</strong></span>}
+                                    {an?.projecao?.reducao_cpa_estimada && <span>Redução CPA: <strong className="text-emerald-400">{an.projecao.reducao_cpa_estimada}</strong></span>}
                                   </div>
                                 )}
                               </AccordionContent>
