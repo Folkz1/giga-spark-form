@@ -788,14 +788,14 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 6 — Recomendações */}
-                          {an.recomendacoes?.length > 0 && (
+                          {(an?.recomendacoes?.length ?? 0) > 0 && (
                             <AccordionItem value="recomendacoes" className="rounded-xl overflow-hidden border-none bg-blue-500/5 border border-blue-500/20">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                                <span>🎯 Recomendações ({an.recomendacoes.length})</span>
+                                <span>🎯 Recomendações ({an?.recomendacoes?.length || 0})</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <Accordion type="multiple" className="space-y-2">
-                                  {an.recomendacoes.map((rec, i) => (
+                                  {(an?.recomendacoes || []).map((rec, i) => (
                                     <AccordionItem key={i} value={`rec-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
                                       <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
                                         <div className="flex items-center gap-2 flex-wrap flex-1 text-left">
