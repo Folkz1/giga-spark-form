@@ -1083,7 +1083,7 @@ const RelatoriosBatch = () => {
                                       {demographicInsights.map((d, i) => (
                                         <tr key={i} className="border-b border-border/50">
                                           <td className="py-2 pr-3 text-foreground">{d.segmento}</td>
-                                          <td className="py-2 pr-3"><Badge className={`text-[9px] px-1.5 py-0 ${placementStatusBadge(d.status)}`}>{d.status}</Badge></td>
+                                          <td className="py-2 pr-3"><Badge className={`text-[11px] px-2 py-0.5 ${placementStatusBadge(d.status)}`}>{d.status}</Badge></td>
                                           <td className="py-2 pr-3 text-muted-foreground">{formatCurrency(d.cpa)}</td>
                                           <td className="py-2 text-muted-foreground max-w-[250px]">{d.recomendacao}</td>
                                         </tr>
