@@ -778,7 +778,7 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 3 — Métricas */}
-                          {ac.resumo && (
+                          {resumoNormalized && (
                             <AccordionItem value="metricas" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
                                 <span>📊 Métricas</span>
@@ -786,35 +786,35 @@ const RelatoriosBatch = () => {
                               <AccordionContent className="px-4 pb-4">
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                   {[
-                                    { label: "Investimento", value: formatCurrency(ac.resumo.total_investimento), icon: DollarSign },
-                                    { label: "Leads", value: formatNumber(ac.resumo.total_leads), icon: Users },
-                                    { label: "CPL", value: formatCurrency(ac.resumo.cpl_geral), icon: Target },
-                                    { label: "ROAS", value: `${ac.resumo.roas_geral}x`, icon: TrendingUp },
-                                    { label: "CPA", value: formatCurrency(ac.resumo.cpa_geral), icon: Target },
-                                    { label: "CTR", value: formatPercent(ac.resumo.ctr_medio), icon: Crosshair },
-                                    { label: "Frequência", value: ac.resumo.frequencia_media, icon: RefreshCw },
-                                    { label: "CPM", value: formatCurrency(ac.resumo.cpm_medio), icon: DollarSign },
+                                    { label: "Investimento", value: formatCurrency(resumoNormalized.total_investimento), icon: DollarSign },
+                                    { label: "Leads", value: formatNumber(resumoNormalized.total_leads), icon: Users },
+                                    { label: "CPL", value: formatCurrency(resumoNormalized.cpl_geral), icon: Target },
+                                    { label: "ROAS", value: `${resumoNormalized.roas_geral}x`, icon: TrendingUp },
+                                    { label: "CPA", value: formatCurrency(resumoNormalized.cpa_geral), icon: Target },
+                                    { label: "CTR", value: formatPercent(resumoNormalized.ctr_medio), icon: Crosshair },
+                                    { label: "Frequência", value: resumoNormalized.frequencia_media, icon: RefreshCw },
+                                    { label: "CPM", value: formatCurrency(resumoNormalized.cpm_medio), icon: DollarSign },
                                   ].map(m => (
                                     <div key={m.label} className="bg-secondary/50 rounded-lg p-3">
                                       <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1"><m.icon className="w-3 h-3" />{m.label}</div>
                                       <p className="text-sm font-bold text-foreground">{m.value}</p>
                                     </div>
                                   ))}
-                                  {!isHistorico && (
+                                  {!isHistorico && resumoNormalized.total_campanhas > 0 && (
                                     <>
                                       <div className="bg-secondary/50 rounded-lg p-3">
                                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1"><LayoutGrid className="w-3 h-3" />Campanhas</div>
-                                        <p className="text-sm font-bold text-foreground">{ac.resumo.total_campanhas}</p>
+                                        <p className="text-sm font-bold text-foreground">{resumoNormalized.total_campanhas}</p>
                                         <div className="flex gap-1 mt-1 text-[9px]">
-                                          <span className="text-red-400">{ac.resumo.campanhas_criticas} crít.</span>
-                                          <span className="text-amber-400">{ac.resumo.campanhas_atencao} aten.</span>
-                                          <span className="text-emerald-400">{ac.resumo.campanhas_saudaveis} saud.</span>
+                                          <span className="text-red-400">{resumoNormalized.campanhas_criticas} crít.</span>
+                                          <span className="text-amber-400">{resumoNormalized.campanhas_atencao} aten.</span>
+                                          <span className="text-emerald-400">{resumoNormalized.campanhas_saudaveis} saud.</span>
                                         </div>
                                       </div>
                                       <div className="bg-secondary/50 rounded-lg p-3">
                                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1"><Eye className="w-3 h-3" />Anúncios</div>
-                                        <p className="text-sm font-bold text-foreground">{ac.resumo.total_anuncios}</p>
-                                        <p className="text-[9px] text-amber-400 mt-1">{ac.resumo.anuncios_fatigados} fatigados</p>
+                                        <p className="text-sm font-bold text-foreground">{resumoNormalized.total_anuncios}</p>
+                                        <p className="text-[9px] text-amber-400 mt-1">{resumoNormalized.anuncios_fatigados} fatigados</p>
                                       </div>
                                     </>
                                   )}
