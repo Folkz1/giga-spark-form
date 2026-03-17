@@ -914,7 +914,7 @@ const RelatoriosBatch = () => {
                                     ))}
                                   </div>
                                 )}
-                                {an.diagnostico_criativos.winners?.length > 0 && (
+                                {(an?.diagnostico_criativos?.winners?.length ?? 0) > 0 && (
                                   <div>
                                     <p className="text-xs font-semibold text-emerald-400 mb-1">🏆 Winners</p>
                                     {an.diagnostico_criativos.winners.map((w, i) => (
