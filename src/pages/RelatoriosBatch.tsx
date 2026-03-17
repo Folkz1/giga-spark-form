@@ -1171,7 +1171,7 @@ const RelatoriosBatch = () => {
                                       <AccordionItem key={i} value={`camp-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
                                         <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
                                           <div className="flex items-center gap-2 flex-1 text-left">
-                                            {campStatus && <Badge className={`text-[9px] px-1.5 py-0 ${scoreBadgeStyle(campStatus)}`}>{formatScore(campStatus)}</Badge>}
+                                            {campStatus && <Badge className={`text-[11px] px-2 py-0.5 ${scoreBadgeStyle(campStatus)}`}>{formatScore(campStatus)}</Badge>}
                                             <span className="font-medium text-foreground truncate">{campName}</span>
                                             {campType && <span className="text-muted-foreground">{campType}</span>}
                                           </div>
