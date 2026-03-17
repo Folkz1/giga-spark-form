@@ -103,7 +103,7 @@ const Relatorios = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">
                         <p className="text-foreground font-semibold text-base">{formatDate(batch.dataExecucao)}</p>
-                        {batch.plataforma.split(",").map(p => {
+                        {(batch.plataforma || "").split(",").filter(Boolean).map(p => {
                           const key = p.trim();
                           const isMeta = key === "meta_ads";
                           const isGoogle = key === "google_ads";
