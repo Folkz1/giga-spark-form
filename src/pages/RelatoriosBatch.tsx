@@ -207,6 +207,7 @@ const RelatoriosBatch = () => {
   const [clickupTitle, setClickupTitle] = useState("");
   const [clickupDesc, setClickupDesc] = useState("");
   const [clickupCreated, setClickupCreated] = useState<Set<string>>(new Set());
+  const [clickupRecIdx, setClickupRecIdx] = useState<number>(-1);
 
   const clientes = detail?.clientes || [];
 
@@ -384,7 +385,7 @@ const RelatoriosBatch = () => {
   };
 
   const openClickup = (rec: Recomendacao, idx: number) => {
-    const title = rec.titulo || (rec as any).nome || `Recomendação ${idx + 1}`;
+    const title = rec.titulo || (rec as any).nome || rec.acao || `Recomendação ${idx + 1}`;
     const desc = [
       rec.diagnostico ? `📋 Diagnóstico:\n${rec.diagnostico}` : "",
       rec.acao ? `🎯 Ação:\n${rec.acao}` : "",
@@ -394,6 +395,7 @@ const RelatoriosBatch = () => {
       rec.prerequisito ? `⚠️ Pré-requisito:\n${rec.prerequisito}` : "",
     ].filter(Boolean).join("\n\n");
     setClickupTitle(title);
+    setClickupRecIdx(idx);
     setClickupDesc(desc);
     setClickupOpen(true);
   };
@@ -1301,7 +1303,15 @@ const RelatoriosBatch = () => {
         onClose={() => setClickupOpen(false)}
         taskTitle={clickupTitle}
         taskDescription={clickupDesc}
-        onSuccess={() => {}}
+        onSuccess={() => {
+          if (clickupRecIdx >= 0) {
+            setClickupCreated(prev => {
+              const next = new Set(prev);
+              next.add(`rec-${clickupRecIdx}`);
+              return next;
+            });
+          }
+        }}
       />
     </div>
   );
