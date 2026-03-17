@@ -239,7 +239,7 @@ export function ClickUpTaskModal({
     }
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <>
