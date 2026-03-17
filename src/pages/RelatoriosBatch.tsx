@@ -862,10 +862,10 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 7 — Diagnóstico por Campanha */}
-                          {an.diagnostico_por_campanha?.length > 0 && (
+                          {(an?.diagnostico_por_campanha?.length ?? 0) > 0 && (
                             <AccordionItem value="diag_campanha" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                                <span>📈 Diagnóstico por Campanha ({an.diagnostico_por_campanha.length})</span>
+                                <span>📈 Diagnóstico por Campanha ({an?.diagnostico_por_campanha?.length || 0})</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <div className="overflow-x-auto">
@@ -880,7 +880,7 @@ const RelatoriosBatch = () => {
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {an.diagnostico_por_campanha.map((d, i) => (
+                                      {(an?.diagnostico_por_campanha || []).map((d, i) => (
                                         <tr key={i} className="border-b border-border/50">
                                           <td className="py-2 pr-3 font-medium text-foreground max-w-[200px] truncate">{d.nome}</td>
                                           <td className="py-2 pr-3 text-muted-foreground">{d.objetivo}</td>
