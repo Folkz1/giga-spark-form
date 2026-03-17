@@ -852,28 +852,28 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 6 — Recomendações */}
-                          {(an?.recomendacoes?.length ?? 0) > 0 && (
+                          {recomendacoes.length > 0 && (
                             <AccordionItem value="recomendacoes" className="rounded-xl overflow-hidden border-none bg-blue-500/5 border border-blue-500/20">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                                <span>🎯 Recomendações ({an?.recomendacoes?.length || 0})</span>
+                                <span>🎯 Recomendações ({recomendacoes.length})</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <Accordion type="multiple" className="space-y-2">
-                                  {(an?.recomendacoes || []).map((rec, i) => (
+                                  {recomendacoes.map((rec: any, i: number) => (
                                     <AccordionItem key={i} value={`rec-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
                                       <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
                                         <div className="flex items-center gap-2 flex-wrap flex-1 text-left">
-                                          <Badge className={`text-[9px] px-1.5 py-0 ${prioridadeBadge(rec.prioridade)}`}>{rec.prioridade}</Badge>
-                                          <Badge className={`text-[9px] px-1.5 py-0 ${tipoBadge(rec.tipo)}`}>{rec.tipo}</Badge>
-                                          <span className="font-medium text-foreground">{rec.titulo}</span>
+                                          {rec.prioridade && <Badge className={`text-[9px] px-1.5 py-0 ${prioridadeBadge(rec.prioridade)}`}>{rec.prioridade}</Badge>}
+                                          {rec.tipo && <Badge className={`text-[9px] px-1.5 py-0 ${tipoBadge(rec.tipo)}`}>{rec.tipo}</Badge>}
+                                          <span className="font-medium text-foreground">{rec.titulo || rec.nome || `Recomendação ${i + 1}`}</span>
                                           {rec.urgencia && <span className="text-[9px] text-red-400 font-bold">{rec.urgencia}</span>}
                                         </div>
                                       </AccordionTrigger>
                                       <AccordionContent className="px-3 pb-3 space-y-3">
-                                        {rec.diagnostico && (
+                                        {(rec.diagnostico || rec.descricao) && (
                                           <div>
                                             <p className="text-[10px] text-muted-foreground font-semibold mb-1">Diagnóstico</p>
-                                            <p className="text-sm text-muted-foreground">{rec.diagnostico}</p>
+                                            <p className="text-sm text-muted-foreground">{rec.diagnostico || rec.descricao}</p>
                                           </div>
                                         )}
                                         {rec.acao && (
@@ -886,16 +886,16 @@ const RelatoriosBatch = () => {
                                           <div>
                                             <p className="text-[10px] text-muted-foreground font-semibold mb-1">Como executar</p>
                                             <ol className="list-decimal list-inside space-y-1">
-                                              {rec.como_executar.split(";").map((step, si) => (
+                                              {rec.como_executar.split(";").map((step: string, si: number) => (
                                                 <li key={si} className="text-sm text-muted-foreground">{step.trim()}</li>
                                               ))}
                                             </ol>
                                           </div>
                                         )}
-                                        {rec.impacto_esperado && (
+                                        {(rec.impacto_esperado || rec.impacto) && (
                                           <div>
                                             <p className="text-[10px] text-muted-foreground font-semibold mb-1">Impacto esperado</p>
-                                            <p className="text-sm text-emerald-400">{rec.impacto_esperado}</p>
+                                            <p className="text-sm text-emerald-400">{rec.impacto_esperado || rec.impacto}</p>
                                           </div>
                                         )}
                                         {rec.angulos_criativo && (
@@ -913,7 +913,7 @@ const RelatoriosBatch = () => {
                                         {clickupCreated.has(`rec-${i}`) ? (
                                           <span className="inline-flex items-center gap-1 text-xs text-emerald-400 font-semibold"><CheckCircle2 className="w-3.5 h-3.5" /> Tarefa criada</span>
                                         ) : (
-                                          <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => openClickup(rec, i)}>
+                                          <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => openClickup(rec as Recomendacao, i)}>
                                             <Zap className="w-3.5 h-3.5" /> Criar tarefa ClickUp
                                           </Button>
                                         )}
@@ -925,7 +925,17 @@ const RelatoriosBatch = () => {
                             </AccordionItem>
                           )}
 
-                          {/* Section 7 — Diagnóstico por Campanha */}
+                          {/* Section 6.5 — Análise Narrativa (Google Ads) */}
+                          {analiseNarrativa && (
+                            <AccordionItem value="analise_narrativa" className="rounded-xl overflow-hidden border-none glass-card">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
+                                <span>📝 Análise Detalhada</span>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4">
+                                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{analiseNarrativa}</p>
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
                           {(an?.diagnostico_por_campanha?.length ?? 0) > 0 && (
                             <AccordionItem value="diag_campanha" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
