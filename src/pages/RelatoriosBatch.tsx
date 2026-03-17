@@ -260,8 +260,12 @@ const RelatoriosBatch = () => {
     setAnaliseLoading(true);
     try {
       const data = await fetchAnaliseCliente(batchId, c.customerId, p.plataforma);
+      console.log("[DEBUG] analise raw response:", JSON.stringify(data, null, 2).slice(0, 2000));
+      console.log("[DEBUG] analiseCompleta keys:", data?.analiseCompleta ? Object.keys(data.analiseCompleta) : "NO analiseCompleta");
+      console.log("[DEBUG] analiseCompleta.analise keys:", data?.analiseCompleta?.analise ? Object.keys(data.analiseCompleta.analise) : "NO analise nested");
       setAnalise(data);
-    } catch {
+    } catch (err) {
+      console.error("[DEBUG] loadAnalise error:", err);
       setAnalise(null);
     } finally {
       setAnaliseLoading(false);
@@ -391,7 +395,8 @@ const RelatoriosBatch = () => {
   ];
 
   const ac = analise?.analiseCompleta;
-  const an = ac?.analise;
+  // Google Ads may put analise data directly in ac (no nested .analise)
+  const an = ac?.analise || (ac && !ac.analise ? ac as unknown as typeof ac.analise : null);
   const isHistorico = (analise as any)?.fonte === "historico";
 
   const placementInsights = ac?.placement_insights || an?.placement_insights || [];
@@ -403,12 +408,13 @@ const RelatoriosBatch = () => {
   const canGoNext = drawerIdx < drawerNavList.length - 1;
 
   const resumoExecutivo = useMemo(() => {
-    if (!an?.resumo_executivo) return "";
-    if (isHistorico && (an.resumo_executivo === HISTORICO_PLACEHOLDER || an.resumo_executivo.includes("Analise resumida"))) {
+    const re = an?.resumo_executivo || (ac as any)?.resumo_executivo;
+    if (!re) return "";
+    if (isHistorico && (re === HISTORICO_PLACEHOLDER || re.includes("Analise resumida"))) {
       return analise ? generateAutoResumo(analise) : "";
     }
-    return an.resumo_executivo;
-  }, [an, isHistorico, analise]);
+    return re;
+  }, [an, ac, isHistorico, analise]);
 
   return (
     <div className="min-h-screen bg-background px-4 pt-8 pb-12">
@@ -670,7 +676,7 @@ const RelatoriosBatch = () => {
                       <div className="text-center py-12 text-muted-foreground">Erro ao carregar análise. Tente novamente.</div>
                     )}
 
-                    {!analiseLoading && !navLoading && ac && an && (
+                    {!analiseLoading && !navLoading && ac && (
                       <>
                         {/* Historico banner */}
                         {isHistorico && (
@@ -681,9 +687,9 @@ const RelatoriosBatch = () => {
                         )}
 
                         {/* Section 1 — Header info with BUG 3 period fix */}
-                        {an.score_justificativa && (
+                        {(an?.score_justificativa || (ac as any)?.score_justificativa) && (
                           <div className="glass-card rounded-xl p-4">
-                            <p className="text-sm text-muted-foreground">{an.score_justificativa}</p>
+                            <p className="text-sm text-muted-foreground">{an?.score_justificativa || (ac as any)?.score_justificativa}</p>
                             <p className="text-xs text-muted-foreground/60 mt-2">
                               {ac.data_analise} • Período: {formatPeriodo(ac.periodo || "")}
                             </p>
@@ -754,13 +760,13 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 4 — Alertas Críticos */}
-                          {an.alertas_criticos?.length > 0 && (
+                          {(an?.alertas_criticos?.length ?? 0) > 0 && (
                             <AccordionItem value="alertas_criticos" className="rounded-xl overflow-hidden border-none bg-red-500/5 border border-red-500/20">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                                <span>🚨 Alertas Críticos ({an.alertas_criticos.length})</span>
+                                <span>🚨 Alertas Críticos ({an?.alertas_criticos?.length || 0})</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4 space-y-2">
-                                {an.alertas_criticos.map((a, i) => (
+                                {(an?.alertas_criticos || []).map((a, i) => (
                                   <AlertCard key={i} text={a} variant="red" />
                                 ))}
                               </AccordionContent>
@@ -768,13 +774,13 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 5 — Oportunidades */}
-                          {an.oportunidades?.length > 0 && (
+                          {(an?.oportunidades?.length ?? 0) > 0 && (
                             <AccordionItem value="oportunidades" className="rounded-xl overflow-hidden border-none bg-emerald-500/5 border border-emerald-500/20">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                                <span>💡 Oportunidades ({an.oportunidades.length})</span>
+                                <span>💡 Oportunidades ({an?.oportunidades?.length || 0})</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4 space-y-2">
-                                {an.oportunidades.map((o, i) => (
+                                {(an?.oportunidades || []).map((o, i) => (
                                   <AlertCard key={i} text={o} variant="emerald" />
                                 ))}
                               </AccordionContent>
@@ -782,14 +788,14 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 6 — Recomendações */}
-                          {an.recomendacoes?.length > 0 && (
+                          {(an?.recomendacoes?.length ?? 0) > 0 && (
                             <AccordionItem value="recomendacoes" className="rounded-xl overflow-hidden border-none bg-blue-500/5 border border-blue-500/20">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                                <span>🎯 Recomendações ({an.recomendacoes.length})</span>
+                                <span>🎯 Recomendações ({an?.recomendacoes?.length || 0})</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <Accordion type="multiple" className="space-y-2">
-                                  {an.recomendacoes.map((rec, i) => (
+                                  {(an?.recomendacoes || []).map((rec, i) => (
                                     <AccordionItem key={i} value={`rec-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
                                       <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
                                         <div className="flex items-center gap-2 flex-wrap flex-1 text-left">
@@ -856,10 +862,10 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 7 — Diagnóstico por Campanha */}
-                          {an.diagnostico_por_campanha?.length > 0 && (
+                          {(an?.diagnostico_por_campanha?.length ?? 0) > 0 && (
                             <AccordionItem value="diag_campanha" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                                <span>📈 Diagnóstico por Campanha ({an.diagnostico_por_campanha.length})</span>
+                                <span>📈 Diagnóstico por Campanha ({an?.diagnostico_por_campanha?.length || 0})</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <div className="overflow-x-auto">
@@ -874,7 +880,7 @@ const RelatoriosBatch = () => {
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {an.diagnostico_por_campanha.map((d, i) => (
+                                      {(an?.diagnostico_por_campanha || []).map((d, i) => (
                                         <tr key={i} className="border-b border-border/50">
                                           <td className="py-2 pr-3 font-medium text-foreground max-w-[200px] truncate">{d.nome}</td>
                                           <td className="py-2 pr-3 text-muted-foreground">{d.objetivo}</td>
@@ -891,35 +897,35 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 8 — Criativos */}
-                          {!isHistorico && an.diagnostico_criativos && (
+                          {!isHistorico && an?.diagnostico_criativos && (
                             <AccordionItem value="criativos" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
                                 <span>🎨 Criativos</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4 space-y-3">
-                                {an.diagnostico_criativos.resumo && (
+                                {an?.diagnostico_criativos?.resumo && (
                                   <p className="text-sm text-muted-foreground">{an.diagnostico_criativos.resumo}</p>
                                 )}
-                                {an.diagnostico_criativos.fatigados?.length > 0 && (
+                                {(an?.diagnostico_criativos?.fatigados?.length ?? 0) > 0 && (
                                   <div>
                                     <p className="text-xs font-semibold text-amber-400 mb-1">⚠️ Fatigados</p>
-                                    {an.diagnostico_criativos.fatigados.map((f, i) => (
+                                    {(an?.diagnostico_criativos?.fatigados || []).map((f, i) => (
                                       <div key={i} className="text-xs text-muted-foreground pl-3 mb-1">• <strong>{f.nome}</strong>: {f.motivo}</div>
                                     ))}
                                   </div>
                                 )}
-                                {an.diagnostico_criativos.winners?.length > 0 && (
+                                {(an?.diagnostico_criativos?.winners?.length ?? 0) > 0 && (
                                   <div>
                                     <p className="text-xs font-semibold text-emerald-400 mb-1">🏆 Winners</p>
-                                    {an.diagnostico_criativos.winners.map((w, i) => (
+                                    {(an?.diagnostico_criativos?.winners || []).map((w, i) => (
                                       <div key={i} className="text-xs text-muted-foreground pl-3 mb-1">• <strong>{w.nome}</strong>: {w.motivo}</div>
                                     ))}
                                   </div>
                                 )}
-                                {an.diagnostico_criativos.proximos_testes && (
+                                {an?.diagnostico_criativos?.proximos_testes && (
                                   <div>
                                     <p className="text-xs font-semibold text-blue-400 mb-1">🧪 Próximos testes</p>
-                                    <p className="text-sm text-muted-foreground">{an.diagnostico_criativos.proximos_testes}</p>
+                                    <p className="text-sm text-muted-foreground">{an?.diagnostico_criativos?.proximos_testes}</p>
                                   </div>
                                 )}
                               </AccordionContent>
@@ -1016,7 +1022,7 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 12 — Projeção */}
-                          {an.projecao && (
+                          {an?.projecao && (
                             <AccordionItem value="projecao" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
                                 <span>🔮 Projeção</span>
@@ -1025,17 +1031,17 @@ const RelatoriosBatch = () => {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                   <div className="p-3 rounded-lg bg-secondary/50 border border-border">
                                     <p className="text-[10px] text-muted-foreground font-semibold mb-1">Cenário Atual</p>
-                                    <p className="text-sm text-muted-foreground">{an.projecao.cenario_atual}</p>
+                                    <p className="text-sm text-muted-foreground">{an?.projecao?.cenario_atual}</p>
                                   </div>
                                   <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                                     <p className="text-[10px] text-emerald-400 font-semibold mb-1">Com Otimizações</p>
-                                    <p className="text-sm text-muted-foreground">{an.projecao.com_otimizacoes}</p>
+                                    <p className="text-sm text-muted-foreground">{an?.projecao?.com_otimizacoes}</p>
                                   </div>
                                 </div>
-                                {(an.projecao.roas_esperado || an.projecao.reducao_cpa_estimada) && (
+                                {(an?.projecao?.roas_esperado || an?.projecao?.reducao_cpa_estimada) && (
                                   <div className="flex gap-4 mt-3 text-xs text-muted-foreground">
-                                    {an.projecao.roas_esperado && <span>ROAS esperado: <strong className="text-emerald-400">{an.projecao.roas_esperado}</strong></span>}
-                                    {an.projecao.reducao_cpa_estimada && <span>Redução CPA: <strong className="text-emerald-400">{an.projecao.reducao_cpa_estimada}</strong></span>}
+                                    {an?.projecao?.roas_esperado && <span>ROAS esperado: <strong className="text-emerald-400">{an.projecao.roas_esperado}</strong></span>}
+                                    {an?.projecao?.reducao_cpa_estimada && <span>Redução CPA: <strong className="text-emerald-400">{an.projecao.reducao_cpa_estimada}</strong></span>}
                                   </div>
                                 )}
                               </AccordionContent>
@@ -1090,14 +1096,14 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 14 — Relatório Fiscal */}
-                          {an.relatorio_fiscal && (
+                          {an?.relatorio_fiscal && (
                             <AccordionItem value="fiscal" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
                                 <span>📑 Relatório Fiscal</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono bg-secondary/50 p-4 rounded-lg overflow-x-auto">
-                                  {an.relatorio_fiscal}
+                                  {an?.relatorio_fiscal}
                                 </pre>
                               </AccordionContent>
                             </AccordionItem>
