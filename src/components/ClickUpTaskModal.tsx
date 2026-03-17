@@ -464,6 +464,7 @@ export function ClickUpTaskModal({
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
