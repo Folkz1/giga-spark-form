@@ -774,13 +774,13 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 5 — Oportunidades */}
-                          {an.oportunidades?.length > 0 && (
+                          {(an?.oportunidades?.length ?? 0) > 0 && (
                             <AccordionItem value="oportunidades" className="rounded-xl overflow-hidden border-none bg-emerald-500/5 border border-emerald-500/20">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                                <span>💡 Oportunidades ({an.oportunidades.length})</span>
+                                <span>💡 Oportunidades ({an?.oportunidades?.length || 0})</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4 space-y-2">
-                                {an.oportunidades.map((o, i) => (
+                                {(an?.oportunidades || []).map((o, i) => (
                                   <AlertCard key={i} text={o} variant="emerald" />
                                 ))}
                               </AccordionContent>
