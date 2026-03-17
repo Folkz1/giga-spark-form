@@ -114,7 +114,7 @@ function CustomSelect({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.97 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 w-full mt-2 rounded-xl bg-[#1a1a2e] border border-white/10 shadow-2xl shadow-black/50 overflow-hidden"
+            className="absolute z-[110] w-full mt-2 rounded-xl bg-[#1a1a2e] border border-white/10 shadow-2xl shadow-black/50 overflow-hidden"
           >
             {searchable && (
               <div className="px-3 pt-3 pb-2 border-b border-white/5">
