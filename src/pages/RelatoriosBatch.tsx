@@ -384,6 +384,7 @@ const RelatoriosBatch = () => {
   };
 
   const openClickup = (rec: Recomendacao, idx: number) => {
+    const title = rec.titulo || (rec as any).nome || `Recomendação ${idx + 1}`;
     const desc = [
       rec.diagnostico ? `📋 Diagnóstico:\n${rec.diagnostico}` : "",
       rec.acao ? `🎯 Ação:\n${rec.acao}` : "",
@@ -392,7 +393,7 @@ const RelatoriosBatch = () => {
       rec.angulos_criativo ? `🎨 Ângulos de criativo:\n${rec.angulos_criativo}` : "",
       rec.prerequisito ? `⚠️ Pré-requisito:\n${rec.prerequisito}` : "",
     ].filter(Boolean).join("\n\n");
-    setClickupTitle(rec.titulo);
+    setClickupTitle(title);
     setClickupDesc(desc);
     setClickupOpen(true);
   };
