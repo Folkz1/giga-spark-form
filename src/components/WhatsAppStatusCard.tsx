@@ -46,8 +46,8 @@ export function WhatsAppStatusCard() {
   }, []);
 
   useEffect(() => {
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 60_000);
+    fetchStatus(true);
+    const interval = setInterval(() => fetchStatus(false), 60_000);
     return () => clearInterval(interval);
   }, [fetchStatus]);
 
