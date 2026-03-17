@@ -687,9 +687,9 @@ const RelatoriosBatch = () => {
                         )}
 
                         {/* Section 1 — Header info with BUG 3 period fix */}
-                        {an.score_justificativa && (
+                        {(an?.score_justificativa || (ac as any)?.score_justificativa) && (
                           <div className="glass-card rounded-xl p-4">
-                            <p className="text-sm text-muted-foreground">{an.score_justificativa}</p>
+                            <p className="text-sm text-muted-foreground">{an?.score_justificativa || (ac as any)?.score_justificativa}</p>
                             <p className="text-xs text-muted-foreground/60 mt-2">
                               {ac.data_analise} • Período: {formatPeriodo(ac.periodo || "")}
                             </p>
