@@ -207,6 +207,7 @@ const RelatoriosBatch = () => {
   const [clickupTitle, setClickupTitle] = useState("");
   const [clickupDesc, setClickupDesc] = useState("");
   const [clickupCreated, setClickupCreated] = useState<Set<string>>(new Set());
+  const [clickupRecIdx, setClickupRecIdx] = useState<number>(-1);
 
   const clientes = detail?.clientes || [];
 
