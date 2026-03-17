@@ -1035,7 +1035,7 @@ const RelatoriosBatch = () => {
                                   </div>
                                   <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                                     <p className="text-[10px] text-emerald-400 font-semibold mb-1">Com Otimizações</p>
-                                    <p className="text-sm text-muted-foreground">{an.projecao.com_otimizacoes}</p>
+                                    <p className="text-sm text-muted-foreground">{an?.projecao?.com_otimizacoes}</p>
                                   </div>
                                 </div>
                                 {(an.projecao.roas_esperado || an.projecao.reducao_cpa_estimada) && (
