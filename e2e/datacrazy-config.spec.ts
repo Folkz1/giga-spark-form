@@ -106,7 +106,7 @@ test.describe("Connection Panel", () => {
     await goToConfig(page);
     await fillConnection(page);
     // Should show client list section
-    await expect(page.getByRole("heading", { name: /Clientes/ })).toBeVisible();
+    await expect(page.locator("text=Novo Cliente")).toBeVisible();
   });
 
   test("test connection with invalid key fails", async ({ page }) => {
@@ -208,10 +208,15 @@ test.describe.serial("Client CRUD", () => {
     await page.getByRole("tab", { name: /Est/ }).click();
     await expect(page.locator("text=Mapeamento de Estágios")).toBeVisible();
 
-    // Add stage mapping — default event is "Lead", just fill stage name
-    await page.click('button:has-text("Adicionar")');
-    await page.fill('input[placeholder*="Nome do est"]', "Qualificado");
-    // "Lead" is already selected as default, just save
+    // Load stages from CRM, then click one to map it
+    await page.click('button:has-text("Carregar do CRM")');
+    // Wait for toast
+    await expect(page.locator('[data-sonner-toast]').first()).toBeVisible({ timeout: 15_000 });
+    // Wait for stage badges to appear
+    await expect(page.locator('text=NOVO LEAD').first()).toBeVisible({ timeout: 5_000 });
+    // Click NOVO LEAD to map it
+    await page.locator('text=NOVO LEAD').first().click();
+    // Save
     await page.click('button:has-text("Salvar")');
     await expect(page.locator("text=Cliente atualizado")).toBeVisible({ timeout: 10_000 });
   });
