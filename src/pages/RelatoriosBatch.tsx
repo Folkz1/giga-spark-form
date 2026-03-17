@@ -763,10 +763,10 @@ const RelatoriosBatch = () => {
                           {(an?.alertas_criticos?.length ?? 0) > 0 && (
                             <AccordionItem value="alertas_criticos" className="rounded-xl overflow-hidden border-none bg-red-500/5 border border-red-500/20">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                                <span>🚨 Alertas Críticos ({an.alertas_criticos.length})</span>
+                                <span>🚨 Alertas Críticos ({an?.alertas_criticos?.length || 0})</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4 space-y-2">
-                                {an.alertas_criticos.map((a, i) => (
+                                {(an?.alertas_criticos || []).map((a, i) => (
                                   <AlertCard key={i} text={a} variant="red" />
                                 ))}
                               </AccordionContent>
