@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Rocket, TrendingUp, Brain, BarChart2, MessageSquareText, FileBarChart } from "lucide-react";
 import { useState, useEffect } from "react";
 import { fetchBatches, type Batch } from "@/lib/relatorios-utils";
+import { WhatsAppStatusCard } from "@/components/WhatsAppStatusCard";
 
 const channels = [
   {
