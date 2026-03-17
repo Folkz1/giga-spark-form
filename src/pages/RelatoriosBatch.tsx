@@ -39,13 +39,17 @@ const scoreBadgeStyle = (score: string) => {
   }
 };
 
+const prioridadeOrder = (p: string): number => {
+  const map: Record<string, number> = { urgent: 0, urgente: 0, high: 1, alta: 1, medium: 2, media: 2, média: 2, low: 3, baixa: 3 };
+  return map[p?.toLowerCase()] ?? 4;
+};
+
 const prioridadeBadge = (p: string) => {
-  switch (p) {
-    case "urgent": return "bg-red-600/20 text-red-300 border-red-500/40";
-    case "high": return "bg-orange-600/20 text-orange-300 border-orange-500/40";
-    case "medium": return "bg-blue-500/20 text-blue-300 border-blue-500/35";
-    default: return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
-  }
+  const key = p?.toLowerCase();
+  if (key === "urgent" || key === "urgente") return "bg-red-600/20 text-red-300 border-red-500/40";
+  if (key === "high" || key === "alta") return "bg-orange-600/20 text-orange-300 border-orange-500/40";
+  if (key === "medium" || key === "media" || key === "média") return "bg-blue-500/20 text-blue-300 border-blue-500/35";
+  return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
 };
 
 const formatPrioridade = (p: string): string => {
