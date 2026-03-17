@@ -123,22 +123,62 @@ export async function checkHealth(): Promise<{ status: string; version: string }
 
 // --- CRM helpers ---
 
-export interface Pipeline {
-  id: string;
-  name: string;
-}
-
 export interface PipelineStage {
   id: string;
   name: string;
+  order?: number;
+}
+
+export interface Pipeline {
+  id: string;
+  name: string;
+  stages: PipelineStage[];
+  stages_count?: number;
+}
+
+export interface LeadField {
+  path: string;
+  sample_value: string;
+  count: number;
+}
+
+export interface EventRecord {
+  id: string;
+  client_id: string;
+  event_type: string;
+  event_data: Record<string, unknown>;
+  user_data: Record<string, unknown>;
+  meta_response: Record<string, unknown>;
+  status: string;
+  error_message: string | null;
+  created_at: string;
+}
+
+export interface EventStats {
+  by_status: Record<string, number>;
+  by_type: Record<string, number>;
+  total: number;
 }
 
 export async function listPipelines(): Promise<Pipeline[]> {
   return apiFetch<Pipeline[]>("/api/crm/pipelines");
 }
 
-export async function listLeadFields(): Promise<Record<string, string[]>> {
-  return apiFetch<Record<string, string[]>>("/api/crm/lead-fields");
+export async function listLeadFields(): Promise<{ fields: LeadField[] }> {
+  return apiFetch<{ fields: LeadField[] }>("/api/crm/lead-fields");
+}
+
+// --- Events ---
+
+export async function listEvents(clientId?: string, limit = 50): Promise<EventRecord[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (clientId) params.set("client_id", clientId);
+  return apiFetch<EventRecord[]>(`/api/events?${params}`);
+}
+
+export async function getEventStats(clientId?: string): Promise<EventStats> {
+  const params = clientId ? `?client_id=${clientId}` : "";
+  return apiFetch<EventStats>(`/api/events/stats${params}`);
 }
 
 // --- Event types ---

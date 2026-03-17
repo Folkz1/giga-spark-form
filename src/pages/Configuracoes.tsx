@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Pencil, Trash2, Loader2, Settings2, Plug, Check, X, ChevronDown, ChevronUp, Copy } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Loader2, Settings2, Plug, Check, X, ChevronDown, ChevronUp, Copy, Search, Activity, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -20,14 +20,24 @@ import {
   createClient,
   updateClient,
   deleteClient,
+  listPipelines,
+  listLeadFields,
+  listEvents,
+  getEventStats,
   META_EVENT_TYPES,
   USER_DATA_FIELDS,
   type ClientData,
   type PixelEntry,
   type GooglePixelEntry,
-  type CrmCredentials,
+  type Pipeline,
+  type PipelineStage,
+  type LeadField,
+  type EventRecord,
+  type EventStats,
   type DataCrazyConnection,
 } from "@/lib/datacrazy-client";
+
+const ITEMS_PER_PAGE = 15;
 
 /* ═══════════════════════════════════════════════
    Connection Panel — API URL + Master Key
@@ -95,9 +105,7 @@ function ConnectionPanel({ onConnected }: { onConnected: () => void }) {
    ═══════════════════════════════════════════════ */
 
 function PixelListEditor({
-  type,
-  pixels,
-  onChange,
+  type, pixels, onChange,
 }: {
   type: "meta" | "google";
   pixels: (PixelEntry | GooglePixelEntry)[];
@@ -110,9 +118,7 @@ function PixelListEditor({
       onChange([...pixels, { measurement_id: "", api_secret: "", label: "Principal", active: true }]);
     }
   };
-
   const remove = (i: number) => onChange(pixels.filter((_, idx) => idx !== i));
-
   const update = (i: number, field: string, value: any) => {
     const copy = [...pixels];
     (copy[i] as any)[field] = value;
@@ -132,12 +138,8 @@ function PixelListEditor({
       {pixels.map((px, i) => (
         <Card key={i} className="p-3 space-y-2">
           <div className="flex items-center justify-between">
-            <Input
-              value={px.label}
-              onChange={e => update(i, "label", e.target.value)}
-              placeholder="Label (ex: B2B, Lançamento)"
-              className="max-w-[200px] h-8 text-sm"
-            />
+            <Input value={px.label} onChange={e => update(i, "label", e.target.value)}
+              placeholder="Label (ex: B2B, Lançamento)" className="max-w-[200px] h-8 text-sm" />
             <div className="flex items-center gap-2">
               <Switch checked={px.active} onCheckedChange={v => update(i, "active", v)} />
               <Button variant="ghost" size="sm" onClick={() => remove(i)}>
@@ -147,35 +149,17 @@ function PixelListEditor({
           </div>
           {type === "meta" ? (
             <>
-              <Input
-                value={(px as PixelEntry).pixel_id}
-                onChange={e => update(i, "pixel_id", e.target.value)}
-                placeholder="Pixel ID (ex: 123456789)"
-                className="h-8 text-sm"
-              />
-              <Input
-                value={(px as PixelEntry).access_token}
-                onChange={e => update(i, "access_token", e.target.value)}
-                placeholder="Access Token (CAPI)"
-                className="h-8 text-sm font-mono"
-                type="password"
-              />
+              <Input value={(px as PixelEntry).pixel_id} onChange={e => update(i, "pixel_id", e.target.value)}
+                placeholder="Pixel ID (ex: 123456789)" className="h-8 text-sm" />
+              <Input value={(px as PixelEntry).access_token} onChange={e => update(i, "access_token", e.target.value)}
+                placeholder="Access Token (CAPI)" className="h-8 text-sm font-mono" type="password" />
             </>
           ) : (
             <>
-              <Input
-                value={(px as GooglePixelEntry).measurement_id}
-                onChange={e => update(i, "measurement_id", e.target.value)}
-                placeholder="Measurement ID (G-XXXXXXX)"
-                className="h-8 text-sm"
-              />
-              <Input
-                value={(px as GooglePixelEntry).api_secret}
-                onChange={e => update(i, "api_secret", e.target.value)}
-                placeholder="API Secret"
-                className="h-8 text-sm font-mono"
-                type="password"
-              />
+              <Input value={(px as GooglePixelEntry).measurement_id} onChange={e => update(i, "measurement_id", e.target.value)}
+                placeholder="Measurement ID (G-XXXXXXX)" className="h-8 text-sm" />
+              <Input value={(px as GooglePixelEntry).api_secret} onChange={e => update(i, "api_secret", e.target.value)}
+                placeholder="API Secret" className="h-8 text-sm font-mono" type="password" />
             </>
           )}
         </Card>
@@ -188,19 +172,33 @@ function PixelListEditor({
 }
 
 /* ═══════════════════════════════════════════════
-   Stage Mapping Editor
+   Stage Mapping Editor — AUTO-FETCH from CRM
    ═══════════════════════════════════════════════ */
 
 function StageMappingEditor({
-  stageMap,
-  onChange,
+  stageMap, onChange, pipelines, loadingPipelines, onRefreshPipelines,
 }: {
   stageMap: Record<string, string>;
   onChange: (map: Record<string, string>) => void;
+  pipelines: Pipeline[];
+  loadingPipelines: boolean;
+  onRefreshPipelines: () => void;
 }) {
-  const entries = Object.entries(stageMap);
+  const allStages = useMemo(() => {
+    const stages: { name: string; pipeline: string }[] = [];
+    for (const p of pipelines) {
+      for (const s of p.stages || []) {
+        stages.push({ name: s.name, pipeline: p.name });
+      }
+    }
+    return stages;
+  }, [pipelines]);
 
-  const addEntry = () => onChange({ ...stageMap, "": "Lead" });
+  const addFromCrm = (stageName: string) => {
+    if (!stageMap[stageName]) {
+      onChange({ ...stageMap, [stageName]: "Lead" });
+    }
+  };
 
   const removeEntry = (key: string) => {
     const copy = { ...stageMap };
@@ -208,72 +206,99 @@ function StageMappingEditor({
     onChange(copy);
   };
 
-  const updateEntry = (oldKey: string, newKey: string, value: string) => {
-    const copy = { ...stageMap };
-    if (oldKey !== newKey) delete copy[oldKey];
-    copy[newKey] = value;
-    onChange(copy);
+  const updateEvent = (key: string, value: string) => {
+    onChange({ ...stageMap, [key]: value });
   };
 
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium">Mapeamento de Estágios</Label>
-        <Button variant="outline" size="sm" onClick={addEntry}>
-          <Plus className="h-3 w-3 mr-1" /> Adicionar
+        <Button variant="outline" size="sm" onClick={onRefreshPipelines} disabled={loadingPipelines}>
+          {loadingPipelines ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+          Carregar do CRM
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Quando o deal muda para o estágio, dispara o evento Meta correspondente.
+        Clique nos estágios do CRM para adicionar ao mapeamento. Cada estágio dispara o evento Meta correspondente.
       </p>
-      {entries.map(([key, value], i) => (
-        <div key={i} className="flex gap-2 items-center">
-          <Input
-            value={key}
-            onChange={e => updateEntry(key, e.target.value, value)}
-            placeholder="Nome do estágio no CRM"
-            className="h-8 text-sm flex-1"
-          />
-          <span className="text-xs text-muted-foreground whitespace-nowrap">→</span>
-          <Select value={value} onValueChange={v => updateEntry(key, key, v)}>
-            <SelectTrigger className="h-8 text-sm w-[180px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {META_EVENT_TYPES.map(evt => (
-                <SelectItem key={evt} value={evt}>{evt}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="ghost" size="sm" onClick={() => removeEntry(key)}>
-            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-          </Button>
+
+      {/* CRM stages from API */}
+      {allStages.length > 0 && (
+        <div className="space-y-2">
+          {pipelines.map(p => (
+            <div key={p.id}>
+              <p className="text-xs font-medium text-muted-foreground mb-1">{p.name}</p>
+              <div className="flex flex-wrap gap-1">
+                {(p.stages || []).map(s => {
+                  const mapped = !!stageMap[s.name];
+                  return (
+                    <Badge
+                      key={s.id}
+                      variant={mapped ? "default" : "outline"}
+                      className="cursor-pointer text-xs"
+                      onClick={() => mapped ? removeEntry(s.name) : addFromCrm(s.name)}
+                    >
+                      {mapped ? <Check className="h-2.5 w-2.5 mr-1" /> : <Plus className="h-2.5 w-2.5 mr-1" />}
+                      {s.name}
+                    </Badge>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
-      {entries.length === 0 && (
+      )}
+
+      {allStages.length === 0 && !loadingPipelines && (
         <p className="text-xs text-muted-foreground text-center py-2">
-          Sem mapeamento — só "won" → Purchase será disparado automaticamente
+          Clique "Carregar do CRM" para buscar os estágios automaticamente
         </p>
+      )}
+
+      {/* Mapped entries */}
+      {Object.entries(stageMap).length > 0 && (
+        <>
+          <Separator />
+          <Label className="text-xs font-medium">Mapeamento ativo:</Label>
+          {Object.entries(stageMap).map(([key, value]) => (
+            <div key={key} className="flex gap-2 items-center">
+              <span className="text-sm flex-1 truncate">{key}</span>
+              <span className="text-xs text-muted-foreground">→</span>
+              <Select value={value} onValueChange={v => updateEvent(key, v)}>
+                <SelectTrigger className="h-8 text-sm w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {META_EVENT_TYPES.map(evt => (
+                    <SelectItem key={evt} value={evt}>{evt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="ghost" size="sm" onClick={() => removeEntry(key)}>
+                <Trash2 className="h-3.5 w-3.5 text-destructive" />
+              </Button>
+            </div>
+          ))}
+        </>
       )}
     </div>
   );
 }
 
 /* ═══════════════════════════════════════════════
-   Field Mapping Editor
+   Field Mapping Editor — AUTO-FETCH from CRM
    ═══════════════════════════════════════════════ */
 
 function FieldMappingEditor({
-  fieldMap,
-  onChange,
+  fieldMap, onChange, crmFields, loadingFields, onRefreshFields,
 }: {
   fieldMap: Record<string, string>;
   onChange: (map: Record<string, string>) => void;
+  crmFields: LeadField[];
+  loadingFields: boolean;
+  onRefreshFields: () => void;
 }) {
-  const entries = Object.entries(fieldMap);
-
-  const addEntry = () => onChange({ ...fieldMap, city: "" });
-
   const removeEntry = (key: string) => {
     const copy = { ...fieldMap };
     delete copy[key];
@@ -291,15 +316,18 @@ function FieldMappingEditor({
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <Label className="text-sm font-medium">Mapeamento de Campos</Label>
-        <Button variant="outline" size="sm" onClick={addEntry}>
-          <Plus className="h-3 w-3 mr-1" /> Adicionar
+        <Button variant="outline" size="sm" onClick={onRefreshFields} disabled={loadingFields}>
+          {loadingFields ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+          Carregar do CRM
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Mapeia campos do CRM para dados do usuário (Meta/Google). Use paths como "address.city" ou "customFields.cep".
+        Mapeia campos do CRM para dados do usuário (Meta/Google). Selecione o campo Meta e o path do CRM.
       </p>
-      {entries.map(([key, value], i) => (
-        <div key={i} className="flex gap-2 items-center">
+
+      {/* Existing mappings */}
+      {Object.entries(fieldMap).map(([key, value]) => (
+        <div key={key} className="flex gap-2 items-center">
           <Select value={key} onValueChange={v => updateEntry(key, v, value)}>
             <SelectTrigger className="h-8 text-sm w-[160px]">
               <SelectValue />
@@ -310,19 +338,40 @@ function FieldMappingEditor({
               ))}
             </SelectContent>
           </Select>
-          <span className="text-xs text-muted-foreground whitespace-nowrap">←</span>
-          <Input
-            value={value}
-            onChange={e => updateEntry(key, key, e.target.value)}
-            placeholder="Path no CRM (ex: address.city)"
-            className="h-8 text-sm flex-1 font-mono"
-          />
+          <span className="text-xs text-muted-foreground">←</span>
+          {crmFields.length > 0 ? (
+            <Select value={value} onValueChange={v => updateEntry(key, key, v)}>
+              <SelectTrigger className="h-8 text-sm flex-1 font-mono">
+                <SelectValue placeholder="Selecione campo do CRM" />
+              </SelectTrigger>
+              <SelectContent>
+                {crmFields.map(f => (
+                  <SelectItem key={f.path} value={f.path}>
+                    {f.path} {f.sample_value ? `(ex: ${f.sample_value.slice(0, 30)})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <Input value={value} onChange={e => updateEntry(key, key, e.target.value)}
+              placeholder="Path no CRM (ex: address.city)" className="h-8 text-sm flex-1 font-mono" />
+          )}
           <Button variant="ghost" size="sm" onClick={() => removeEntry(key)}>
             <Trash2 className="h-3.5 w-3.5 text-destructive" />
           </Button>
         </div>
       ))}
-      {entries.length === 0 && (
+
+      {/* Add new mapping */}
+      <Button variant="outline" size="sm" onClick={() => {
+        const usedKeys = Object.keys(fieldMap);
+        const nextKey = USER_DATA_FIELDS.find(f => !usedKeys.includes(f.key))?.key || "city";
+        onChange({ ...fieldMap, [nextKey]: "" });
+      }}>
+        <Plus className="h-3 w-3 mr-1" /> Adicionar Campo
+      </Button>
+
+      {Object.keys(fieldMap).length === 0 && (
         <p className="text-xs text-muted-foreground text-center py-2">
           Usando campos padrão do CRM (email, phone, name, city, state)
         </p>
@@ -332,7 +381,114 @@ function FieldMappingEditor({
 }
 
 /* ═══════════════════════════════════════════════
-   Client Form Dialog
+   Event Log Panel
+   ═══════════════════════════════════════════════ */
+
+function EventLogPanel({ clientId, clientName }: { clientId?: string; clientName?: string }) {
+  const [events, setEvents] = useState<EventRecord[]>([]);
+  const [stats, setStats] = useState<EventStats | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const loadEvents = async () => {
+    setLoading(true);
+    try {
+      const [evts, st] = await Promise.all([
+        listEvents(clientId, 30),
+        getEventStats(clientId),
+      ]);
+      setEvents(evts);
+      setStats(st);
+    } catch (e: any) {
+      toast.error("Erro ao carregar log: " + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { loadEvents(); }, [clientId]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <Activity className="h-5 w-5" />
+          Log de Eventos {clientName ? `— ${clientName}` : "(Todos)"}
+        </h3>
+        <Button variant="outline" size="sm" onClick={loadEvents} disabled={loading}>
+          {loading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
+          Atualizar
+        </Button>
+      </div>
+
+      {/* Stats */}
+      {stats && stats.total > 0 && (
+        <div className="grid grid-cols-4 gap-3">
+          <Card className="p-3 text-center">
+            <p className="text-2xl font-bold">{stats.total}</p>
+            <p className="text-xs text-muted-foreground">Total</p>
+          </Card>
+          <Card className="p-3 text-center">
+            <p className="text-2xl font-bold text-green-500">{stats.by_status?.sent || 0}</p>
+            <p className="text-xs text-muted-foreground">Enviados</p>
+          </Card>
+          <Card className="p-3 text-center">
+            <p className="text-2xl font-bold text-red-500">{stats.by_status?.error || 0}</p>
+            <p className="text-xs text-muted-foreground">Erros</p>
+          </Card>
+          <Card className="p-3 text-center">
+            <p className="text-2xl font-bold text-yellow-500">{stats.by_status?.pending || 0}</p>
+            <p className="text-xs text-muted-foreground">Pendentes</p>
+          </Card>
+        </div>
+      )}
+
+      {/* Event list */}
+      {loading && (
+        <div className="flex justify-center py-4">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {!loading && events.length === 0 && (
+        <p className="text-sm text-muted-foreground text-center py-4">Nenhum evento registrado</p>
+      )}
+
+      {!loading && events.length > 0 && (
+        <div className="space-y-2 max-h-[400px] overflow-y-auto">
+          {events.map(evt => (
+            <div key={evt.id} className="flex items-center gap-3 p-2 rounded border text-sm">
+              {evt.status === "sent" ? (
+                <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+              ) : (
+                <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">{evt.event_type}</Badge>
+                  {(evt.event_data as any)?.pixel_label && (
+                    <span className="text-xs text-muted-foreground">{(evt.event_data as any).pixel_label}</span>
+                  )}
+                  {(evt.event_data as any)?.platform === "google" && (
+                    <Badge variant="secondary" className="text-xs">GA4</Badge>
+                  )}
+                </div>
+                {evt.error_message && (
+                  <p className="text-xs text-red-400 truncate mt-0.5">{evt.error_message}</p>
+                )}
+              </div>
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                {new Date(evt.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════
+   Client Form Dialog (with CRM auto-fetch)
    ═══════════════════════════════════════════════ */
 
 const emptyClient: ClientData = {
@@ -344,10 +500,7 @@ const emptyClient: ClientData = {
 };
 
 function ClientFormDialog({
-  open,
-  client,
-  onClose,
-  onSaved,
+  open, client, onClose, onSaved,
 }: {
   open: boolean;
   client: ClientData | null;
@@ -356,6 +509,10 @@ function ClientFormDialog({
 }) {
   const [form, setForm] = useState<ClientData>(emptyClient);
   const [saving, setSaving] = useState(false);
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
+  const [crmFields, setCrmFields] = useState<LeadField[]>([]);
+  const [loadingPipelines, setLoadingPipelines] = useState(false);
+  const [loadingFields, setLoadingFields] = useState(false);
   const isEdit = !!client?.id;
 
   useEffect(() => {
@@ -364,7 +521,36 @@ function ClientFormDialog({
     } else {
       setForm({ ...emptyClient });
     }
+    setPipelines([]);
+    setCrmFields([]);
   }, [client, open]);
+
+  const fetchPipelines = async () => {
+    setLoadingPipelines(true);
+    try {
+      const data = await listPipelines();
+      setPipelines(data);
+      toast.success(`${data.length} pipelines carregados`);
+    } catch (e: any) {
+      toast.error("Erro ao carregar pipelines: " + e.message);
+    } finally {
+      setLoadingPipelines(false);
+    }
+  };
+
+  const fetchFields = async () => {
+    setLoadingFields(true);
+    try {
+      const data = await listLeadFields();
+      const fields = data.fields || [];
+      setCrmFields(fields);
+      toast.success(`${fields.length} campos encontrados`);
+    } catch (e: any) {
+      toast.error("Erro ao carregar campos: " + e.message);
+    } finally {
+      setLoadingFields(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!form.name.trim()) { toast.error("Nome é obrigatório"); return; }
@@ -419,54 +605,39 @@ function ClientFormDialog({
           <TabsContent value="geral" className="space-y-4 mt-4">
             <div className="space-y-2">
               <Label>Nome do Cliente</Label>
-              <Input
-                value={form.name}
-                onChange={e => setForm({ ...form, name: e.target.value })}
-                placeholder="Ex: Clínica São Paulo"
-              />
+              <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                placeholder="Ex: Clínica São Paulo" />
             </div>
-
             <div className="space-y-2">
               <Label>Token CRM DataCrazy</Label>
-              <Input
-                value={crmCreds.datacrazy_token || ""}
+              <Input value={crmCreds.datacrazy_token || ""}
                 onChange={e => setForm({
                   ...form,
                   crm_credentials: { ...crmCreds, datacrazy_token: e.target.value },
                 })}
-                placeholder="dc_eyJhbGciOi..."
-                type="password"
-                className="font-mono"
-              />
+                placeholder="dc_eyJhbGciOi..." type="password" className="font-mono" />
               <p className="text-xs text-muted-foreground">Token individual do cliente no CRM DataCrazy</p>
             </div>
-
             <Separator />
-
             <div className="space-y-2">
               <Label>Eventos Habilitados</Label>
               <div className="flex flex-wrap gap-2">
                 {META_EVENT_TYPES.map(evt => {
                   const enabled = form.events_enabled.includes(evt);
                   return (
-                    <Badge
-                      key={evt}
-                      variant={enabled ? "default" : "outline"}
-                      className="cursor-pointer"
+                    <Badge key={evt} variant={enabled ? "default" : "outline"} className="cursor-pointer"
                       onClick={() => {
                         const next = enabled
                           ? form.events_enabled.filter(e => e !== evt)
                           : [...form.events_enabled, evt];
                         setForm({ ...form, events_enabled: next });
-                      }}
-                    >
+                      }}>
                       {evt}
                     </Badge>
                   );
                 })}
               </div>
             </div>
-
             {isEdit && client?.api_key && (
               <>
                 <Separator />
@@ -474,14 +645,10 @@ function ClientFormDialog({
                   <Label>API Key do Cliente</Label>
                   <div className="flex gap-2">
                     <Input value={client.api_key} readOnly className="font-mono text-xs" />
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        navigator.clipboard.writeText(client.api_key!);
-                        toast.success("API Key copiada!");
-                      }}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => {
+                      navigator.clipboard.writeText(client.api_key!);
+                      toast.success("API Key copiada!");
+                    }}>
                       <Copy className="h-3.5 w-3.5" />
                     </Button>
                   </div>
@@ -493,17 +660,11 @@ function ClientFormDialog({
 
           {/* Tab: Pixels */}
           <TabsContent value="pixels" className="space-y-6 mt-4">
-            <PixelListEditor
-              type="meta"
-              pixels={form.pixels}
-              onChange={pixels => setForm({ ...form, pixels })}
-            />
+            <PixelListEditor type="meta" pixels={form.pixels}
+              onChange={pixels => setForm({ ...form, pixels })} />
             <Separator />
-            <PixelListEditor
-              type="google"
-              pixels={form.google_pixels}
-              onChange={google_pixels => setForm({ ...form, google_pixels })}
-            />
+            <PixelListEditor type="google" pixels={form.google_pixels}
+              onChange={google_pixels => setForm({ ...form, google_pixels })} />
           </TabsContent>
 
           {/* Tab: Estágios */}
@@ -514,6 +675,9 @@ function ClientFormDialog({
                 ...form,
                 crm_credentials: { ...crmCreds, stage_map },
               })}
+              pipelines={pipelines}
+              loadingPipelines={loadingPipelines}
+              onRefreshPipelines={fetchPipelines}
             />
           </TabsContent>
 
@@ -525,6 +689,9 @@ function ClientFormDialog({
                 ...form,
                 crm_credentials: { ...crmCreds, field_map },
               })}
+              crmFields={crmFields}
+              loadingFields={loadingFields}
+              onRefreshFields={fetchFields}
             />
           </TabsContent>
         </Tabs>
@@ -542,8 +709,10 @@ function ClientFormDialog({
 }
 
 /* ═══════════════════════════════════════════════
-   Main Page — Configurações
+   Main Page — Configurações (50+ clients ready)
    ═══════════════════════════════════════════════ */
+
+type SortKey = "name" | "created_at" | "active";
 
 const Configuracoes = () => {
   const navigate = useNavigate();
@@ -553,6 +722,12 @@ const Configuracoes = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<ClientData | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [busca, setBusca] = useState("");
+  const [page, setPage] = useState(0);
+  const [sortBy, setSortBy] = useState<SortKey>("name");
+  const [logClientId, setLogClientId] = useState<string | undefined>(undefined);
+  const [logClientName, setLogClientName] = useState<string | undefined>(undefined);
+  const [showLog, setShowLog] = useState(false);
 
   const loadClients = async () => {
     setLoading(true);
@@ -573,6 +748,25 @@ const Configuracoes = () => {
       loadClients();
     }
   }, []);
+
+  // Filtered + sorted + paginated
+  const filtered = useMemo(() => {
+    let list = clients.filter(c =>
+      c.name.toLowerCase().includes(busca.toLowerCase())
+    );
+    list.sort((a, b) => {
+      if (sortBy === "name") return a.name.localeCompare(b.name, "pt-BR");
+      if (sortBy === "created_at") return (b.created_at || "").localeCompare(a.created_at || "");
+      if (sortBy === "active") return (b.active ? 1 : 0) - (a.active ? 1 : 0);
+      return 0;
+    });
+    return list;
+  }, [clients, busca, sortBy]);
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const paginated = filtered.slice(page * ITEMS_PER_PAGE, (page + 1) * ITEMS_PER_PAGE);
+
+  useEffect(() => { setPage(0); }, [busca]);
 
   const handleDelete = async (client: ClientData) => {
     if (!confirm(`Excluir "${client.name}"? Todos os eventos serão apagados.`)) return;
@@ -609,12 +803,37 @@ const Configuracoes = () => {
         {/* Client list */}
         {connected && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Clientes ({clients.length})</h2>
+            {/* Toolbar: search + sort + actions */}
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input value={busca} onChange={e => setBusca(e.target.value)}
+                  placeholder="Buscar cliente..." className="pl-9" />
+              </div>
+              <Select value={sortBy} onValueChange={v => setSortBy(v as SortKey)}>
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue placeholder="Ordenar por" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name">Nome A-Z</SelectItem>
+                  <SelectItem value="created_at">Mais recente</SelectItem>
+                  <SelectItem value="active">Status</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" onClick={() => { setLogClientId(undefined); setLogClientName(undefined); setShowLog(!showLog); }}>
+                <Activity className="h-4 w-4 mr-2" /> Log
+              </Button>
               <Button onClick={() => { setEditing(null); setModalOpen(true); }}>
                 <Plus className="h-4 w-4 mr-2" /> Novo Cliente
               </Button>
             </div>
+
+            {/* Count */}
+            <p className="text-xs text-muted-foreground">
+              {filtered.length} cliente{filtered.length !== 1 ? "s" : ""}
+              {busca ? ` encontrado${filtered.length !== 1 ? "s" : ""}` : ""}
+              {totalPages > 1 ? ` — Página ${page + 1} de ${totalPages}` : ""}
+            </p>
 
             {loading && (
               <div className="flex justify-center py-8">
@@ -622,15 +841,15 @@ const Configuracoes = () => {
               </div>
             )}
 
-            {!loading && clients.length === 0 && (
+            {!loading && filtered.length === 0 && (
               <Card className="border-dashed">
                 <CardContent className="py-8 text-center text-muted-foreground">
-                  Nenhum cliente cadastrado. Clique em "Novo Cliente" para começar.
+                  {busca ? "Nenhum cliente encontrado." : "Nenhum cliente cadastrado. Clique em \"Novo Cliente\" para começar."}
                 </CardContent>
               </Card>
             )}
 
-            {clients.map(client => {
+            {paginated.map(client => {
               const expanded = expandedId === client.id;
               const metaCount = client.pixels?.length || 0;
               const googleCount = client.google_pixels?.length || 0;
@@ -641,14 +860,12 @@ const Configuracoes = () => {
                 <Card key={client.id} className={`transition-all ${client.active ? "" : "opacity-50"}`}>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
-                      <div
-                        className="flex items-center gap-3 flex-1 cursor-pointer"
-                        onClick={() => setExpandedId(expanded ? null : client.id!)}
-                      >
+                      <div className="flex items-center gap-3 flex-1 cursor-pointer"
+                        onClick={() => setExpandedId(expanded ? null : client.id!)}>
                         {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         <div>
                           <p className="font-medium">{client.name}</p>
-                          <div className="flex gap-2 mt-1">
+                          <div className="flex gap-2 mt-1 flex-wrap">
                             {metaCount > 0 && <Badge variant="outline" className="text-xs">Meta: {metaCount}</Badge>}
                             {googleCount > 0 && <Badge variant="outline" className="text-xs">GA4: {googleCount}</Badge>}
                             {stageCount > 0 && <Badge variant="outline" className="text-xs">Estágios: {stageCount}</Badge>}
@@ -658,6 +875,13 @@ const Configuracoes = () => {
                         </div>
                       </div>
                       <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => {
+                          setLogClientId(client.id);
+                          setLogClientName(client.name);
+                          setShowLog(true);
+                        }}>
+                          <Activity className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="sm" onClick={() => { setEditing(client); setModalOpen(true); }}>
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -681,7 +905,6 @@ const Configuracoes = () => {
                             <span className="ml-2">{client.events_enabled?.join(", ")}</span>
                           </div>
                         </div>
-
                         {metaCount > 0 && (
                           <div>
                             <span className="text-muted-foreground">Pixels Meta:</span>
@@ -692,7 +915,6 @@ const Configuracoes = () => {
                             ))}
                           </div>
                         )}
-
                         {googleCount > 0 && (
                           <div>
                             <span className="text-muted-foreground">Pixels GA4:</span>
@@ -703,18 +925,14 @@ const Configuracoes = () => {
                             ))}
                           </div>
                         )}
-
                         {stageCount > 0 && (
                           <div>
                             <span className="text-muted-foreground">Mapeamento:</span>
                             {Object.entries(client.crm_credentials?.stage_map || {}).map(([k, v]) => (
-                              <span key={k} className="ml-2 text-xs">
-                                {k} → <strong>{v as string}</strong>
-                              </span>
+                              <span key={k} className="ml-2 text-xs">{k} → <strong>{v as string}</strong></span>
                             ))}
                           </div>
                         )}
-
                         <div className="text-xs text-muted-foreground">
                           Criado em: {client.created_at ? new Date(client.created_at).toLocaleDateString("pt-BR") : "—"}
                         </div>
@@ -724,16 +942,31 @@ const Configuracoes = () => {
                 </Card>
               );
             })}
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-2">
+                <Button variant="outline" size="sm" disabled={page === 0}
+                  onClick={() => setPage(p => p - 1)}>Anterior</Button>
+                <span className="text-sm text-muted-foreground">{page + 1} / {totalPages}</span>
+                <Button variant="outline" size="sm" disabled={page >= totalPages - 1}
+                  onClick={() => setPage(p => p + 1)}>Próximo</Button>
+              </div>
+            )}
           </div>
         )}
 
+        {/* Event Log */}
+        {showLog && connected && (
+          <>
+            <Separator />
+            <EventLogPanel clientId={logClientId} clientName={logClientName} />
+          </>
+        )}
+
         {/* Client form dialog */}
-        <ClientFormDialog
-          open={modalOpen}
-          client={editing}
-          onClose={() => setModalOpen(false)}
-          onSaved={loadClients}
-        />
+        <ClientFormDialog open={modalOpen} client={editing}
+          onClose={() => setModalOpen(false)} onSaved={loadClients} />
       </div>
     </div>
   );
