@@ -260,9 +260,7 @@ const RelatoriosBatch = () => {
     setAnaliseLoading(true);
     try {
       const data = await fetchAnaliseCliente(batchId, c.customerId, p.plataforma);
-      console.log("[DEBUG] analise raw response:", JSON.stringify(data, null, 2).slice(0, 2000));
-      console.log("[DEBUG] analiseCompleta keys:", data?.analiseCompleta ? Object.keys(data.analiseCompleta) : "NO analiseCompleta");
-      console.log("[DEBUG] analiseCompleta.analise keys:", data?.analiseCompleta?.analise ? Object.keys(data.analiseCompleta.analise) : "NO analise nested");
+      console.log("[DEBUG] Google Ads?", data?.plataforma, "| analiseCompleta keys:", data?.analiseCompleta ? Object.keys(data.analiseCompleta) : "NONE", "| analise type:", typeof data?.analiseCompleta?.analise);
       setAnalise(data);
     } catch (err) {
       console.error("[DEBUG] loadAnalise error:", err);
