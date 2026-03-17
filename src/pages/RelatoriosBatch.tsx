@@ -395,7 +395,8 @@ const RelatoriosBatch = () => {
   ];
 
   const ac = analise?.analiseCompleta;
-  const an = ac?.analise;
+  // Google Ads may put analise data directly in ac (no nested .analise)
+  const an = ac?.analise || (ac && !ac.analise ? ac as unknown as typeof ac.analise : null);
   const isHistorico = (analise as any)?.fonte === "historico";
 
   const placementInsights = ac?.placement_insights || an?.placement_insights || [];
@@ -407,12 +408,13 @@ const RelatoriosBatch = () => {
   const canGoNext = drawerIdx < drawerNavList.length - 1;
 
   const resumoExecutivo = useMemo(() => {
-    if (!an?.resumo_executivo) return "";
-    if (isHistorico && (an.resumo_executivo === HISTORICO_PLACEHOLDER || an.resumo_executivo.includes("Analise resumida"))) {
+    const re = an?.resumo_executivo || (ac as any)?.resumo_executivo;
+    if (!re) return "";
+    if (isHistorico && (re === HISTORICO_PLACEHOLDER || re.includes("Analise resumida"))) {
       return analise ? generateAutoResumo(analise) : "";
     }
-    return an.resumo_executivo;
-  }, [an, isHistorico, analise]);
+    return re;
+  }, [an, ac, isHistorico, analise]);
 
   return (
     <div className="min-h-screen bg-background px-4 pt-8 pb-12">
