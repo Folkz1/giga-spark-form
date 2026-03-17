@@ -45,6 +45,14 @@ import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MentionTextarea } from "@/components/MentionTextarea";
 
+const CLICKUP_FALLBACK_MEMBERS = [
+  { id: "112072046", username: "Railson" },
+  { id: "111933744", username: "Vanessa" },
+  { id: "111933196", username: "Talita" },
+  { id: "106108085", username: "Alex" },
+  { id: "254549717", username: "Alan" },
+];
+
 interface ChatMessage {
   role: "user" | "assistant";
   content: string;
