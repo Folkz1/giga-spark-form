@@ -41,11 +41,21 @@ const scoreBadgeStyle = (score: string) => {
 
 const prioridadeBadge = (p: string) => {
   switch (p) {
-    case "urgent": return "bg-red-500/15 text-red-400 border-red-500/25";
-    case "high": return "bg-orange-500/15 text-orange-400 border-orange-500/25";
-    case "medium": return "bg-amber-500/15 text-amber-400 border-amber-500/25";
-    default: return "bg-secondary text-muted-foreground";
+    case "urgent": return "bg-red-600/20 text-red-300 border-red-500/40";
+    case "high": return "bg-orange-600/20 text-orange-300 border-orange-500/40";
+    case "medium": return "bg-blue-500/20 text-blue-300 border-blue-500/35";
+    default: return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
   }
+};
+
+const formatPrioridade = (p: string): string => {
+  const map: Record<string, string> = {
+    urgent: "Urgente",
+    high: "Alta",
+    medium: "Média",
+    low: "Baixa",
+  };
+  return map[p] || p;
 };
 
 const tipoBadge = (t: string) => {
@@ -59,6 +69,19 @@ const tipoBadge = (t: string) => {
     CORRIGIR: "bg-orange-500/15 text-orange-400 border-orange-500/25",
   };
   return map[t] || "bg-secondary text-muted-foreground";
+};
+
+const formatTipo = (t: string): string => {
+  const map: Record<string, string> = {
+    TRACKING: "Rastreamento",
+    CRIATIVO: "Criativo",
+    PAUSAR: "Pausar",
+    OTIMIZACAO: "Otimização",
+    TESTAR: "Testar",
+    ESCALAR: "Escalar",
+    CORRIGIR: "Corrigir",
+  };
+  return map[t] || t;
 };
 
 const placementStatusBadge = (s: string) => {
