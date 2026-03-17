@@ -43,6 +43,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MentionTextarea } from "@/components/MentionTextarea";
 
 interface ChatMessage {
   role: "user" | "assistant";
@@ -300,7 +301,7 @@ const GestorIA = () => {
       setClickupListId("");
     };
     try {
-      await fetch("https://principaln8o.gigainteligencia.com.br/webhook/gestor-clickup", {
+      const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/gestor-clickup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -313,13 +314,28 @@ const GestorIA = () => {
           como_executar: rec.como_executar,
           termos_negativar: rec.termos_negativar,
           keywords_adicionar: rec.keywords_adicionar,
-          observacao: clickupObs,
           assignee: clickupAssignee || undefined,
           due_date: clickupDueDate ? format(clickupDueDate, "yyyy-MM-dd") : undefined,
           priority: clickupPriority || undefined,
           listId: clickupListId || undefined,
         }),
       });
+      const resData = await res.json();
+      const taskId = resData?.taskId || resData?.task_id || resData?.id;
+
+      // Post observation as a separate comment/activity
+      if (clickupObs && taskId) {
+        try {
+          await fetch("https://appn8o2.gigainteligencia.com.br/webhook/clickup-postar-comentario", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ task_id: taskId, observacao: clickupObs }),
+          });
+        } catch (e) {
+          console.warn("Erro ao postar comentário:", e);
+        }
+      }
+
       setClickupSuccess(true);
       if (clickupModal.recIndex !== null) {
         setClickupCreatedTasks(prev => new Set(prev).add(clickupModal.recIndex!));
@@ -2243,12 +2259,20 @@ const GestorIA = () => {
 
               {/* Observação */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Observação para a equipe <span className="opacity-50">(opcional)</span></label>
-                <Textarea
+                <label className="text-xs font-medium text-muted-foreground">
+                  Observação para a equipe <span className="text-emerald-400/60">(será postada como atividade)</span>
+                </label>
+                <MentionTextarea
                   value={clickupObs}
-                  onChange={(e) => setClickupObs(e.target.value)}
-                  placeholder="Adicionar observação para a equipe..."
-                  className="min-h-[80px] resize-none text-sm"
+                  onChange={setClickupObs}
+                  placeholder="Adicionar observação... use @ para mencionar membros"
+                  rows={3}
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+                  hint={
+                    <p className="text-[10px] text-emerald-400/50 mt-1">
+                      Dica: use <span className="font-medium">@</span> para mencionar membros. Será postada como atividade no ClickUp.
+                    </p>
+                  }
                 />
               </div>
             </div>
