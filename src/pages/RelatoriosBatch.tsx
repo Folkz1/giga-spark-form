@@ -884,8 +884,8 @@ const RelatoriosBatch = () => {
                                     <AccordionItem key={i} value={`rec-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
                                       <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
                                         <div className="flex items-center gap-2 flex-wrap flex-1 text-left">
-                                          {rec.prioridade && <Badge className={`text-[9px] px-1.5 py-0 ${prioridadeBadge(rec.prioridade)}`}>{rec.prioridade}</Badge>}
-                                          {rec.tipo && <Badge className={`text-[9px] px-1.5 py-0 ${tipoBadge(rec.tipo)}`}>{rec.tipo}</Badge>}
+                                          {rec.prioridade && <Badge className={`text-[11px] px-2 py-0.5 ${prioridadeBadge(rec.prioridade)} font-semibold`}>{formatPrioridade(rec.prioridade)}</Badge>}
+                                          {rec.tipo && <Badge className={`text-[11px] px-2 py-0.5 ${tipoBadge(rec.tipo)}`}>{formatTipo(rec.tipo)}</Badge>}
                                           <span className="font-medium text-foreground">{rec.titulo || rec.nome || `Recomendação ${i + 1}`}</span>
                                           {rec.urgencia && <span className="text-[9px] text-red-400 font-bold">{rec.urgencia}</span>}
                                         </div>
