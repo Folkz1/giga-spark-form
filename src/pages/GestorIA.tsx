@@ -300,7 +300,7 @@ const GestorIA = () => {
       setClickupListId("");
     };
     try {
-      await fetch("https://principaln8o.gigainteligencia.com.br/webhook/gestor-clickup", {
+      const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/gestor-clickup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -313,13 +313,28 @@ const GestorIA = () => {
           como_executar: rec.como_executar,
           termos_negativar: rec.termos_negativar,
           keywords_adicionar: rec.keywords_adicionar,
-          observacao: clickupObs,
           assignee: clickupAssignee || undefined,
           due_date: clickupDueDate ? format(clickupDueDate, "yyyy-MM-dd") : undefined,
           priority: clickupPriority || undefined,
           listId: clickupListId || undefined,
         }),
       });
+      const resData = await res.json();
+      const taskId = resData?.taskId || resData?.task_id || resData?.id;
+
+      // Post observation as a separate comment/activity
+      if (clickupObs && taskId) {
+        try {
+          await fetch("https://appn8o2.gigainteligencia.com.br/webhook/clickup-postar-comentario", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ task_id: taskId, observacao: clickupObs }),
+          });
+        } catch (e) {
+          console.warn("Erro ao postar comentário:", e);
+        }
+      }
+
       setClickupSuccess(true);
       if (clickupModal.recIndex !== null) {
         setClickupCreatedTasks(prev => new Set(prev).add(clickupModal.recIndex!));
