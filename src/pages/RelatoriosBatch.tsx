@@ -906,9 +906,13 @@ const RelatoriosBatch = () => {
                                         {rec.como_executar && (
                                           <div>
                                             <p className="text-[10px] text-muted-foreground font-semibold mb-1">Como executar</p>
-                                            <ol className="list-decimal list-inside space-y-1">
-                                              {rec.como_executar.split(";").map((step: string, si: number) => (
-                                                <li key={si} className="text-sm text-muted-foreground">{step.trim()}</li>
+                                             <ol className="list-decimal list-inside space-y-1">
+                                              {rec.como_executar
+                                                .split(/(?:;\s*|\s*(?=\d+\.\s))/)
+                                                .map((s: string) => s.replace(/^\d+\.\s*/, "").trim())
+                                                .filter((s: string) => s.length > 0)
+                                                .map((step: string, si: number) => (
+                                                <li key={si} className="text-sm text-muted-foreground">{step}</li>
                                               ))}
                                             </ol>
                                           </div>
