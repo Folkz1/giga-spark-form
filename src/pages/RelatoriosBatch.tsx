@@ -41,11 +41,21 @@ const scoreBadgeStyle = (score: string) => {
 
 const prioridadeBadge = (p: string) => {
   switch (p) {
-    case "urgent": return "bg-red-500/15 text-red-400 border-red-500/25";
-    case "high": return "bg-orange-500/15 text-orange-400 border-orange-500/25";
-    case "medium": return "bg-amber-500/15 text-amber-400 border-amber-500/25";
-    default: return "bg-secondary text-muted-foreground";
+    case "urgent": return "bg-red-600/20 text-red-300 border-red-500/40";
+    case "high": return "bg-orange-600/20 text-orange-300 border-orange-500/40";
+    case "medium": return "bg-blue-500/20 text-blue-300 border-blue-500/35";
+    default: return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
   }
+};
+
+const formatPrioridade = (p: string): string => {
+  const map: Record<string, string> = {
+    urgent: "Urgente",
+    high: "Alta",
+    medium: "Média",
+    low: "Baixa",
+  };
+  return map[p] || p;
 };
 
 const tipoBadge = (t: string) => {
@@ -59,6 +69,19 @@ const tipoBadge = (t: string) => {
     CORRIGIR: "bg-orange-500/15 text-orange-400 border-orange-500/25",
   };
   return map[t] || "bg-secondary text-muted-foreground";
+};
+
+const formatTipo = (t: string): string => {
+  const map: Record<string, string> = {
+    TRACKING: "Rastreamento",
+    CRIATIVO: "Criativo",
+    PAUSAR: "Pausar",
+    OTIMIZACAO: "Otimização",
+    TESTAR: "Testar",
+    ESCALAR: "Escalar",
+    CORRIGIR: "Corrigir",
+  };
+  return map[t] || t;
 };
 
 const placementStatusBadge = (s: string) => {
@@ -861,8 +884,8 @@ const RelatoriosBatch = () => {
                                     <AccordionItem key={i} value={`rec-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
                                       <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
                                         <div className="flex items-center gap-2 flex-wrap flex-1 text-left">
-                                          {rec.prioridade && <Badge className={`text-[9px] px-1.5 py-0 ${prioridadeBadge(rec.prioridade)}`}>{rec.prioridade}</Badge>}
-                                          {rec.tipo && <Badge className={`text-[9px] px-1.5 py-0 ${tipoBadge(rec.tipo)}`}>{rec.tipo}</Badge>}
+                                          {rec.prioridade && <Badge className={`text-[11px] px-2 py-0.5 ${prioridadeBadge(rec.prioridade)} font-semibold`}>{formatPrioridade(rec.prioridade)}</Badge>}
+                                          {rec.tipo && <Badge className={`text-[11px] px-2 py-0.5 ${tipoBadge(rec.tipo)}`}>{formatTipo(rec.tipo)}</Badge>}
                                           <span className="font-medium text-foreground">{rec.titulo || rec.nome || `Recomendação ${i + 1}`}</span>
                                           {rec.urgencia && <span className="text-[9px] text-red-400 font-bold">{rec.urgencia}</span>}
                                         </div>
@@ -956,7 +979,7 @@ const RelatoriosBatch = () => {
                                         <tr key={i} className="border-b border-border/50">
                                           <td className="py-2 pr-3 font-medium text-foreground max-w-[200px] truncate">{d.nome}</td>
                                           <td className="py-2 pr-3 text-muted-foreground">{d.objetivo}</td>
-                                          <td className="py-2 pr-3"><Badge className={`text-[9px] px-1.5 py-0 ${scoreBadgeStyle(d.status)}`}>{formatScore(d.status)}</Badge></td>
+                                          <td className="py-2 pr-3"><Badge className={`text-[11px] px-2 py-0.5 ${scoreBadgeStyle(d.status)}`}>{formatScore(d.status)}</Badge></td>
                                           <td className="py-2 pr-3 text-muted-foreground max-w-[200px]">{d.causa_raiz}</td>
                                           <td className="py-2 text-muted-foreground max-w-[200px]">{d.acao_principal}</td>
                                         </tr>
@@ -1026,7 +1049,7 @@ const RelatoriosBatch = () => {
                                       {placementInsights.map((p, i) => (
                                         <tr key={i} className="border-b border-border/50">
                                           <td className="py-2 pr-3 text-foreground">{p.posicionamento}</td>
-                                          <td className="py-2 pr-3"><Badge className={`text-[9px] px-1.5 py-0 ${placementStatusBadge(p.status)}`}>{p.status}</Badge></td>
+                                          <td className="py-2 pr-3"><Badge className={`text-[11px] px-2 py-0.5 ${placementStatusBadge(p.status)}`}>{p.status}</Badge></td>
                                           <td className="py-2 pr-3 text-muted-foreground">{formatCurrency(p.cpa)}</td>
                                           <td className="py-2 pr-3 text-muted-foreground">{p.conversoes}</td>
                                           <td className="py-2 text-muted-foreground max-w-[200px]">{p.recomendacao}</td>
@@ -1060,7 +1083,7 @@ const RelatoriosBatch = () => {
                                       {demographicInsights.map((d, i) => (
                                         <tr key={i} className="border-b border-border/50">
                                           <td className="py-2 pr-3 text-foreground">{d.segmento}</td>
-                                          <td className="py-2 pr-3"><Badge className={`text-[9px] px-1.5 py-0 ${placementStatusBadge(d.status)}`}>{d.status}</Badge></td>
+                                          <td className="py-2 pr-3"><Badge className={`text-[11px] px-2 py-0.5 ${placementStatusBadge(d.status)}`}>{d.status}</Badge></td>
                                           <td className="py-2 pr-3 text-muted-foreground">{formatCurrency(d.cpa)}</td>
                                           <td className="py-2 text-muted-foreground max-w-[250px]">{d.recomendacao}</td>
                                         </tr>
@@ -1082,7 +1105,7 @@ const RelatoriosBatch = () => {
                                 {alertasTecnicos.map((a, i) => (
                                   <div key={i} className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-1">
                                     <div className="flex items-center gap-2">
-                                      <Badge className="text-[9px] px-1.5 py-0 bg-amber-500/15 text-amber-400">{a.tipo}</Badge>
+                                      <Badge className="text-[11px] px-2 py-0.5 bg-amber-500/15 text-amber-400">{a.tipo}</Badge>
                                       <span className="text-xs text-foreground font-medium">{a.campanha}</span>
                                     </div>
                                     <p className="text-xs text-muted-foreground">{a.descricao}</p>
@@ -1148,7 +1171,7 @@ const RelatoriosBatch = () => {
                                       <AccordionItem key={i} value={`camp-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
                                         <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
                                           <div className="flex items-center gap-2 flex-1 text-left">
-                                            {campStatus && <Badge className={`text-[9px] px-1.5 py-0 ${scoreBadgeStyle(campStatus)}`}>{formatScore(campStatus)}</Badge>}
+                                            {campStatus && <Badge className={`text-[11px] px-2 py-0.5 ${scoreBadgeStyle(campStatus)}`}>{formatScore(campStatus)}</Badge>}
                                             <span className="font-medium text-foreground truncate">{campName}</span>
                                             {campType && <span className="text-muted-foreground">{campType}</span>}
                                           </div>
