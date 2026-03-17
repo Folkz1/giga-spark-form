@@ -68,119 +68,89 @@ function CustomSelect({
   getSearchText?: (opt: any) => string;
 }) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const wrapperRef = useRef<HTMLDivElement>(null);
   const selected = options.find((o) => o.id === value || o.value === value);
 
-  const filtered = searchable && search.trim()
-    ? options.filter((opt) => {
-        const text = getSearchText
-          ? getSearchText(opt)
-          : (opt.name || opt.label || opt.username || "");
-        return text.toLowerCase().includes(search.toLowerCase());
-      })
-    : options;
-
-  const handleOpen = (newOpen: boolean) => {
-    setOpen(newOpen);
-    if (!newOpen) setSearch("");
-  };
-
-  useEffect(() => {
-    if (!open) return;
-
-    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
-      if (!(event.target instanceof Node)) return;
-      if (!wrapperRef.current?.contains(event.target)) {
-        handleOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handlePointerDown);
-    document.addEventListener("touchstart", handlePointerDown);
-
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDown);
-      document.removeEventListener("touchstart", handlePointerDown);
-    };
-  }, [open]);
-
   return (
-    <div ref={wrapperRef} className="relative">
-      <button
-        type="button"
-        onClick={() => handleOpen(!open)}
-        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-[#1a1a2e] border border-white/10 text-sm text-white hover:border-purple-500/50 transition-all duration-200 focus:outline-none focus:border-purple-500"
-      >
-        {loading ? (
-          <Loader2 className="w-4 h-4 text-purple-400 animate-spin shrink-0" />
-        ) : (
-          <Icon className="w-4 h-4 text-purple-400 shrink-0" />
-        )}
-        <span className={`flex-1 text-left ${!selected ? "text-white/40" : "text-white"}`}>
-          {selected
-            ? renderValue
-              ? renderValue(selected)
-              : selected.name || selected.label
-            : loading
-            ? "Carregando..."
-            : placeholder}
-        </span>
-        <ChevronDown
-          className={`w-4 h-4 text-white/40 shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -8, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -8, scale: 0.97 }}
-            transition={{ duration: 0.15 }}
-            className="absolute z-[110] w-full mt-2 rounded-xl bg-[#1a1a2e] border border-white/10 shadow-2xl shadow-black/50 overflow-hidden"
-          >
-            {searchable && (
-              <div className="px-3 pt-3 pb-2 border-b border-white/5">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder={searchPlaceholder}
-                    autoFocus
-                    className="w-full pl-8 pr-3 py-2 rounded-lg bg-white/5 border border-white/10 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-purple-500/50"
-                  />
-                </div>
-              </div>
+    <Popover open={open} onOpenChange={setOpen} modal={false}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          disabled={loading}
+          className="w-full justify-between rounded-xl border-white/10 bg-[#1a1a2e] px-4 py-3 text-sm font-normal text-white hover:border-purple-500/50 hover:bg-[#1a1a2e] hover:text-white"
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-3 text-left">
+            {loading ? (
+              <Loader2 className="h-4 w-4 shrink-0 animate-spin text-purple-400" />
+            ) : (
+              <Icon className="h-4 w-4 shrink-0 text-purple-400" />
             )}
-            <div className="max-h-44 overflow-y-auto">
-              {filtered.length === 0 ? (
-                <div className="px-4 py-3 text-sm text-white/40 text-center">
-                  Nenhum item encontrado
-                </div>
+            <div className={cn("min-w-0 flex-1", !selected && "text-white/40")}>
+              {selected ? (
+                renderValue ? renderValue(selected) : selected.name || selected.label
+              ) : loading ? (
+                "Carregando..."
               ) : (
-                filtered.map((opt) => (
-                  <button
-                    key={opt.id || opt.value}
-                    type="button"
-                    onClick={() => {
-                      onChange(opt.id || opt.value);
-                      handleOpen(false);
-                    }}
-                    className="w-full flex items-center gap-3 px-4 py-3 text-sm text-white hover:bg-purple-500/10 transition-colors text-left"
-                  >
-                    {renderOption ? renderOption(opt) : opt.name || opt.label}
-                  </button>
-                ))
+                placeholder
               )}
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+          <ChevronsUpDown className="h-4 w-4 shrink-0 text-white/40" />
+        </Button>
+      </PopoverTrigger>
 
-    </div>
+      <PopoverContent
+        align="start"
+        sideOffset={8}
+        className="z-[120] w-[var(--radix-popover-trigger-width)] rounded-xl border border-white/10 bg-[#1a1a2e] p-0 text-white shadow-2xl shadow-black/50"
+      >
+        <Command className="rounded-xl bg-transparent text-white">
+          {searchable && (
+            <CommandInput
+              placeholder={searchPlaceholder}
+              className="border-white/5 text-white placeholder:text-white/25"
+            />
+          )}
+          <CommandList className="max-h-44 overflow-y-auto">
+            <CommandEmpty className="px-4 py-3 text-center text-sm text-white/40">
+              Nenhum item encontrado
+            </CommandEmpty>
+            <CommandGroup className="p-1">
+              {options.map((opt) => {
+                const optionValue = opt.id || opt.value;
+                const optionLabel = getSearchText
+                  ? getSearchText(opt)
+                  : opt.name || opt.label || opt.username || String(optionValue);
+
+                return (
+                  <CommandItem
+                    key={optionValue}
+                    value={optionLabel}
+                    onSelect={() => {
+                      onChange(optionValue);
+                      setOpen(false);
+                    }}
+                    className="gap-3 rounded-lg px-3 py-3 text-sm text-white data-[selected=true]:bg-purple-500/10 data-[selected=true]:text-white"
+                  >
+                    <Check
+                      className={cn(
+                        "h-4 w-4 shrink-0 text-purple-400",
+                        value === optionValue ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    <div className="min-w-0 flex-1">
+                      {renderOption ? renderOption(opt) : opt.name || opt.label}
+                    </div>
+                  </CommandItem>
+                );
+              })}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 
