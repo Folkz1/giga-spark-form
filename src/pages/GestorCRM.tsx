@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { MentionTextarea } from "@/components/MentionTextarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -193,8 +194,16 @@ const ClickUpModal = ({ open, onClose, clienteSelecionado, respostaMarkdown, tok
             </Select>
           </div>
           <div>
-            <label className="text-sm mb-1 block" style={{ color: "#94a3b8" }}>Observações</label>
-            <Textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} placeholder="Adicione observações para a tarefa..." className="border rounded-lg min-h-[80px]" style={{ background: "#1e293b", borderColor: "#374151", color: "#f1f5f9" }} />
+            <label className="text-sm mb-1 block" style={{ color: "#94a3b8" }}>Observações para a equipe <span className="text-emerald-400/60">(será postada como atividade)</span></label>
+            <MentionTextarea
+              value={observacoes}
+              onChange={setObservacoes}
+              members={members.map(m => ({ id: m.id, username: m.name }))}
+              placeholder="Use @ para mencionar membros..."
+              className="flex w-full border rounded-lg min-h-[80px] px-3 py-2 text-sm"
+              style={{ background: "#1e293b", borderColor: "#374151", color: "#f1f5f9" }}
+              hint={<p className="text-xs mt-1" style={{ color: "#64748b" }}>Dica: use @ para mencionar membros. Será postada como atividade no ClickUp.</p>}
+            />
           </div>
           <div className="flex items-center gap-2">
             <Checkbox id="incluir" checked={incluirResposta} onCheckedChange={v => setIncluirResposta(!!v)} />
