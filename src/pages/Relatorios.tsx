@@ -103,9 +103,16 @@ const Relatorios = () => {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2">
                         <p className="text-foreground font-semibold text-base">{formatDate(batch.dataExecucao)}</p>
-                        <Badge className="text-[10px] px-2 py-0.5 bg-blue-500/15 text-blue-400 border-blue-500/25">
-                          {batch.plataforma === "meta_ads" ? "Meta Ads" : batch.plataforma === "google_ads" ? "Google Ads" : batch.plataforma}
-                        </Badge>
+                        {batch.plataforma.split(",").map(p => {
+                          const key = p.trim();
+                          const isMeta = key === "meta_ads";
+                          const isGoogle = key === "google_ads";
+                          return (
+                            <Badge key={key} className={`text-[10px] px-2 py-0.5 ${isMeta ? "bg-blue-500/15 text-blue-400 border-blue-500/25" : isGoogle ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25" : "bg-muted text-muted-foreground border-border"}`}>
+                              {isMeta ? "Meta Ads" : isGoogle ? "Google Ads" : key}
+                            </Badge>
+                          );
+                        })}
                       </div>
 
                       <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
