@@ -903,7 +903,7 @@ const RelatoriosBatch = () => {
                                 <span>🎨 Criativos</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4 space-y-3">
-                                {an.diagnostico_criativos.resumo && (
+                                {an?.diagnostico_criativos?.resumo && (
                                   <p className="text-sm text-muted-foreground">{an.diagnostico_criativos.resumo}</p>
                                 )}
                                 {an.diagnostico_criativos.fatigados?.length > 0 && (
