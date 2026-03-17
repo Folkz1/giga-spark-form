@@ -386,14 +386,31 @@ const RelatoriosBatch = () => {
 
   const openClickup = (rec: Recomendacao, idx: number) => {
     const title = rec.titulo || (rec as any).nome || rec.acao || `Recomendação ${idx + 1}`;
-    const desc = [
-      rec.diagnostico ? `📋 Diagnóstico:\n${rec.diagnostico}` : "",
-      rec.acao ? `🎯 Ação:\n${rec.acao}` : "",
-      rec.como_executar ? `📝 Como executar:\n${rec.como_executar.split(";").map((s, i) => `${i + 1}. ${s.trim()}`).join("\n")}` : "",
-      rec.impacto_esperado ? `📈 Impacto esperado:\n${rec.impacto_esperado}` : "",
-      rec.angulos_criativo ? `🎨 Ângulos de criativo:\n${rec.angulos_criativo}` : "",
-      rec.prerequisito ? `⚠️ Pré-requisito:\n${rec.prerequisito}` : "",
-    ].filter(Boolean).join("\n\n");
+    const sections: string[] = [];
+    if (rec.diagnostico || rec.descricao || (rec as any).por_que_fazer) {
+      sections.push(`## Diagnóstico\n${rec.diagnostico || rec.descricao || (rec as any).por_que_fazer}`);
+    }
+    if (rec.acao) {
+      sections.push(`## Ação Principal\n${rec.acao}`);
+    }
+    if (rec.como_executar) {
+      const steps = rec.como_executar.split(";").map((s: string) => s.trim()).filter(Boolean);
+      const stepsList = steps.map((s: string, i: number) => {
+        const cleaned = s.replace(/^\d+[\.\)]\s*/, '').replace(/^[a-z][\.\)]\s*/i, '');
+        return `${i + 1}. ${cleaned}`;
+      }).join("\n");
+      sections.push(`## Como Executar\n${stepsList}`);
+    }
+    if (rec.impacto_esperado || (rec as any).impacto) {
+      sections.push(`## Impacto Esperado\n${rec.impacto_esperado || (rec as any).impacto}`);
+    }
+    if (rec.angulos_criativo) {
+      sections.push(`## Ângulos de Criativo\n${rec.angulos_criativo}`);
+    }
+    if (rec.prerequisito) {
+      sections.push(`## Pré-requisito\n⚠️ ${rec.prerequisito}`);
+    }
+    const desc = sections.join("\n\n---\n\n");
     setClickupTitle(title);
     setClickupRecIdx(idx);
     setClickupDesc(desc);
