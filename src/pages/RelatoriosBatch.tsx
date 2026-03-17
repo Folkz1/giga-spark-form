@@ -1096,14 +1096,14 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 14 — Relatório Fiscal */}
-                          {an.relatorio_fiscal && (
+                          {an?.relatorio_fiscal && (
                             <AccordionItem value="fiscal" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
                                 <span>📑 Relatório Fiscal</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono bg-secondary/50 p-4 rounded-lg overflow-x-auto">
-                                  {an.relatorio_fiscal}
+                                  {an?.relatorio_fiscal}
                                 </pre>
                               </AccordionContent>
                             </AccordionItem>
