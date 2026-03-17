@@ -214,6 +214,8 @@ export function ClickUpTaskModal({
         observacao: observacao || null,
       };
 
+      console.log("[ClickUp] Creating task with body:", JSON.stringify(body, null, 2));
+
       const res = await fetch(N8N_CRIAR_TAREFA_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
