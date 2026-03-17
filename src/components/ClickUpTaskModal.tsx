@@ -82,6 +82,25 @@ function CustomSelect({
     if (!newOpen) setSearch("");
   };
 
+  useEffect(() => {
+    if (!open) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (!(event.target instanceof Node)) return;
+      if (!wrapperRef.current?.contains(event.target)) {
+        handleOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
+  }, [open]);
+
   return (
     <div className="relative">
       <button
