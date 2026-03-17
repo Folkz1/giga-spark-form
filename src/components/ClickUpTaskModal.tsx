@@ -402,18 +402,21 @@ export function ClickUpTaskModal({
                 {/* Observação */}
                 <div>
                   <label className="text-xs text-white/40 font-medium mb-1.5 block">
-                    Observação para a equipe <span className="text-white/20">(opcional)</span>
+                    Observação para a equipe <span className="text-emerald-400/60">(será postada como atividade)</span>
                   </label>
-                  <div className="relative">
-                    <MessageSquare className="absolute left-3 top-3 w-4 h-4 text-purple-400 pointer-events-none" />
-                    <textarea
-                      value={observacao}
-                      onChange={(e) => setObservacao(e.target.value)}
-                      placeholder="Adicionar observação para a equipe..."
-                      rows={3}
-                      className="w-full pl-9 pr-3 py-3 rounded-xl bg-[#1a1a2e] border border-white/10 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-purple-500 hover:border-white/20 transition-all resize-none"
-                    />
-                  </div>
+                  <MentionTextarea
+                    value={observacao}
+                    onChange={setObservacao}
+                    members={membros}
+                    placeholder="Adicionar observação... use @ para mencionar membros"
+                    rows={3}
+                    className="w-full pl-3 pr-3 py-3 rounded-xl bg-[#1a1a2e] border border-white/10 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-purple-500 hover:border-white/20 transition-all resize-none"
+                    hint={
+                      <p className="text-[10px] text-emerald-400/50 mt-1">
+                        Dica: use <span className="font-medium">@</span> para mencionar membros da equipe
+                      </p>
+                    }
+                  />
                 </div>
 
                 {/* Erro */}

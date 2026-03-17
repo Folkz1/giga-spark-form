@@ -2258,12 +2258,20 @@ const GestorIA = () => {
 
               {/* Observação */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Observação para a equipe <span className="opacity-50">(opcional)</span></label>
-                <Textarea
+                <label className="text-xs font-medium text-muted-foreground">
+                  Observação para a equipe <span className="text-emerald-400/60">(será postada como atividade)</span>
+                </label>
+                <MentionTextarea
                   value={clickupObs}
-                  onChange={(e) => setClickupObs(e.target.value)}
-                  placeholder="Adicionar observação para a equipe..."
-                  className="min-h-[80px] resize-none text-sm"
+                  onChange={setClickupObs}
+                  placeholder="Adicionar observação... use @ para mencionar membros"
+                  rows={3}
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+                  hint={
+                    <p className="text-[10px] text-emerald-400/50 mt-1">
+                      Dica: use <span className="font-medium">@</span> para mencionar membros. Será postada como atividade no ClickUp.
+                    </p>
+                  }
                 />
               </div>
             </div>
