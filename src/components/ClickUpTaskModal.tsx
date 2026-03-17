@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, CheckSquare, Loader2, Calendar, User, List, Flag, MessageSquare, Check, ChevronsUpDown } from "lucide-react";
+import { X, CheckSquare, Loader2, Calendar, User, List, Flag, Check, ChevronsUpDown } from "lucide-react";
+import { MentionTextarea } from "@/components/MentionTextarea";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
