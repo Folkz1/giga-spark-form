@@ -925,7 +925,7 @@ const RelatoriosBatch = () => {
                                 {an?.diagnostico_criativos?.proximos_testes && (
                                   <div>
                                     <p className="text-xs font-semibold text-blue-400 mb-1">🧪 Próximos testes</p>
-                                    <p className="text-sm text-muted-foreground">{an.diagnostico_criativos.proximos_testes}</p>
+                                    <p className="text-sm text-muted-foreground">{an?.diagnostico_criativos?.proximos_testes}</p>
                                   </div>
                                 )}
                               </AccordionContent>
