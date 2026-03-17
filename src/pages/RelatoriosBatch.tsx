@@ -698,7 +698,7 @@ const RelatoriosBatch = () => {
       </div>
 
       {/* ─── Analysis Drawer ─── */}
-      <Sheet open={drawerOpen} onOpenChange={(open) => { if (!open) return; setDrawerOpen(open); }}>
+      <Sheet modal={false} open={drawerOpen} onOpenChange={(open) => { if (!open) return; setDrawerOpen(open); }}>
         <SheetContent side="right" hideCloseButton className="w-full sm:w-[70vw] sm:max-w-[70vw] p-0 flex flex-col">
           {currentCliente && (
             <>
