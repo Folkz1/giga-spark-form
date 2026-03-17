@@ -1105,7 +1105,7 @@ const RelatoriosBatch = () => {
                                 {alertasTecnicos.map((a, i) => (
                                   <div key={i} className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-1">
                                     <div className="flex items-center gap-2">
-                                      <Badge className="text-[9px] px-1.5 py-0 bg-amber-500/15 text-amber-400">{a.tipo}</Badge>
+                                      <Badge className="text-[11px] px-2 py-0.5 bg-amber-500/15 text-amber-400">{a.tipo}</Badge>
                                       <span className="text-xs text-foreground font-medium">{a.campanha}</span>
                                     </div>
                                     <p className="text-xs text-muted-foreground">{a.descricao}</p>
