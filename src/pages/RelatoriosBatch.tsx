@@ -1303,7 +1303,15 @@ const RelatoriosBatch = () => {
         onClose={() => setClickupOpen(false)}
         taskTitle={clickupTitle}
         taskDescription={clickupDesc}
-        onSuccess={() => {}}
+        onSuccess={() => {
+          if (clickupRecIdx >= 0) {
+            setClickupCreated(prev => {
+              const next = new Set(prev);
+              next.add(`rec-${clickupRecIdx}`);
+              return next;
+            });
+          }
+        }}
       />
     </div>
   );
