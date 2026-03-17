@@ -102,7 +102,7 @@ function CustomSelect({
   }, [open]);
 
   return (
-    <div className="relative">
+    <div ref={wrapperRef} className="relative">
       <button
         type="button"
         onClick={() => handleOpen(!open)}
