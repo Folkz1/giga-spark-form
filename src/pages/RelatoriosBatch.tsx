@@ -387,8 +387,8 @@ const RelatoriosBatch = () => {
   const openClickup = (rec: Recomendacao, idx: number) => {
     const title = rec.titulo || (rec as any).nome || rec.acao || `Recomendação ${idx + 1}`;
     const sections: string[] = [];
-    if (rec.diagnostico || rec.descricao || rec.por_que_fazer) {
-      sections.push(`## Diagnóstico\n${rec.diagnostico || rec.descricao || rec.por_que_fazer}`);
+    if (rec.diagnostico || rec.descricao || (rec as any).por_que_fazer) {
+      sections.push(`## Diagnóstico\n${rec.diagnostico || rec.descricao || (rec as any).por_que_fazer}`);
     }
     if (rec.acao) {
       sections.push(`## Ação Principal\n${rec.acao}`);
@@ -401,8 +401,8 @@ const RelatoriosBatch = () => {
       }).join("\n");
       sections.push(`## Como Executar\n${stepsList}`);
     }
-    if (rec.impacto_esperado || rec.impacto) {
-      sections.push(`## Impacto Esperado\n${rec.impacto_esperado || rec.impacto}`);
+    if (rec.impacto_esperado || (rec as any).impacto) {
+      sections.push(`## Impacto Esperado\n${rec.impacto_esperado || (rec as any).impacto}`);
     }
     if (rec.angulos_criativo) {
       sections.push(`## Ângulos de Criativo\n${rec.angulos_criativo}`);
