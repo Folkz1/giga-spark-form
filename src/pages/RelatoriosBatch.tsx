@@ -793,7 +793,19 @@ const RelatoriosBatch = () => {
                                 <span>📋 Resumo Executivo</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
-                                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{resumoExecutivo}</p>
+                                <div className="text-sm text-muted-foreground leading-relaxed space-y-3">
+                                  {resumoExecutivo.split(/(?<=\.)\s+/).reduce((acc: string[][], sentence: string) => {
+                                    const last = acc[acc.length - 1];
+                                    if (last && last.join(' ').length + sentence.length < 300) {
+                                      last.push(sentence);
+                                    } else {
+                                      acc.push([sentence]);
+                                    }
+                                    return acc;
+                                  }, [] as string[][]).map((group: string[], i: number) => (
+                                    <p key={i}>{group.join(' ')}</p>
+                                  ))}
+                                </div>
                               </AccordionContent>
                             </AccordionItem>
                           )}
