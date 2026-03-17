@@ -909,7 +909,7 @@ const RelatoriosBatch = () => {
                                 {(an?.diagnostico_criativos?.fatigados?.length ?? 0) > 0 && (
                                   <div>
                                     <p className="text-xs font-semibold text-amber-400 mb-1">⚠️ Fatigados</p>
-                                    {an.diagnostico_criativos.fatigados.map((f, i) => (
+                                    {(an?.diagnostico_criativos?.fatigados || []).map((f, i) => (
                                       <div key={i} className="text-xs text-muted-foreground pl-3 mb-1">• <strong>{f.nome}</strong>: {f.motivo}</div>
                                     ))}
                                   </div>
