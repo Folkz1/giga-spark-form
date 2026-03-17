@@ -233,13 +233,12 @@ export function ClickUpTaskModal({
       setTimeout(() => {
         onClose();
         setSucesso(false);
-        // Reset
         setListaSelecionada("");
         setResponsavelSelecionado("");
         setDataConclusao("");
         setPrioridade("");
         setObservacao("");
-      }, 1800);
+      }, 400);
     } catch {
       setErro("Erro ao criar tarefa no ClickUp. Tente novamente.");
     } finally {
