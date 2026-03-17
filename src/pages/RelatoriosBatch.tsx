@@ -1031,7 +1031,7 @@ const RelatoriosBatch = () => {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                   <div className="p-3 rounded-lg bg-secondary/50 border border-border">
                                     <p className="text-[10px] text-muted-foreground font-semibold mb-1">Cenário Atual</p>
-                                    <p className="text-sm text-muted-foreground">{an.projecao.cenario_atual}</p>
+                                    <p className="text-sm text-muted-foreground">{an?.projecao?.cenario_atual}</p>
                                   </div>
                                   <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                                     <p className="text-[10px] text-emerald-400 font-semibold mb-1">Com Otimizações</p>
