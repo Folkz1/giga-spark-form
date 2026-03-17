@@ -896,7 +896,7 @@ const RelatoriosBatch = () => {
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <Accordion type="multiple" className="space-y-2">
-                                  {recomendacoes.map((rec: any, i: number) => (
+                                  {[...recomendacoes].sort((a: any, b: any) => prioridadeOrder(a.prioridade) - prioridadeOrder(b.prioridade)).map((rec: any, i: number) => (
                                     <AccordionItem key={i} value={`rec-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
                                       <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
                                         <div className="flex items-center gap-2 flex-wrap flex-1 text-left">
