@@ -39,23 +39,27 @@ const scoreBadgeStyle = (score: string) => {
   }
 };
 
+const prioridadeOrder = (p: string): number => {
+  const map: Record<string, number> = { urgent: 0, urgente: 0, high: 1, alta: 1, medium: 2, media: 2, média: 2, low: 3, baixa: 3 };
+  return map[p?.toLowerCase()] ?? 4;
+};
+
 const prioridadeBadge = (p: string) => {
-  switch (p) {
-    case "urgent": return "bg-red-600/20 text-red-300 border-red-500/40";
-    case "high": return "bg-orange-600/20 text-orange-300 border-orange-500/40";
-    case "medium": return "bg-blue-500/20 text-blue-300 border-blue-500/35";
-    default: return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
-  }
+  const key = p?.toLowerCase();
+  if (key === "urgent" || key === "urgente") return "bg-red-600/20 text-red-300 border-red-500/40";
+  if (key === "high" || key === "alta") return "bg-orange-600/20 text-orange-300 border-orange-500/40";
+  if (key === "medium" || key === "media" || key === "média") return "bg-blue-500/20 text-blue-300 border-blue-500/35";
+  return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
 };
 
 const formatPrioridade = (p: string): string => {
   const map: Record<string, string> = {
-    urgent: "Urgente",
-    high: "Alta",
-    medium: "Média",
-    low: "Baixa",
+    urgent: "Urgente", urgente: "Urgente",
+    high: "Alta", alta: "Alta",
+    medium: "Média", media: "Média", média: "Média",
+    low: "Baixa", baixa: "Baixa",
   };
-  return map[p] || p;
+  return map[p?.toLowerCase()] || p;
 };
 
 const tipoBadge = (t: string) => {
@@ -892,7 +896,7 @@ const RelatoriosBatch = () => {
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <Accordion type="multiple" className="space-y-2">
-                                  {recomendacoes.map((rec: any, i: number) => (
+                                  {[...recomendacoes].sort((a: any, b: any) => prioridadeOrder(a.prioridade) - prioridadeOrder(b.prioridade)).map((rec: any, i: number) => (
                                     <AccordionItem key={i} value={`rec-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
                                       <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
                                         <div className="flex items-center gap-2 flex-wrap flex-1 text-left">
