@@ -54,12 +54,12 @@ const prioridadeBadge = (p: string) => {
 
 const formatPrioridade = (p: string): string => {
   const map: Record<string, string> = {
-    urgent: "Urgente",
-    high: "Alta",
-    medium: "Média",
-    low: "Baixa",
+    urgent: "Urgente", urgente: "Urgente",
+    high: "Alta", alta: "Alta",
+    medium: "Média", media: "Média", média: "Média",
+    low: "Baixa", baixa: "Baixa",
   };
-  return map[p] || p;
+  return map[p?.toLowerCase()] || p;
 };
 
 const tipoBadge = (t: string) => {
