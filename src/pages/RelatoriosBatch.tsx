@@ -897,7 +897,7 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 8 — Criativos */}
-                          {!isHistorico && an.diagnostico_criativos && (
+                          {!isHistorico && an?.diagnostico_criativos && (
                             <AccordionItem value="criativos" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
                                 <span>🎨 Criativos</span>
