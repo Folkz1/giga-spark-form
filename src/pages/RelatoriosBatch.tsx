@@ -979,7 +979,7 @@ const RelatoriosBatch = () => {
                                         <tr key={i} className="border-b border-border/50">
                                           <td className="py-2 pr-3 font-medium text-foreground max-w-[200px] truncate">{d.nome}</td>
                                           <td className="py-2 pr-3 text-muted-foreground">{d.objetivo}</td>
-                                          <td className="py-2 pr-3"><Badge className={`text-[9px] px-1.5 py-0 ${scoreBadgeStyle(d.status)}`}>{formatScore(d.status)}</Badge></td>
+                                          <td className="py-2 pr-3"><Badge className={`text-[11px] px-2 py-0.5 ${scoreBadgeStyle(d.status)}`}>{formatScore(d.status)}</Badge></td>
                                           <td className="py-2 pr-3 text-muted-foreground max-w-[200px]">{d.causa_raiz}</td>
                                           <td className="py-2 text-muted-foreground max-w-[200px]">{d.acao_principal}</td>
                                         </tr>
