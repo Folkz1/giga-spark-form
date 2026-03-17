@@ -327,6 +327,7 @@ export function formatDate(dateStr: string | null | undefined): string {
 export function scoreOrder(score: string): number {
   if (score === "CRITICO") return 0;
   if (score === "ATENCAO") return 1;
+  if (score === "SEM_DADOS") return 3;
   return 2; // SAUDAVEL
 }
 
@@ -337,4 +338,65 @@ export function getPlataformaData(c: ClienteResumo): { data: PlataformaData; pla
   if (c.meta_ads) return { data: c.meta_ads, plataforma: "meta_ads" };
   if (c.google_ads) return { data: c.google_ads, plataforma: "google_ads" };
   return null;
+}
+
+// ─── Display Helpers ───
+
+export function formatScore(score: string): string {
+  const map: Record<string, string> = {
+    CRITICO: "Crítico",
+    ATENCAO: "Atenção",
+    SAUDAVEL: "Saudável",
+    SEM_DADOS: "Sem Dados",
+  };
+  return map[score] || score;
+}
+
+export function formatPeriodo(periodo: string): string {
+  const map: Record<string, string> = {
+    last_7d: "Últimos 7 dias",
+    last_14d: "Últimos 14 dias",
+    last_28d: "Últimos 28 dias",
+    last_30d: "Últimos 30 dias",
+  };
+  return map[periodo] || periodo;
+}
+
+export function pluralize(count: number, singular: string, plural: string): string {
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+export function formatBatchId(batchId: string): string {
+  const parts = batchId.split("-");
+  if (parts.length === 3) return `Relatório ${parts[2]}/${parts[1]}/${parts[0]}`;
+  return batchId;
+}
+
+export function formatAccountDisplay(name: string): { display: string; isNumericId: boolean } {
+  if (/^\d+$/.test(name)) {
+    const formatted = name.replace(/(\d{3})(?=\d)/g, "$1-").replace(/-$/, "");
+    return { display: `Google Ads • ${formatted}`, isNumericId: true };
+  }
+  return { display: name, isNumericId: false };
+}
+
+export function isAllMetricsZero(data: PlataformaData): boolean {
+  const inv = typeof data.investimento === "string" ? parseFloat(data.investimento) : (data.investimento as any) || 0;
+  const cpa = typeof data.cpa === "string" ? parseFloat(data.cpa) : (data.cpa as any) || 0;
+  const ctr = typeof data.ctr === "string" ? parseFloat(data.ctr) : (data.ctr as any) || 0;
+  const conv = data.conversoes || 0;
+  return inv === 0 && cpa === 0 && ctr === 0 && conv === 0;
+}
+
+export function resolveScore(c: ClienteResumo): string {
+  const p = getPlataformaData(c);
+  if (!p) return "SEM_DADOS";
+  const score = p.data.score_fiscal;
+  if (score && score !== "") return score;
+  // Auto-classify based on data
+  const inv = typeof p.data.investimento === "string" ? parseFloat(p.data.investimento) : (p.data.investimento as any) || 0;
+  const conv = p.data.conversoes || 0;
+  if (inv === 0 && conv === 0) return "SEM_DADOS";
+  // Has spend but no score — mark as attention
+  return "ATENCAO";
 }

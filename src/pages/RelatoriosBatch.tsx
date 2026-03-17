@@ -13,20 +13,28 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ClickUpTaskModal } from "@/components/ClickUpTaskModal";
 import {
   fetchBatchClientes, fetchAnaliseCliente, retryCliente, isRevisado, setRevisado, getRevisados,
   formatCurrency, formatNumber, formatPercent, scoreOrder, getPlataformaData,
+  formatScore, formatPeriodo, pluralize, formatBatchId, formatAccountDisplay, isAllMetricsZero, resolveScore,
   type ClienteResumo, type AnaliseCompleta, type BatchDetailResponse, type Recomendacao,
 } from "@/lib/relatorios-utils";
 
 type StatusFilter = "todos" | "critico" | "atencao" | "saudavel" | "erro";
+type PlatformFilter = "todas" | "meta_ads" | "google_ads";
 
 const scoreBadgeStyle = (score: string) => {
   switch (score) {
     case "CRITICO": return "bg-red-500/15 text-red-400 border-red-500/25";
     case "ATENCAO": return "bg-amber-500/15 text-amber-400 border-amber-500/25";
     case "SAUDAVEL": return "bg-emerald-500/15 text-emerald-400 border-emerald-500/25";
+    case "SEM_DADOS": return "bg-zinc-500/15 text-zinc-400 border-zinc-500/25";
     default: return "bg-secondary text-muted-foreground";
   }
 };
@@ -70,7 +78,6 @@ function generateAutoResumo(analise: AnaliseCompleta): string {
   const ac = analise.analiseCompleta;
   const an = ac?.analise;
   const resumo = ac?.resumo;
-  const p = getPlataformaData({ accountName: analise.accountName, customerId: analise.customerId, google_ads: null, meta_ads: null, statusGeral: "success" });
   const score = an?.score_conta || "";
   const parts: string[] = [];
   if (score) parts.push(`Conta com score **${score}**.`);
@@ -90,7 +97,6 @@ function generateAutoResumo(analise: AnaliseCompleta): string {
 function parseAlertText(text: string): { tag: string | null; body: string } {
   const match = text.match(/^(\[[\[\]\w\s\.\-\/\(\)]+\])\s*(.+)$/s);
   if (match) return { tag: match[1], body: match[2] };
-  // Try matching multiple bracket groups at start
   const multiMatch = text.match(/^((?:\[[^\]]*\]\s*)+)(.+)$/s);
   if (multiMatch) return { tag: multiMatch[1].trim(), body: multiMatch[2].trim() };
   return { tag: null, body: text };
@@ -125,6 +131,24 @@ const AlertCard = ({ text, variant }: { text: string; variant: "red" | "amber" |
   );
 };
 
+// Account name display component (MELHORIA 10)
+const AccountNameDisplay = ({ name, className }: { name: string; className?: string }) => {
+  const { display, isNumericId } = formatAccountDisplay(name);
+  if (!isNumericId) return <span className={className}>{display}</span>;
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className={`${className} text-muted-foreground`}>{display}</span>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>ID da conta Google Ads — nome não disponível</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+};
+
 const RelatoriosBatch = () => {
   const { batchId } = useParams<{ batchId: string }>();
   const navigate = useNavigate();
@@ -133,18 +157,23 @@ const RelatoriosBatch = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<StatusFilter>("todos");
+  const [platformFilter, setPlatformFilter] = useState<PlatformFilter>("todas");
   const [search, setSearch] = useState("");
   const [revisadosVersion, setRevisadosVersion] = useState(0);
 
   // Drawer state
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerNavList, setDrawerNavList] = useState<ClienteResumo[]>([]); // snapshot of list at open time
+  const [drawerNavList, setDrawerNavList] = useState<ClienteResumo[]>([]);
   const [drawerIdx, setDrawerIdx] = useState(0);
   const [analise, setAnalise] = useState<AnaliseCompleta | null>(null);
   const [analiseLoading, setAnaliseLoading] = useState(false);
-  const [navLoading, setNavLoading] = useState(false); // loading during nav
-  const [drawerContentKey, setDrawerContentKey] = useState(0); // for fade transitions
+  const [navLoading, setNavLoading] = useState(false);
+  const [drawerContentKey, setDrawerContentKey] = useState(0);
   const drawerScrollRef = useRef<HTMLDivElement>(null);
+  const drawerIdxRef = useRef(0); // BUG 1: ref to avoid stale closures
+
+  // Undo revisado confirm (MELHORIA 9)
+  const [confirmUndoOpen, setConfirmUndoOpen] = useState(false);
 
   // ClickUp
   const [clickupOpen, setClickupOpen] = useState(false);
@@ -170,13 +199,8 @@ const RelatoriosBatch = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const getScore = (c: ClienteResumo): string => {
-    const p = getPlataformaData(c);
-    return p?.data.score_fiscal || "SAUDAVEL";
-  };
-
   const sorted = useMemo(() => {
-    return [...clientes].sort((a, b) => scoreOrder(getScore(a)) - scoreOrder(getScore(b)));
+    return [...clientes].sort((a, b) => scoreOrder(resolveScore(a)) - scoreOrder(resolveScore(b)));
   }, [clientes]);
 
   const filtered = useMemo(() => {
@@ -185,12 +209,23 @@ const RelatoriosBatch = () => {
       const q = search.toLowerCase();
       list = list.filter(c => c.accountName.toLowerCase().includes(q));
     }
+    // Platform filter (MELHORIA 7)
+    if (platformFilter !== "todas") {
+      list = list.filter(c => {
+        if (platformFilter === "meta_ads") return c.meta_ads != null;
+        if (platformFilter === "google_ads") return c.google_ads != null;
+        return true;
+      });
+    }
     if (filter !== "todos") {
       list = list.filter(c => {
         const p = getPlataformaData(c);
         if (!p) return filter === "erro";
-        if (filter === "erro") return p.data.status === "error";
-        const score = p.data.score_fiscal;
+        if (filter === "erro") {
+          const score = resolveScore(c);
+          return p.data.status === "error" || score === "SEM_DADOS";
+        }
+        const score = resolveScore(c);
         if (filter === "critico") return score === "CRITICO";
         if (filter === "atencao") return score === "ATENCAO";
         if (filter === "saudavel") return score === "SAUDAVEL";
@@ -198,9 +233,9 @@ const RelatoriosBatch = () => {
       });
     }
     return list;
-  }, [sorted, search, filter]);
+  }, [sorted, search, filter, platformFilter]);
 
-  // Revisados count - reads from localStorage, re-triggers on version bump
+  // Revisados count
   const revisadosCount = useMemo(() => {
     if (!batchId) return 0;
     return clientes.filter(c => {
@@ -210,7 +245,6 @@ const RelatoriosBatch = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clientes, batchId, revisadosVersion]);
 
-  // Check if a specific client is reviewed
   const isClientRevisado = useCallback((c: ClienteResumo) => {
     if (!batchId) return false;
     const p = getPlataformaData(c);
@@ -234,31 +268,33 @@ const RelatoriosBatch = () => {
     }
   };
 
-  // BUG FIX 1 & 2: Snapshot the filtered list when opening drawer, decouple from live filter
   const openDrawer = async (idx: number) => {
-    const snapshot = [...filtered]; // freeze current list
+    const snapshot = [...filtered];
     setDrawerNavList(snapshot);
     setDrawerIdx(idx);
+    drawerIdxRef.current = idx;
     setDrawerOpen(true);
     setClickupCreated(new Set());
     setDrawerContentKey(k => k + 1);
     await loadAnalise(snapshot[idx]);
   };
 
-  // BUG FIX 1: Navigation that actually works - uses drawerNavList (snapshot)
+  // BUG 1 FIX: Navigation uses ref for latest index
   const navDrawer = async (dir: -1 | 1) => {
-    const nextIdx = drawerIdx + dir;
+    const currentIdx = drawerIdxRef.current;
+    const nextIdx = currentIdx + dir;
     if (nextIdx < 0 || nextIdx >= drawerNavList.length) return;
     const nextCliente = drawerNavList[nextIdx];
     if (!nextCliente) return;
 
     setNavLoading(true);
     setDrawerIdx(nextIdx);
+    drawerIdxRef.current = nextIdx;
     setClickupCreated(new Set());
 
-    // Scroll to top
+    // Scroll to top instantly
     if (drawerScrollRef.current) {
-      drawerScrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
+      drawerScrollRef.current.scrollTop = 0;
     }
 
     const p = getPlataformaData(nextCliente);
@@ -281,15 +317,31 @@ const RelatoriosBatch = () => {
     }
   };
 
+  // MELHORIA 9: Toggle revisado with confirm for undo
   const toggleRevisado = () => {
     if (!batchId) return;
-    const c = drawerNavList[drawerIdx];
+    const c = drawerNavList[drawerIdxRef.current];
     if (!c) return;
     const p = getPlataformaData(c);
     if (!p) return;
     const cur = isRevisado(batchId, c.customerId, p.plataforma);
-    setRevisado(batchId, c.customerId, p.plataforma, !cur);
-    setRevisadosVersion(v => v + 1); // triggers re-render of revisadosCount & isClientRevisado
+    if (cur) {
+      setConfirmUndoOpen(true);
+      return;
+    }
+    setRevisado(batchId, c.customerId, p.plataforma, true);
+    setRevisadosVersion(v => v + 1);
+  };
+
+  const confirmUndo = () => {
+    if (!batchId) return;
+    const c = drawerNavList[drawerIdxRef.current];
+    if (!c) return;
+    const p = getPlataformaData(c);
+    if (!p) return;
+    setRevisado(batchId, c.customerId, p.plataforma, false);
+    setRevisadosVersion(v => v + 1);
+    setConfirmUndoOpen(false);
   };
 
   const handleRetry = async (c: ClienteResumo) => {
@@ -322,7 +374,6 @@ const RelatoriosBatch = () => {
   const currentRevisado = batchId && currentCliente && currentP
     ? isRevisado(batchId, currentCliente.customerId, currentP.plataforma)
     : false;
-  // Force re-eval on version change
   void revisadosVersion;
 
   const filters: { label: string; value: StatusFilter }[] = [
@@ -330,14 +381,19 @@ const RelatoriosBatch = () => {
     { label: "Críticos", value: "critico" },
     { label: "Atenção", value: "atencao" },
     { label: "Saudáveis", value: "saudavel" },
-    { label: "Com Erro", value: "erro" },
+    { label: "Com Erro / Sem Dados", value: "erro" },
+  ];
+
+  const platformFilters: { label: string; value: PlatformFilter }[] = [
+    { label: "Todas Plataformas", value: "todas" },
+    { label: "Meta Ads", value: "meta_ads" },
+    { label: "Google Ads", value: "google_ads" },
   ];
 
   const ac = analise?.analiseCompleta;
   const an = ac?.analise;
   const isHistorico = (analise as any)?.fonte === "historico";
 
-  // Use root-level insights (more complete per spec)
   const placementInsights = ac?.placement_insights || an?.placement_insights || [];
   const demographicInsights = ac?.demographic_insights || an?.demographic_insights || [];
   const alertasTecnicos = ac?.alertas_tecnicos || an?.alertas_tecnicos || [];
@@ -346,7 +402,6 @@ const RelatoriosBatch = () => {
   const canGoPrev = drawerIdx > 0;
   const canGoNext = drawerIdx < drawerNavList.length - 1;
 
-  // MELHORIA 4: Auto-generate resumo for historico
   const resumoExecutivo = useMemo(() => {
     if (!an?.resumo_executivo) return "";
     if (isHistorico && (an.resumo_executivo === HISTORICO_PLACEHOLDER || an.resumo_executivo.includes("Analise resumida"))) {
@@ -358,7 +413,7 @@ const RelatoriosBatch = () => {
   return (
     <div className="min-h-screen bg-background px-4 pt-8 pb-12">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
+        {/* Header with BUG 5 fix */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
           <Button variant="ghost" onClick={() => navigate("/relatorios")} className="gap-2 self-start">
             <ArrowLeft className="w-4 h-4" /> Voltar
@@ -366,7 +421,7 @@ const RelatoriosBatch = () => {
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <span className="cursor-pointer hover:text-foreground transition-colors" onClick={() => navigate("/relatorios")}>Relatórios</span>
             <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-foreground font-medium">Batch {batchId}</span>
+            <span className="text-foreground font-medium">{batchId ? formatBatchId(batchId) : ""}</span>
           </div>
         </div>
 
@@ -381,26 +436,44 @@ const RelatoriosBatch = () => {
           </div>
         )}
 
-        {/* Filters & Search */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
-          <div className="flex flex-wrap gap-2 flex-1">
-            {filters.map(f => (
+        {/* Filters & Search - with MELHORIA 7 platform filter */}
+        <div className="flex flex-col gap-3 mb-6">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-wrap gap-2 flex-1">
+              {filters.map(f => (
+                <button
+                  key={f.value}
+                  onClick={() => setFilter(f.value)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                    filter === f.value
+                      ? "bg-primary/20 text-primary border border-primary/30"
+                      : "bg-secondary/50 text-muted-foreground hover:bg-secondary border border-transparent"
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input placeholder="Buscar cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9 bg-secondary/50 border-border/50" />
+            </div>
+          </div>
+          {/* Platform filter row */}
+          <div className="flex flex-wrap gap-2">
+            {platformFilters.map(f => (
               <button
                 key={f.value}
-                onClick={() => setFilter(f.value)}
+                onClick={() => setPlatformFilter(f.value)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  filter === f.value
-                    ? "bg-primary/20 text-primary border border-primary/30"
+                  platformFilter === f.value
+                    ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
                     : "bg-secondary/50 text-muted-foreground hover:bg-secondary border border-transparent"
                 }`}
               >
                 {f.label}
               </button>
             ))}
-          </div>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input placeholder="Buscar cliente..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9 bg-secondary/50 border-border/50" />
           </div>
         </div>
 
@@ -426,12 +499,13 @@ const RelatoriosBatch = () => {
             <AnimatePresence mode="popLayout">
               {filtered.map((c, idx) => {
                 const p = getPlataformaData(c);
-                const score = p?.data.score_fiscal || "";
+                const score = resolveScore(c);
                 const isError = p?.data.status === "error" || c.statusGeral === "error";
                 const reviewed = isClientRevisado(c);
+                const allZero = p && !isError && isAllMetricsZero(p.data);
                 const borderColor = reviewed
                   ? "border-l-[3px] border-l-emerald-500 border-t border-r border-b border-t-border/30 border-r-border/30 border-b-border/30"
-                  : isError ? "border border-red-500/30" : score === "CRITICO" ? "border border-red-500/30" : score === "ATENCAO" ? "border border-amber-500/30" : "border border-emerald-500/30";
+                  : isError ? "border border-red-500/30" : score === "CRITICO" ? "border border-red-500/30" : score === "ATENCAO" ? "border border-amber-500/30" : score === "SEM_DADOS" ? "border border-zinc-500/30" : "border border-emerald-500/30";
 
                 return (
                   <motion.div
@@ -440,12 +514,20 @@ const RelatoriosBatch = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
                     transition={{ delay: idx * 0.03, duration: 0.25 }}
-                    className={`glass-card rounded-2xl p-5 ${borderColor} hover:shadow-lg transition-all group ${reviewed ? "opacity-80" : ""}`}
+                    className={`glass-card rounded-2xl p-5 ${borderColor} hover:shadow-lg transition-all group ${reviewed ? "opacity-80" : ""} ${allZero ? "opacity-85" : ""}`}
                   >
+                    {/* MELHORIA 8: Zero metrics banner */}
+                    {allZero && (
+                      <div className="flex items-center gap-1.5 text-xs text-amber-400 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-1.5 mb-3">
+                        <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                        Conta sem dados no período
+                      </div>
+                    )}
+
                     <div className="flex items-start justify-between mb-3">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="text-base font-bold text-foreground truncate">{c.accountName}</h3>
+                          <AccountNameDisplay name={c.accountName} className="text-base font-bold text-foreground truncate" />
                           {reviewed && <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />}
                         </div>
                         <div className="flex gap-1.5 mt-1">
@@ -453,9 +535,9 @@ const RelatoriosBatch = () => {
                           {c.google_ads && <Badge className="text-[10px] px-1.5 py-0.5 bg-emerald-500/15 text-emerald-400 border-emerald-500/25">Google Ads</Badge>}
                         </div>
                       </div>
-                      {score && !isError && (
+                      {!isError && (
                         <Badge className={`text-[10px] px-2 py-0.5 ${scoreBadgeStyle(score)} font-bold`}>
-                          {score}
+                          {formatScore(score)}
                         </Badge>
                       )}
                       {isError && (
@@ -485,14 +567,14 @@ const RelatoriosBatch = () => {
                       </div>
                     )}
 
-                    {/* Counters */}
+                    {/* Counters - BUG 4: Plural fix */}
                     {p && !isError && (
                       <div className="flex gap-2 mb-3 text-xs">
                         {p.data.recomendacoes?.length > 0 && (
-                          <span className="text-blue-400">{p.data.recomendacoes.length} recomendações</span>
+                          <span className="text-blue-400">{pluralize(p.data.recomendacoes.length, 'recomendação', 'recomendações')}</span>
                         )}
                         {p.data.alertas?.length > 0 && (
-                          <span className="text-amber-400">{p.data.alertas.length} alertas</span>
+                          <span className="text-amber-400">{pluralize(p.data.alertas.length, 'alerta', 'alertas')}</span>
                         )}
                       </div>
                     )}
@@ -525,12 +607,11 @@ const RelatoriosBatch = () => {
         <SheetContent side="right" hideCloseButton className="w-full sm:w-[70vw] sm:max-w-[70vw] p-0 flex flex-col">
           {currentCliente && (
             <>
-              {/* MELHORIA 1: Better header layout with proper spacing */}
               <SheetHeader className="p-5 border-b border-border shrink-0">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <SheetTitle className="text-lg font-bold truncate">
-                      {currentCliente.accountName}
+                      <AccountNameDisplay name={currentCliente.accountName} className="text-lg font-bold" />
                     </SheetTitle>
                     {currentP && (
                       <div className="flex items-center gap-2 mt-1">
@@ -539,13 +620,14 @@ const RelatoriosBatch = () => {
                         </Badge>
                         {drawerScore && (
                           <Badge className={`text-[10px] px-2 py-0.5 ${scoreBadgeStyle(drawerScore)} font-bold`}>
-                            {drawerScore}
+                            {formatScore(drawerScore)}
                           </Badge>
                         )}
                       </div>
                     )}
                   </div>
                   <div className="flex items-center gap-4 shrink-0">
+                    {/* MELHORIA 9: Undo revisado button */}
                     <Button
                       size="sm"
                       variant={currentRevisado ? "default" : "outline"}
@@ -554,6 +636,7 @@ const RelatoriosBatch = () => {
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       {currentRevisado ? "Revisado ✓" : "Marcar Revisado"}
+                      {currentRevisado && <X className="w-3 h-3 ml-1 opacity-70" />}
                     </Button>
                     <Button
                       size="sm"
@@ -597,11 +680,13 @@ const RelatoriosBatch = () => {
                           </div>
                         )}
 
-                        {/* Section 1 — Header info */}
+                        {/* Section 1 — Header info with BUG 3 period fix */}
                         {an.score_justificativa && (
                           <div className="glass-card rounded-xl p-4">
                             <p className="text-sm text-muted-foreground">{an.score_justificativa}</p>
-                            <p className="text-xs text-muted-foreground/60 mt-2">{ac.data_analise} • Período: {ac.periodo}</p>
+                            <p className="text-xs text-muted-foreground/60 mt-2">
+                              {ac.data_analise} • Período: {formatPeriodo(ac.periodo || "")}
+                            </p>
                           </div>
                         )}
 
@@ -610,7 +695,7 @@ const RelatoriosBatch = () => {
                           defaultValue={["resumo_executivo", "metricas", "alertas_criticos", "recomendacoes"]}
                           className="space-y-3"
                         >
-                          {/* Section 2 — Resumo Executivo (MELHORIA 4) */}
+                          {/* Section 2 — Resumo Executivo */}
                           {resumoExecutivo && (
                             <AccordionItem value="resumo_executivo" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
@@ -645,7 +730,6 @@ const RelatoriosBatch = () => {
                                       <p className="text-sm font-bold text-foreground">{m.value}</p>
                                     </div>
                                   ))}
-                                  {/* MELHORIA 3: Hide Campanhas/Anúncios metric cards for historico */}
                                   {!isHistorico && (
                                     <>
                                       <div className="bg-secondary/50 rounded-lg p-3">
@@ -669,7 +753,7 @@ const RelatoriosBatch = () => {
                             </AccordionItem>
                           )}
 
-                          {/* Section 4 — Alertas Críticos (MELHORIA 5: expandable alerts) */}
+                          {/* Section 4 — Alertas Críticos */}
                           {an.alertas_criticos?.length > 0 && (
                             <AccordionItem value="alertas_criticos" className="rounded-xl overflow-hidden border-none bg-red-500/5 border border-red-500/20">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
@@ -794,7 +878,7 @@ const RelatoriosBatch = () => {
                                         <tr key={i} className="border-b border-border/50">
                                           <td className="py-2 pr-3 font-medium text-foreground max-w-[200px] truncate">{d.nome}</td>
                                           <td className="py-2 pr-3 text-muted-foreground">{d.objetivo}</td>
-                                          <td className="py-2 pr-3"><Badge className={`text-[9px] px-1.5 py-0 ${scoreBadgeStyle(d.status)}`}>{d.status}</Badge></td>
+                                          <td className="py-2 pr-3"><Badge className={`text-[9px] px-1.5 py-0 ${scoreBadgeStyle(d.status)}`}>{formatScore(d.status)}</Badge></td>
                                           <td className="py-2 pr-3 text-muted-foreground max-w-[200px]">{d.causa_raiz}</td>
                                           <td className="py-2 text-muted-foreground max-w-[200px]">{d.acao_principal}</td>
                                         </tr>
@@ -806,7 +890,7 @@ const RelatoriosBatch = () => {
                             </AccordionItem>
                           )}
 
-                          {/* Section 8 — Criativos (hidden for historico - MELHORIA 3) */}
+                          {/* Section 8 — Criativos */}
                           {!isHistorico && an.diagnostico_criativos && (
                             <AccordionItem value="criativos" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
@@ -958,7 +1042,7 @@ const RelatoriosBatch = () => {
                             </AccordionItem>
                           )}
 
-                          {/* Section 13 — Campanhas (hidden for historico - MELHORIA 3) */}
+                          {/* Section 13 — Campanhas */}
                           {!isHistorico && ac.campanhas?.length > 0 && (
                             <AccordionItem value="campanhas" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
@@ -970,7 +1054,7 @@ const RelatoriosBatch = () => {
                                     <AccordionItem key={i} value={`camp-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
                                       <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
                                         <div className="flex items-center gap-2 flex-1 text-left">
-                                          <Badge className={`text-[9px] px-1.5 py-0 ${scoreBadgeStyle(camp.status_performance)}`}>{camp.status_performance}</Badge>
+                                          <Badge className={`text-[9px] px-1.5 py-0 ${scoreBadgeStyle(camp.status_performance)}`}>{formatScore(camp.status_performance)}</Badge>
                                           <span className="font-medium text-foreground truncate">{camp.nome}</span>
                                           <span className="text-muted-foreground">{camp.tipo_campanha}</span>
                                         </div>
@@ -1025,7 +1109,7 @@ const RelatoriosBatch = () => {
                 </AnimatePresence>
               </div>
 
-              {/* Footer navigation — MELHORIA 6: loading spinners & disabled during load */}
+              {/* Footer navigation */}
               <div className="p-4 border-t border-border flex items-center justify-between shrink-0">
                 <Button
                   size="sm"
@@ -1053,6 +1137,22 @@ const RelatoriosBatch = () => {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* MELHORIA 9: Confirm undo dialog */}
+      <AlertDialog open={confirmUndoOpen} onOpenChange={setConfirmUndoOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desmarcar como revisado?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja desmarcar este cliente como revisado? Ele voltará a aparecer como pendente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmUndo}>Desmarcar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ClickUp Modal */}
       <ClickUpTaskModal
