@@ -129,6 +129,23 @@ const Index = () => {
             </div>
           </motion.section>
         ))}
+
+        {/* WhatsApp Status */}
+        <motion.section
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: channels.length * 0.12, duration: 0.4 }}
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400">
+              WhatsApp
+            </span>
+            <div className="flex-1 h-px bg-border/50" />
+          </div>
+          <div className="max-w-md">
+            <WhatsAppStatusCard />
+          </div>
+        </motion.section>
       </div>
     </div>
   );
