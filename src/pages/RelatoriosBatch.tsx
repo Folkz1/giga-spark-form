@@ -1121,47 +1121,66 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 13 — Campanhas */}
-                          {!isHistorico && ac.campanhas?.length > 0 && (
+                          {!isHistorico && (ac as any)?.campanhas?.length > 0 && (
                             <AccordionItem value="campanhas" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                                <span>📣 Campanhas ({ac.campanhas.length})</span>
+                                <span>📣 Campanhas ({(ac as any).campanhas.length})</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <Accordion type="multiple" className="space-y-2">
-                                  {ac.campanhas.map((camp, i) => (
-                                    <AccordionItem key={i} value={`camp-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
-                                      <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
-                                        <div className="flex items-center gap-2 flex-1 text-left">
-                                          <Badge className={`text-[9px] px-1.5 py-0 ${scoreBadgeStyle(camp.status_performance)}`}>{formatScore(camp.status_performance)}</Badge>
-                                          <span className="font-medium text-foreground truncate">{camp.nome}</span>
-                                          <span className="text-muted-foreground">{camp.tipo_campanha}</span>
-                                        </div>
-                                      </AccordionTrigger>
-                                      <AccordionContent className="px-3 pb-3 space-y-2">
-                                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-xs">
-                                          <div><span className="text-muted-foreground">Gasto:</span> <strong>{formatCurrency(camp.metricas.spend)}</strong></div>
-                                          <div><span className="text-muted-foreground">Leads:</span> <strong>{camp.metricas.leads}</strong></div>
-                                          <div><span className="text-muted-foreground">CPM:</span> <strong>{formatCurrency(camp.metricas.cpm)}</strong></div>
-                                          <div><span className="text-muted-foreground">CTR:</span> <strong>{camp.metricas.ctr}%</strong></div>
-                                          <div><span className="text-muted-foreground">Alcance:</span> <strong>{formatNumber(camp.metricas.reach)}</strong></div>
-                                          <div><span className="text-muted-foreground">Freq:</span> <strong>{camp.metricas.frequency}</strong></div>
-                                          <div><span className="text-muted-foreground">Budget:</span> <strong>{camp.budget_utilization}%</strong></div>
-                                        </div>
-                                        {camp.alertas?.length > 0 && (
-                                          <div className="space-y-1">
-                                            {camp.alertas.map((a, ai) => (
-                                              <p key={ai} className="text-xs text-amber-400">⚠️ {a}</p>
-                                            ))}
+                                  {((ac as any).campanhas as any[]).map((camp: any, i: number) => {
+                                    if (!camp) return null;
+                                    const isGA = isGoogleAds;
+                                    const campName = camp.nome || camp.campaign_name || `Campanha ${i + 1}`;
+                                    const campStatus = camp.status_performance || camp.status || "";
+                                    const campType = camp.tipo_campanha || camp.campaign_type || "";
+                                    const m = camp.metricas || camp;
+                                    const gasto = m?.spend ?? m?.cost ?? 0;
+                                    const leads = m?.leads ?? m?.conversions ?? 0;
+                                    const cpm = m?.cpm ?? 0;
+                                    const ctr = m?.ctr ?? "0";
+                                    const reach = m?.reach ?? m?.impressions ?? 0;
+                                    const freq = m?.frequency ?? "—";
+                                    const budget = camp.budget_utilization ?? "—";
+                                    const alertas = camp.alertas || [];
+
+                                    return (
+                                      <AccordionItem key={i} value={`camp-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
+                                        <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
+                                          <div className="flex items-center gap-2 flex-1 text-left">
+                                            {campStatus && <Badge className={`text-[9px] px-1.5 py-0 ${scoreBadgeStyle(campStatus)}`}>{formatScore(campStatus)}</Badge>}
+                                            <span className="font-medium text-foreground truncate">{campName}</span>
+                                            {campType && <span className="text-muted-foreground">{campType}</span>}
                                           </div>
-                                        )}
-                                        {camp.gerenciador_url && (
-                                          <a href={camp.gerenciador_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-400 hover:underline">
-                                            <ExternalLink className="w-3 h-3" /> Abrir no Gerenciador
-                                          </a>
-                                        )}
-                                      </AccordionContent>
-                                    </AccordionItem>
-                                  ))}
+                                        </AccordionTrigger>
+                                        <AccordionContent className="px-3 pb-3 space-y-2">
+                                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-xs">
+                                            <div><span className="text-muted-foreground">Gasto:</span> <strong>{formatCurrency(gasto)}</strong></div>
+                                            <div><span className="text-muted-foreground">{isGA ? "Conversões" : "Leads"}:</span> <strong>{formatNumber(leads)}</strong></div>
+                                            {cpm > 0 && <div><span className="text-muted-foreground">CPM:</span> <strong>{formatCurrency(cpm)}</strong></div>}
+                                            <div><span className="text-muted-foreground">CTR:</span> <strong>{ctr}%</strong></div>
+                                            <div><span className="text-muted-foreground">{isGA ? "Impressões" : "Alcance"}:</span> <strong>{formatNumber(reach)}</strong></div>
+                                            {!isGA && <div><span className="text-muted-foreground">Freq:</span> <strong>{freq}</strong></div>}
+                                            {budget !== "—" && <div><span className="text-muted-foreground">Budget:</span> <strong>{budget}%</strong></div>}
+                                            {isGA && m?.clicks != null && <div><span className="text-muted-foreground">Cliques:</span> <strong>{formatNumber(m.clicks)}</strong></div>}
+                                            {isGA && m?.conversion_rate != null && <div><span className="text-muted-foreground">Conv. Rate:</span> <strong>{m.conversion_rate}%</strong></div>}
+                                          </div>
+                                          {alertas?.length > 0 && (
+                                            <div className="space-y-1">
+                                              {alertas.map((a: any, ai: number) => (
+                                                <p key={ai} className="text-xs text-amber-400">⚠️ {typeof a === "string" ? a : a?.alerta || a?.msg || JSON.stringify(a)}</p>
+                                              ))}
+                                            </div>
+                                          )}
+                                          {camp.gerenciador_url && (
+                                            <a href={camp.gerenciador_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-400 hover:underline">
+                                              <ExternalLink className="w-3 h-3" /> Abrir no Gerenciador
+                                            </a>
+                                          )}
+                                        </AccordionContent>
+                                      </AccordionItem>
+                                    );
+                                  })}
                                 </Accordion>
                               </AccordionContent>
                             </AccordionItem>
