@@ -395,15 +395,79 @@ const RelatoriosBatch = () => {
   ];
 
   const ac = analise?.analiseCompleta;
-  // Google Ads may put analise data directly in ac (no nested .analise)
-  const an = ac?.analise || (ac && !ac.analise ? ac as unknown as typeof ac.analise : null);
+  const isGoogleAds = analise?.plataforma === "google_ads";
+  // Meta Ads: ac.analise is an object with all fields
+  // Google Ads: ac.analise is a STRING (narrative), fields are at ac root level
+  const anMeta = ac?.analise && typeof ac.analise === "object" ? ac.analise : null;
+  // For Google Ads, we use ac itself as the source for top-level fields
+  const an = anMeta || (ac && typeof ac.analise !== "object" ? ac as unknown as typeof ac.analise : null);
   const isHistorico = (analise as any)?.fonte === "historico";
 
-  const placementInsights = ac?.placement_insights || an?.placement_insights || [];
-  const demographicInsights = ac?.demographic_insights || an?.demographic_insights || [];
-  const alertasTecnicos = ac?.alertas_tecnicos || an?.alertas_tecnicos || [];
+  // Google Ads alertas_criticos are objects {alerta, campanha, grupo, ...}, Meta are strings
+  const alertasCriticosRaw: any[] = an?.alertas_criticos || (ac as any)?.alertas_criticos || [];
+  const alertasCriticos: string[] = alertasCriticosRaw.map((a: any) => {
+    if (typeof a === "string") return a;
+    // Google Ads object format
+    const parts: string[] = [];
+    if (a.campanha) parts.push(`[${a.campanha}${a.grupo ? ` / ${a.grupo}` : ""}]`);
+    if (a.alerta) parts.push(a.alerta);
+    if (a.dado) parts.push(`Dado: ${a.dado}`);
+    if (a.causa_provavel) parts.push(`Causa: ${a.causa_provavel}`);
+    if (a.orcamento_diario_sugerido) parts.push(`Orçamento sugerido: ${a.orcamento_diario_sugerido}`);
+    return parts.join(" ");
+  });
 
-  const drawerScore = an?.score_conta || currentP?.data.score_fiscal || "";
+  // Google Ads oportunidades are objects {titulo, descricao, tipo, impacto, campanha, grupo}, Meta are strings
+  const oportunidadesRaw: any[] = an?.oportunidades || (ac as any)?.oportunidades || [];
+  const oportunidades: string[] = oportunidadesRaw.map((o: any) => {
+    if (typeof o === "string") return o;
+    const parts: string[] = [];
+    if (o.campanha) parts.push(`[${o.campanha}${o.grupo ? ` / ${o.grupo}` : ""}]`);
+    if (o.titulo) parts.push(o.titulo);
+    if (o.descricao) parts.push(o.descricao);
+    if (o.impacto) parts.push(`Impacto: ${o.impacto}`);
+    return parts.join(" — ");
+  });
+
+  // Google Ads uses recomendacoes_sugeridas, Meta uses recomendacoes
+  const recomendacoes: Recomendacao[] = an?.recomendacoes || (ac as any)?.recomendacoes_sugeridas || (ac as any)?.recomendacoes || [];
+
+  // Normalize resumo — Google Ads has different fields
+  const resumoNormalized = useMemo(() => {
+    const r = ac?.resumo;
+    if (!r) return null;
+    // If it already has Meta fields, return as-is
+    if (r.total_investimento !== undefined) return r;
+    // Google Ads resumo: custo7dias, custo30dias, totalCampanhas, conversoes7dias, conversoes30dias
+    const gR = r as any;
+    return {
+      total_investimento: gR.custo7dias || gR.custo30dias || "0",
+      total_leads: gR.conversoes7dias || gR.conversoes30dias || 0,
+      cpl_geral: "0",
+      roas_geral: gR.roas_geral || "0",
+      cpa_geral: gR.cpa_geral || "0",
+      ctr_medio: gR.ctr_medio || "0",
+      frequencia_media: gR.frequencia_media || "—",
+      cpm_medio: gR.cpm_medio || "0",
+      total_campanhas: gR.totalCampanhas || 0,
+      campanhas_criticas: gR.campanhas_criticas || 0,
+      campanhas_atencao: gR.campanhas_atencao || 0,
+      campanhas_saudaveis: gR.campanhas_saudaveis || 0,
+      total_anuncios: gR.total_anuncios || 0,
+      anuncios_fatigados: gR.anuncios_fatigados || 0,
+      total_compras: gR.total_compras || 0,
+      total_conversas: gR.total_conversas || 0,
+    } as any;
+  }, [ac]);
+
+  const placementInsights = ac?.placement_insights || an?.placement_insights || (ac as any)?.placement_insights || [];
+  const demographicInsights = ac?.demographic_insights || an?.demographic_insights || (ac as any)?.demographic_insights || [];
+  const alertasTecnicos = ac?.alertas_tecnicos || an?.alertas_tecnicos || (ac as any)?.alertas_tecnicos || [];
+
+  // Google Ads: narrative analise text
+  const analiseNarrativa = isGoogleAds && ac?.analise && typeof ac.analise === "string" ? ac.analise as string : null;
+
+  const drawerScore = an?.score_conta || (ac as any)?.score_conta || currentP?.data.score_fiscal || "";
   const canGoPrev = drawerIdx > 0;
   const canGoNext = drawerIdx < drawerNavList.length - 1;
 
