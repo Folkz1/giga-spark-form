@@ -1022,7 +1022,7 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 12 — Projeção */}
-                          {an.projecao && (
+                          {an?.projecao && (
                             <AccordionItem value="projecao" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
                                 <span>🔮 Projeção</span>
