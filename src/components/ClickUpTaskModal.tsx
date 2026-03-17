@@ -176,9 +176,6 @@ function CustomSelect({
         )}
       </AnimatePresence>
 
-      {open && (
-        <div className="fixed inset-0 z-[105]" onClick={() => handleOpen(false)} />
-      )}
     </div>
   );
 }
