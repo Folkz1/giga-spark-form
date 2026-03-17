@@ -135,11 +135,22 @@ const ClickUpModal = ({ open, onClose, clienteSelecionado, respostaMarkdown, tok
           assignee_id: responsavelId,
           priority: Number(urgencia),
           titulo,
-          observacoes,
           conteudo_resposta: incluirResposta ? (respostaMarkdown || "") : "",
         }),
       });
       if (data.success) {
+        const taskId = data.taskId || data.task_id || data.id;
+        if (observacoes.trim() && taskId) {
+          try {
+            await fetch("https://appn8o2.gigainteligencia.com.br/webhook/clickup-postar-comentario", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ task_id: taskId, observacao: observacoes }),
+            });
+          } catch (e) {
+            console.warn("Erro ao postar comentário:", e);
+          }
+        }
         toast({
           title: "✅ Tarefa criada com sucesso!",
           description: data.task_url ? "Clique para abrir no ClickUp" : undefined,
