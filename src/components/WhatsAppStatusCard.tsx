@@ -24,23 +24,30 @@ interface WhatsAppStatus {
 export function WhatsAppStatusCard() {
   const [data, setData] = useState<WhatsAppStatus | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
-  const fetchStatus = useCallback(async () => {
+  const fetchStatus = useCallback(async (isInitial = false) => {
     try {
-      const res = await fetch(API_URL);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10_000);
+      const res = await fetch(API_URL, { signal: controller.signal });
+      clearTimeout(timeout);
       if (!res.ok) throw new Error();
-      setData(await res.json());
+      const json = await res.json();
+      setData(json);
+      setError(false);
     } catch {
-      setData(null);
+      // Only show error if we have no data yet
+      if (isInitial) setError(true);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchStatus();
-    const interval = setInterval(fetchStatus, 60_000);
+    fetchStatus(true);
+    const interval = setInterval(() => fetchStatus(false), 60_000);
     return () => clearInterval(interval);
   }, [fetchStatus]);
 
@@ -64,16 +71,18 @@ export function WhatsAppStatusCard() {
     );
   }
 
-  if (!data) {
+  if (!data && error) {
     return (
       <div className="rounded-2xl border border-border bg-card p-6 text-center">
         <p className="text-sm text-muted-foreground">Não foi possível carregar o status do WhatsApp.</p>
-        <Button variant="outline" size="sm" className="mt-3 gap-1.5" onClick={() => { setLoading(true); fetchStatus(); }}>
+        <Button variant="outline" size="sm" className="mt-3 gap-1.5" onClick={() => { setLoading(true); setError(false); fetchStatus(true); }}>
           <RefreshCw className="w-3.5 h-3.5" /> Tentar novamente
         </Button>
       </div>
     );
   }
+
+  if (!data) return null;
 
   const allOnline = data.offline === 0;
 
