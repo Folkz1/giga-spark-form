@@ -208,7 +208,7 @@ export function ClickUpTaskModal({
         titulo: taskTitle,
         descricao: taskDescription.replace(/\\n/g, '\n'),
         lista_id: listaSelecionada,
-        responsavel_id: responsavelSelecionado || null,
+        assignee_id: responsavelSelecionado || null,
         data_conclusao: dataConclusao || null,
         prioridade: prioridade || "normal",
         observacao: observacao || null,
