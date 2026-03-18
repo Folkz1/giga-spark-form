@@ -295,7 +295,7 @@ const OtimizarCampanha = () => {
     try {
       console.log('[ACCOUNTS] Buscando contas...');
       const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-accounts", {
-        headers: { "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" }
+        headers: { "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI", "x-api-key": "e1893027bdc74625cb097504d272f838aff046851dfa02d44d1728c149799976" }
       });
       console.log('[ACCOUNTS] Status:', res.status);
       if (!res.ok) throw new Error(`Falha ao carregar contas (status ${res.status})`);
