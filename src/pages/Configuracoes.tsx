@@ -341,7 +341,7 @@ function FieldMappingEditor({
       {sortedCrmFields.length > 0 && (
         <div className="space-y-1">
           <p className="text-xs font-medium text-muted-foreground">
-            Campos disponíveis no CRM ({sortedCrmFields.length} encontrados):
+            Campos do CRM ({sortedCrmFields.length} encontrados, preenchimento em {maxCount} leads analisados):
           </p>
           <div className="max-h-[200px] overflow-y-auto space-y-1 rounded border p-2">
             {sortedCrmFields.map(f => (
@@ -349,7 +349,7 @@ function FieldMappingEditor({
                 <div className="w-[120px] bg-muted rounded-full h-1.5 shrink-0">
                   <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${maxCount > 0 ? (f.count / maxCount) * 100 : 0}%` }} />
                 </div>
-                <span className="text-muted-foreground w-[40px] text-right shrink-0">{f.count}x</span>
+                <span className="text-muted-foreground w-[50px] text-right shrink-0">{f.count}/{maxCount}</span>
                 <code className="font-mono truncate flex-1">{f.path}</code>
                 {f.sample_value && (
                   <span className="text-muted-foreground truncate max-w-[150px]">ex: {f.sample_value.slice(0, 25)}</span>
@@ -386,7 +386,7 @@ function FieldMappingEditor({
               <SelectContent>
                 {sortedCrmFields.map(f => (
                   <SelectItem key={f.path} value={f.path}>
-                    {f.path} ({f.count}x) {f.sample_value ? `— ${f.sample_value.slice(0, 25)}` : ""}
+                    {f.path} ({f.count}/{maxCount}) {f.sample_value ? `— ${f.sample_value.slice(0, 25)}` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
