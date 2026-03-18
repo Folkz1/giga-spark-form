@@ -12,13 +12,13 @@ const googleAds = {
   cards: [
     { title: "Criar Campanha", description: "Crie campanhas Google Ads com IA em minutos", icon: Rocket, path: "/criar-campanha" },
     { title: "Otimizar Campanha", description: "Otimizações inteligentes nas suas campanhas ativas", icon: TrendingUp, path: "/otimizar-campanha" },
-    { title: "Gestor Google Ads", description: "Alertas, oportunidades e recomendações com IA", icon: Brain, path: "/gestor-ia" },
   ],
 };
 
 const gestaoAnalise = {
   channel: "Gestão & Análise",
   cards: [
+    { title: "Gestor Google Ads", description: "Alertas, oportunidades e recomendações com IA", icon: Brain, path: "/gestor-ia", iconBg: "bg-emerald-500/10", iconColor: "text-emerald-400" },
     { title: "Gestor Meta Ads", description: "Análise e otimização das suas campanhas no Facebook e Instagram", icon: BarChart2, path: "/gestor-meta", iconBg: "bg-blue-500/10", iconColor: "text-blue-400" },
     { title: "Gestor CRM IA", description: "Consultoria de vendas e análise de dados em tempo real", icon: MessageSquareText, path: "/gestor-crm", iconBg: "bg-violet-500/10", iconColor: "text-violet-400" },
   ],
