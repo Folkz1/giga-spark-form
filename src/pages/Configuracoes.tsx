@@ -295,6 +295,16 @@ function FieldMappingEditor({
   loadingFields: boolean;
   onRefreshFields: () => void;
 }) {
+  const DEFAULT_FIELDS = ["email", "phone", "name"];
+
+  // Sort CRM fields by count (most populated first)
+  const sortedCrmFields = useMemo(() =>
+    [...crmFields].sort((a, b) => b.count - a.count),
+    [crmFields]
+  );
+
+  const maxCount = sortedCrmFields.length > 0 ? sortedCrmFields[0].count : 0;
+
   const removeEntry = (key: string) => {
     const copy = { ...fieldMap };
     delete copy[key];
@@ -317,8 +327,41 @@ function FieldMappingEditor({
           Carregar do CRM
         </Button>
       </div>
+
+      {/* Auto-add defaults if field_map is empty */}
+      {Object.keys(fieldMap).length === 0 && (
+        <Button variant="outline" size="sm" onClick={() => {
+          onChange({ email: "email", phone: "phone", first_name: "name", city: "", state: "" });
+        }}>
+          <Check className="h-3 w-3 mr-1" /> Carregar campos padrão (email, phone, nome)
+        </Button>
+      )}
+
+      {/* CRM fields overview (after loading) */}
+      {sortedCrmFields.length > 0 && (
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-muted-foreground">
+            Campos disponíveis no CRM ({sortedCrmFields.length} encontrados):
+          </p>
+          <div className="max-h-[200px] overflow-y-auto space-y-1 rounded border p-2">
+            {sortedCrmFields.map(f => (
+              <div key={f.path} className="flex items-center gap-2 text-xs">
+                <div className="w-[120px] bg-muted rounded-full h-1.5 shrink-0">
+                  <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${maxCount > 0 ? (f.count / maxCount) * 100 : 0}%` }} />
+                </div>
+                <span className="text-muted-foreground w-[40px] text-right shrink-0">{f.count}x</span>
+                <code className="font-mono truncate flex-1">{f.path}</code>
+                {f.sample_value && (
+                  <span className="text-muted-foreground truncate max-w-[150px]">ex: {f.sample_value.slice(0, 25)}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <p className="text-xs text-muted-foreground">
-        Mapeia campos do CRM para dados do usuário (Meta/Google). Selecione o campo Meta e o path do CRM.
+        Mapeamentos customizados (campos além do padrão):
       </p>
 
       {/* Existing mappings */}
@@ -335,15 +378,15 @@ function FieldMappingEditor({
             </SelectContent>
           </Select>
           <span className="text-xs text-muted-foreground">←</span>
-          {crmFields.length > 0 ? (
+          {sortedCrmFields.length > 0 ? (
             <Select value={value} onValueChange={v => updateEntry(key, key, v)}>
               <SelectTrigger className="h-8 text-sm flex-1 font-mono">
                 <SelectValue placeholder="Selecione campo do CRM" />
               </SelectTrigger>
               <SelectContent>
-                {crmFields.map(f => (
+                {sortedCrmFields.map(f => (
                   <SelectItem key={f.path} value={f.path}>
-                    {f.path} {f.sample_value ? `(ex: ${f.sample_value.slice(0, 30)})` : ""}
+                    {f.path} ({f.count}x) {f.sample_value ? `— ${f.sample_value.slice(0, 25)}` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -366,12 +409,6 @@ function FieldMappingEditor({
       }}>
         <Plus className="h-3 w-3 mr-1" /> Adicionar Campo
       </Button>
-
-      {Object.keys(fieldMap).length === 0 && (
-        <p className="text-xs text-muted-foreground text-center py-2">
-          Usando campos padrão do CRM (email, phone, name, city, state)
-        </p>
-      )}
     </div>
   );
 }
@@ -386,7 +423,9 @@ const emptyClient: ClientData = {
   pixels: [],
   google_pixels: [],
   events_enabled: ["Purchase", "Lead"],
-  crm_credentials: {},
+  crm_credentials: {
+    field_map: { email: "email", phone: "phone", first_name: "name" },
+  },
 };
 
 function ClientFormDialog({
