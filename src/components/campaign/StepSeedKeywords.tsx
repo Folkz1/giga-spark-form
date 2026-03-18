@@ -49,7 +49,7 @@ const StepSeedKeywords = ({ seedKeywords, clusters, customerId, onSeedChange, on
     try {
       const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-keywords", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" },
+        headers: { "Content-Type": "application/json", "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI", "x-api-key": "e1893027bdc74625cb097504d272f838aff046851dfa02d44d1728c149799976" },
         body: JSON.stringify({ keywords: seedKeywords, customerId }),
       });
 

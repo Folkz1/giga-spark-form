@@ -34,7 +34,7 @@ async function apiFetch(path: string, opts: RequestInit & { token?: string; time
   const { token, timeoutMs = 30000, ...fetchOpts } = opts;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
-  const headers: Record<string, string> = { "Content-Type": "application/json", ...(fetchOpts.headers as Record<string, string> || {}) };
+  const headers: Record<string, string> = { "Content-Type": "application/json", "x-api-key": "e1893027bdc74625cb097504d272f838aff046851dfa02d44d1728c149799976", ...(fetchOpts.headers as Record<string, string> || {}) };
   if (token) headers["Authorization"] = `Bearer ${token}`;
   try {
     const res = await fetch(`${API_BASE}${path}`, { ...fetchOpts, headers, signal: controller.signal });
