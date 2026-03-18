@@ -143,35 +143,8 @@ const Index = () => {
           </div>
         </div>
 
-        {/* ===== GOOGLE ADS ===== */}
-        <div className="mt-10">
-          <SectionDivider label="Google Ads" />
-          <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4">
-            {googleAds.cards.map((card) => {
-              const i = idx++;
-              return (
-                <motion.button
-                  key={card.title}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05, duration: 0.4, ease: "easeOut" }}
-                  onClick={() => navigate(card.path)}
-                  className="group relative rounded-xl p-5 text-left bg-slate-800/40 border border-slate-700/40 transition-all duration-200 cursor-pointer hover:translate-y-[-2px] hover:border-slate-600 hover:shadow-lg hover:shadow-emerald-500/5"
-                >
-                  <ArrowRight className="absolute top-4 right-4 w-4 h-4 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                  <div className={`w-11 h-11 rounded-lg flex items-center justify-center mb-3 ${googleAds.iconBg}`}>
-                    <card.icon className={`w-[22px] h-[22px] ${googleAds.iconColor}`} />
-                  </div>
-                  <h2 className="text-base font-semibold text-white mb-1">{card.title}</h2>
-                  <p className="text-sm text-slate-400 leading-relaxed">{card.description}</p>
-                </motion.button>
-              );
-            })}
-          </div>
-        </div>
-
         {/* ===== GESTÃO & ANÁLISE ===== */}
-        <div className="mt-6">
+        <div className="mt-10">
           <SectionDivider label="Gestão & Análise" />
           <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4">
             {gestaoAnalise.cards.map((card) => {
@@ -188,6 +161,33 @@ const Index = () => {
                   <ArrowRight className="absolute top-4 right-4 w-4 h-4 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
                   <div className={`w-11 h-11 rounded-lg flex items-center justify-center mb-3 ${card.iconBg}`}>
                     <card.icon className={`w-[22px] h-[22px] ${card.iconColor}`} />
+                  </div>
+                  <h2 className="text-base font-semibold text-white mb-1">{card.title}</h2>
+                  <p className="text-sm text-slate-400 leading-relaxed">{card.description}</p>
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ===== GOOGLE ADS ===== */}
+        <div className="mt-6">
+          <SectionDivider label="Google Ads" />
+          <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-4">
+            {googleAds.cards.map((card) => {
+              const i = idx++;
+              return (
+                <motion.button
+                  key={card.title}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05, duration: 0.4, ease: "easeOut" }}
+                  onClick={() => navigate(card.path)}
+                  className="group relative rounded-xl p-5 text-left bg-slate-800/40 border border-slate-700/40 transition-all duration-200 cursor-pointer hover:translate-y-[-2px] hover:border-slate-600 hover:shadow-lg hover:shadow-emerald-500/5"
+                >
+                  <ArrowRight className="absolute top-4 right-4 w-4 h-4 text-slate-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                  <div className={`w-11 h-11 rounded-lg flex items-center justify-center mb-3 ${googleAds.iconBg}`}>
+                    <card.icon className={`w-[22px] h-[22px] ${googleAds.iconColor}`} />
                   </div>
                   <h2 className="text-base font-semibold text-white mb-1">{card.title}</h2>
                   <p className="text-sm text-slate-400 leading-relaxed">{card.description}</p>
