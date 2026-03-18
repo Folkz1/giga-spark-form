@@ -339,7 +339,7 @@ const OtimizarCampanha = () => {
           try {
             const url = `https://principaln8o.gigainteligencia.com.br/webhook/google-ads-campaigns?customerId=${acc.customerId}`;
             console.log(`[CAMPAIGNS] Buscando campanhas para conta: ${acc.name} (${acc.customerId})`);
-            const res = await fetch(url, { headers: { "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" } });
+            const res = await fetch(url, { headers: { "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI", "x-api-key": "e1893027bdc74625cb097504d272f838aff046851dfa02d44d1728c149799976" } });
             console.log(`[CAMPAIGNS] Status para ${acc.customerId}:`, res.status);
             const text = await res.text();
             console.log(`[CAMPAIGNS] Resposta raw para ${acc.customerId}:`, text?.substring(0, 500));

@@ -159,7 +159,7 @@ const ClientesMeta = () => {
     try {
       await fetch(`${base}/cliente/deletar`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": N8N_API_KEY },
         body: JSON.stringify({ ad_account_id: c.adAccountId }),
       });
       toast.success("Cliente removido");
