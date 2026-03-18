@@ -39,13 +39,27 @@ const scoreBadgeStyle = (score: string) => {
   }
 };
 
+const prioridadeOrder = (p: string): number => {
+  const map: Record<string, number> = { urgent: 0, urgente: 0, high: 1, alta: 1, medium: 2, media: 2, média: 2, low: 3, baixa: 3 };
+  return map[p?.toLowerCase()] ?? 4;
+};
+
 const prioridadeBadge = (p: string) => {
-  switch (p) {
-    case "urgent": return "bg-red-500/15 text-red-400 border-red-500/25";
-    case "high": return "bg-orange-500/15 text-orange-400 border-orange-500/25";
-    case "medium": return "bg-amber-500/15 text-amber-400 border-amber-500/25";
-    default: return "bg-secondary text-muted-foreground";
-  }
+  const key = p?.toLowerCase();
+  if (key === "urgent" || key === "urgente") return "bg-red-600/20 text-red-300 border-red-500/40";
+  if (key === "high" || key === "alta") return "bg-orange-600/20 text-orange-300 border-orange-500/40";
+  if (key === "medium" || key === "media" || key === "média") return "bg-blue-500/20 text-blue-300 border-blue-500/35";
+  return "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
+};
+
+const formatPrioridade = (p: string): string => {
+  const map: Record<string, string> = {
+    urgent: "Urgente", urgente: "Urgente",
+    high: "Alta", alta: "Alta",
+    medium: "Média", media: "Média", média: "Média",
+    low: "Baixa", baixa: "Baixa",
+  };
+  return map[p?.toLowerCase()] || p;
 };
 
 const tipoBadge = (t: string) => {
@@ -59,6 +73,19 @@ const tipoBadge = (t: string) => {
     CORRIGIR: "bg-orange-500/15 text-orange-400 border-orange-500/25",
   };
   return map[t] || "bg-secondary text-muted-foreground";
+};
+
+const formatTipo = (t: string): string => {
+  const map: Record<string, string> = {
+    TRACKING: "Rastreamento",
+    CRIATIVO: "Criativo",
+    PAUSAR: "Pausar",
+    OTIMIZACAO: "Otimização",
+    TESTAR: "Testar",
+    ESCALAR: "Escalar",
+    CORRIGIR: "Corrigir",
+  };
+  return map[t] || t;
 };
 
 const placementStatusBadge = (s: string) => {
@@ -180,6 +207,7 @@ const RelatoriosBatch = () => {
   const [clickupTitle, setClickupTitle] = useState("");
   const [clickupDesc, setClickupDesc] = useState("");
   const [clickupCreated, setClickupCreated] = useState<Set<string>>(new Set());
+  const [clickupRecIdx, setClickupRecIdx] = useState<number>(-1);
 
   const clientes = detail?.clientes || [];
 
@@ -260,8 +288,10 @@ const RelatoriosBatch = () => {
     setAnaliseLoading(true);
     try {
       const data = await fetchAnaliseCliente(batchId, c.customerId, p.plataforma);
+      console.log("[DEBUG] Google Ads?", data?.plataforma, "| analiseCompleta keys:", data?.analiseCompleta ? Object.keys(data.analiseCompleta) : "NONE", "| analise type:", typeof data?.analiseCompleta?.analise);
       setAnalise(data);
-    } catch {
+    } catch (err) {
+      console.error("[DEBUG] loadAnalise error:", err);
       setAnalise(null);
     } finally {
       setAnaliseLoading(false);
@@ -355,15 +385,34 @@ const RelatoriosBatch = () => {
   };
 
   const openClickup = (rec: Recomendacao, idx: number) => {
-    const desc = [
-      rec.diagnostico ? `📋 Diagnóstico:\n${rec.diagnostico}` : "",
-      rec.acao ? `🎯 Ação:\n${rec.acao}` : "",
-      rec.como_executar ? `📝 Como executar:\n${rec.como_executar.split(";").map((s, i) => `${i + 1}. ${s.trim()}`).join("\n")}` : "",
-      rec.impacto_esperado ? `📈 Impacto esperado:\n${rec.impacto_esperado}` : "",
-      rec.angulos_criativo ? `🎨 Ângulos de criativo:\n${rec.angulos_criativo}` : "",
-      rec.prerequisito ? `⚠️ Pré-requisito:\n${rec.prerequisito}` : "",
-    ].filter(Boolean).join("\n\n");
-    setClickupTitle(rec.titulo);
+    const title = rec.titulo || (rec as any).nome || rec.acao || `Recomendação ${idx + 1}`;
+    const sections: string[] = [];
+    if (rec.diagnostico || rec.descricao || (rec as any).por_que_fazer) {
+      sections.push(`## Diagnóstico\n${rec.diagnostico || rec.descricao || (rec as any).por_que_fazer}`);
+    }
+    if (rec.acao) {
+      sections.push(`## Ação Principal\n${rec.acao}`);
+    }
+    if (rec.como_executar) {
+      const steps = rec.como_executar.split(";").map((s: string) => s.trim()).filter(Boolean);
+      const stepsList = steps.map((s: string, i: number) => {
+        const cleaned = s.replace(/^\d+[\.\)]\s*/, '').replace(/^[a-z][\.\)]\s*/i, '');
+        return `${i + 1}. ${cleaned}`;
+      }).join("\n");
+      sections.push(`## Como Executar\n${stepsList}`);
+    }
+    if (rec.impacto_esperado || (rec as any).impacto) {
+      sections.push(`## Impacto Esperado\n${rec.impacto_esperado || (rec as any).impacto}`);
+    }
+    if (rec.angulos_criativo) {
+      sections.push(`## Ângulos de Criativo\n${rec.angulos_criativo}`);
+    }
+    if (rec.prerequisito) {
+      sections.push(`## Pré-requisito\n⚠️ ${rec.prerequisito}`);
+    }
+    const desc = sections.join("\n\n---\n\n");
+    setClickupTitle(title);
+    setClickupRecIdx(idx);
     setClickupDesc(desc);
     setClickupOpen(true);
   };
@@ -391,24 +440,90 @@ const RelatoriosBatch = () => {
   ];
 
   const ac = analise?.analiseCompleta;
-  const an = ac?.analise;
+  const isGoogleAds = analise?.plataforma === "google_ads";
+  // Meta Ads: ac.analise is an object with all fields
+  // Google Ads: ac.analise is a STRING (narrative), fields are at ac root level
+  const anMeta = ac?.analise && typeof ac.analise === "object" ? ac.analise : null;
+  // For Google Ads, we use ac itself as the source for top-level fields
+  const an = anMeta || (ac && typeof ac.analise !== "object" ? ac as unknown as typeof ac.analise : null);
   const isHistorico = (analise as any)?.fonte === "historico";
 
-  const placementInsights = ac?.placement_insights || an?.placement_insights || [];
-  const demographicInsights = ac?.demographic_insights || an?.demographic_insights || [];
-  const alertasTecnicos = ac?.alertas_tecnicos || an?.alertas_tecnicos || [];
+  // Google Ads alertas_criticos are objects {alerta, campanha, grupo, ...}, Meta are strings
+  const alertasCriticosRaw: any[] = an?.alertas_criticos || (ac as any)?.alertas_criticos || [];
+  const alertasCriticos: string[] = alertasCriticosRaw.map((a: any) => {
+    if (typeof a === "string") return a;
+    // Google Ads object format
+    const parts: string[] = [];
+    if (a.campanha) parts.push(`[${a.campanha}${a.grupo ? ` / ${a.grupo}` : ""}]`);
+    if (a.alerta) parts.push(a.alerta);
+    if (a.dado) parts.push(`Dado: ${a.dado}`);
+    if (a.causa_provavel) parts.push(`Causa: ${a.causa_provavel}`);
+    if (a.orcamento_diario_sugerido) parts.push(`Orçamento sugerido: ${a.orcamento_diario_sugerido}`);
+    return parts.join(" ");
+  });
 
-  const drawerScore = an?.score_conta || currentP?.data.score_fiscal || "";
+  // Google Ads oportunidades are objects {titulo, descricao, tipo, impacto, campanha, grupo}, Meta are strings
+  const oportunidadesRaw: any[] = an?.oportunidades || (ac as any)?.oportunidades || [];
+  const oportunidades: string[] = oportunidadesRaw.map((o: any) => {
+    if (typeof o === "string") return o;
+    const parts: string[] = [];
+    if (o.campanha) parts.push(`[${o.campanha}${o.grupo ? ` / ${o.grupo}` : ""}]`);
+    if (o.titulo) parts.push(o.titulo);
+    if (o.descricao) parts.push(o.descricao);
+    if (o.impacto) parts.push(`Impacto: ${o.impacto}`);
+    return parts.join(" — ");
+  });
+
+  // Google Ads uses recomendacoes_sugeridas, Meta uses recomendacoes
+  const recomendacoes: Recomendacao[] = an?.recomendacoes || (ac as any)?.recomendacoes_sugeridas || (ac as any)?.recomendacoes || [];
+
+  // Normalize resumo — Google Ads has different fields
+  const resumoNormalized = useMemo(() => {
+    const r = ac?.resumo;
+    if (!r) return null;
+    // If it already has Meta fields, return as-is
+    if (r.total_investimento !== undefined) return r;
+    // Google Ads resumo: custo7dias, custo30dias, totalCampanhas, conversoes7dias, conversoes30dias
+    const gR = r as any;
+    return {
+      total_investimento: gR.custo7dias || gR.custo30dias || "0",
+      total_leads: gR.conversoes7dias || gR.conversoes30dias || 0,
+      cpl_geral: "0",
+      roas_geral: gR.roas_geral || "0",
+      cpa_geral: gR.cpa_geral || "0",
+      ctr_medio: gR.ctr_medio || "0",
+      frequencia_media: gR.frequencia_media || "—",
+      cpm_medio: gR.cpm_medio || "0",
+      total_campanhas: gR.totalCampanhas || 0,
+      campanhas_criticas: gR.campanhas_criticas || 0,
+      campanhas_atencao: gR.campanhas_atencao || 0,
+      campanhas_saudaveis: gR.campanhas_saudaveis || 0,
+      total_anuncios: gR.total_anuncios || 0,
+      anuncios_fatigados: gR.anuncios_fatigados || 0,
+      total_compras: gR.total_compras || 0,
+      total_conversas: gR.total_conversas || 0,
+    } as any;
+  }, [ac]);
+
+  const placementInsights = ac?.placement_insights || an?.placement_insights || (ac as any)?.placement_insights || [];
+  const demographicInsights = ac?.demographic_insights || an?.demographic_insights || (ac as any)?.demographic_insights || [];
+  const alertasTecnicos = ac?.alertas_tecnicos || an?.alertas_tecnicos || (ac as any)?.alertas_tecnicos || [];
+
+  // Google Ads: narrative analise text
+  const analiseNarrativa = isGoogleAds && ac?.analise && typeof ac.analise === "string" ? ac.analise as string : null;
+
+  const drawerScore = an?.score_conta || (ac as any)?.score_conta || currentP?.data.score_fiscal || "";
   const canGoPrev = drawerIdx > 0;
   const canGoNext = drawerIdx < drawerNavList.length - 1;
 
   const resumoExecutivo = useMemo(() => {
-    if (!an?.resumo_executivo) return "";
-    if (isHistorico && (an.resumo_executivo === HISTORICO_PLACEHOLDER || an.resumo_executivo.includes("Analise resumida"))) {
+    const re = an?.resumo_executivo || (ac as any)?.resumo_executivo;
+    if (!re) return "";
+    if (isHistorico && (re === HISTORICO_PLACEHOLDER || re.includes("Analise resumida"))) {
       return analise ? generateAutoResumo(analise) : "";
     }
-    return an.resumo_executivo;
-  }, [an, isHistorico, analise]);
+    return re;
+  }, [an, ac, isHistorico, analise]);
 
   return (
     <div className="min-h-screen bg-background px-4 pt-8 pb-12">
@@ -603,7 +718,7 @@ const RelatoriosBatch = () => {
       </div>
 
       {/* ─── Analysis Drawer ─── */}
-      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+      <Sheet modal={false} open={drawerOpen} onOpenChange={(open) => { if (!open) return; setDrawerOpen(open); }}>
         <SheetContent side="right" hideCloseButton className="w-full sm:w-[70vw] sm:max-w-[70vw] p-0 flex flex-col">
           {currentCliente && (
             <>
@@ -670,7 +785,7 @@ const RelatoriosBatch = () => {
                       <div className="text-center py-12 text-muted-foreground">Erro ao carregar análise. Tente novamente.</div>
                     )}
 
-                    {!analiseLoading && !navLoading && ac && an && (
+                    {!analiseLoading && !navLoading && ac && (
                       <>
                         {/* Historico banner */}
                         {isHistorico && (
@@ -681,9 +796,9 @@ const RelatoriosBatch = () => {
                         )}
 
                         {/* Section 1 — Header info with BUG 3 period fix */}
-                        {an.score_justificativa && (
+                        {(an?.score_justificativa || (ac as any)?.score_justificativa) && (
                           <div className="glass-card rounded-xl p-4">
-                            <p className="text-sm text-muted-foreground">{an.score_justificativa}</p>
+                            <p className="text-sm text-muted-foreground">{an?.score_justificativa || (ac as any)?.score_justificativa}</p>
                             <p className="text-xs text-muted-foreground/60 mt-2">
                               {ac.data_analise} • Período: {formatPeriodo(ac.periodo || "")}
                             </p>
@@ -692,7 +807,7 @@ const RelatoriosBatch = () => {
 
                         <Accordion
                           type="multiple"
-                          defaultValue={["resumo_executivo", "metricas", "alertas_criticos", "recomendacoes"]}
+                          defaultValue={["metricas"]}
                           className="space-y-3"
                         >
                           {/* Section 2 — Resumo Executivo */}
@@ -702,13 +817,25 @@ const RelatoriosBatch = () => {
                                 <span>📋 Resumo Executivo</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
-                                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{resumoExecutivo}</p>
+                                <div className="text-sm text-muted-foreground leading-relaxed space-y-3">
+                                  {resumoExecutivo.split(/(?<=\.)\s+/).reduce((acc: string[][], sentence: string) => {
+                                    const last = acc[acc.length - 1];
+                                    if (last && last.join(' ').length + sentence.length < 300) {
+                                      last.push(sentence);
+                                    } else {
+                                      acc.push([sentence]);
+                                    }
+                                    return acc;
+                                  }, [] as string[][]).map((group: string[], i: number) => (
+                                    <p key={i}>{group.join(' ')}</p>
+                                  ))}
+                                </div>
                               </AccordionContent>
                             </AccordionItem>
                           )}
 
                           {/* Section 3 — Métricas */}
-                          {ac.resumo && (
+                          {resumoNormalized && (
                             <AccordionItem value="metricas" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
                                 <span>📊 Métricas</span>
@@ -716,35 +843,35 @@ const RelatoriosBatch = () => {
                               <AccordionContent className="px-4 pb-4">
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                                   {[
-                                    { label: "Investimento", value: formatCurrency(ac.resumo.total_investimento), icon: DollarSign },
-                                    { label: "Leads", value: formatNumber(ac.resumo.total_leads), icon: Users },
-                                    { label: "CPL", value: formatCurrency(ac.resumo.cpl_geral), icon: Target },
-                                    { label: "ROAS", value: `${ac.resumo.roas_geral}x`, icon: TrendingUp },
-                                    { label: "CPA", value: formatCurrency(ac.resumo.cpa_geral), icon: Target },
-                                    { label: "CTR", value: formatPercent(ac.resumo.ctr_medio), icon: Crosshair },
-                                    { label: "Frequência", value: ac.resumo.frequencia_media, icon: RefreshCw },
-                                    { label: "CPM", value: formatCurrency(ac.resumo.cpm_medio), icon: DollarSign },
+                                    { label: "Investimento", value: formatCurrency(resumoNormalized.total_investimento), icon: DollarSign },
+                                    { label: "Leads", value: formatNumber(resumoNormalized.total_leads), icon: Users },
+                                    { label: "CPL", value: formatCurrency(resumoNormalized.cpl_geral), icon: Target },
+                                    { label: "ROAS", value: `${resumoNormalized.roas_geral}x`, icon: TrendingUp },
+                                    { label: "CPA", value: formatCurrency(resumoNormalized.cpa_geral), icon: Target },
+                                    { label: "CTR", value: formatPercent(resumoNormalized.ctr_medio), icon: Crosshair },
+                                    { label: "Frequência", value: resumoNormalized.frequencia_media, icon: RefreshCw },
+                                    { label: "CPM", value: formatCurrency(resumoNormalized.cpm_medio), icon: DollarSign },
                                   ].map(m => (
                                     <div key={m.label} className="bg-secondary/50 rounded-lg p-3">
                                       <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1"><m.icon className="w-3 h-3" />{m.label}</div>
                                       <p className="text-sm font-bold text-foreground">{m.value}</p>
                                     </div>
                                   ))}
-                                  {!isHistorico && (
+                                  {!isHistorico && resumoNormalized.total_campanhas > 0 && (
                                     <>
                                       <div className="bg-secondary/50 rounded-lg p-3">
                                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1"><LayoutGrid className="w-3 h-3" />Campanhas</div>
-                                        <p className="text-sm font-bold text-foreground">{ac.resumo.total_campanhas}</p>
+                                        <p className="text-sm font-bold text-foreground">{resumoNormalized.total_campanhas}</p>
                                         <div className="flex gap-1 mt-1 text-[9px]">
-                                          <span className="text-red-400">{ac.resumo.campanhas_criticas} crít.</span>
-                                          <span className="text-amber-400">{ac.resumo.campanhas_atencao} aten.</span>
-                                          <span className="text-emerald-400">{ac.resumo.campanhas_saudaveis} saud.</span>
+                                          <span className="text-red-400">{resumoNormalized.campanhas_criticas} crít.</span>
+                                          <span className="text-amber-400">{resumoNormalized.campanhas_atencao} aten.</span>
+                                          <span className="text-emerald-400">{resumoNormalized.campanhas_saudaveis} saud.</span>
                                         </div>
                                       </div>
                                       <div className="bg-secondary/50 rounded-lg p-3">
                                         <div className="flex items-center gap-1 text-[10px] text-muted-foreground mb-1"><Eye className="w-3 h-3" />Anúncios</div>
-                                        <p className="text-sm font-bold text-foreground">{ac.resumo.total_anuncios}</p>
-                                        <p className="text-[9px] text-amber-400 mt-1">{ac.resumo.anuncios_fatigados} fatigados</p>
+                                        <p className="text-sm font-bold text-foreground">{resumoNormalized.total_anuncios}</p>
+                                        <p className="text-[9px] text-amber-400 mt-1">{resumoNormalized.anuncios_fatigados} fatigados</p>
                                       </div>
                                     </>
                                   )}
@@ -754,13 +881,13 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 4 — Alertas Críticos */}
-                          {an.alertas_criticos?.length > 0 && (
+                          {alertasCriticos.length > 0 && (
                             <AccordionItem value="alertas_criticos" className="rounded-xl overflow-hidden border-none bg-red-500/5 border border-red-500/20">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                                <span>🚨 Alertas Críticos ({an.alertas_criticos.length})</span>
+                                <span>🚨 Alertas Críticos ({alertasCriticos.length})</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4 space-y-2">
-                                {an.alertas_criticos.map((a, i) => (
+                                {alertasCriticos.map((a, i) => (
                                   <AlertCard key={i} text={a} variant="red" />
                                 ))}
                               </AccordionContent>
@@ -768,13 +895,13 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 5 — Oportunidades */}
-                          {an.oportunidades?.length > 0 && (
+                          {oportunidades.length > 0 && (
                             <AccordionItem value="oportunidades" className="rounded-xl overflow-hidden border-none bg-emerald-500/5 border border-emerald-500/20">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                                <span>💡 Oportunidades ({an.oportunidades.length})</span>
+                                <span>💡 Oportunidades ({oportunidades.length})</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4 space-y-2">
-                                {an.oportunidades.map((o, i) => (
+                                {oportunidades.map((o, i) => (
                                   <AlertCard key={i} text={o} variant="emerald" />
                                 ))}
                               </AccordionContent>
@@ -782,28 +909,28 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 6 — Recomendações */}
-                          {an.recomendacoes?.length > 0 && (
+                          {recomendacoes.length > 0 && (
                             <AccordionItem value="recomendacoes" className="rounded-xl overflow-hidden border-none bg-blue-500/5 border border-blue-500/20">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                                <span>🎯 Recomendações ({an.recomendacoes.length})</span>
+                                <span>🎯 Recomendações ({recomendacoes.length})</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <Accordion type="multiple" className="space-y-2">
-                                  {an.recomendacoes.map((rec, i) => (
+                                  {[...recomendacoes].sort((a: any, b: any) => prioridadeOrder(a.prioridade) - prioridadeOrder(b.prioridade)).map((rec: any, i: number) => (
                                     <AccordionItem key={i} value={`rec-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
                                       <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
                                         <div className="flex items-center gap-2 flex-wrap flex-1 text-left">
-                                          <Badge className={`text-[9px] px-1.5 py-0 ${prioridadeBadge(rec.prioridade)}`}>{rec.prioridade}</Badge>
-                                          <Badge className={`text-[9px] px-1.5 py-0 ${tipoBadge(rec.tipo)}`}>{rec.tipo}</Badge>
-                                          <span className="font-medium text-foreground">{rec.titulo}</span>
+                                          {rec.prioridade && <Badge className={`text-[11px] px-2 py-0.5 ${prioridadeBadge(rec.prioridade)} font-semibold`}>{formatPrioridade(rec.prioridade)}</Badge>}
+                                          {rec.tipo && <Badge className={`text-[11px] px-2 py-0.5 ${tipoBadge(rec.tipo)}`}>{formatTipo(rec.tipo)}</Badge>}
+                                          <span className="font-medium text-foreground">{rec.titulo || rec.nome || `Recomendação ${i + 1}`}</span>
                                           {rec.urgencia && <span className="text-[9px] text-red-400 font-bold">{rec.urgencia}</span>}
                                         </div>
                                       </AccordionTrigger>
                                       <AccordionContent className="px-3 pb-3 space-y-3">
-                                        {rec.diagnostico && (
+                                        {(rec.diagnostico || rec.descricao) && (
                                           <div>
                                             <p className="text-[10px] text-muted-foreground font-semibold mb-1">Diagnóstico</p>
-                                            <p className="text-sm text-muted-foreground">{rec.diagnostico}</p>
+                                            <p className="text-sm text-muted-foreground">{rec.diagnostico || rec.descricao}</p>
                                           </div>
                                         )}
                                         {rec.acao && (
@@ -815,17 +942,21 @@ const RelatoriosBatch = () => {
                                         {rec.como_executar && (
                                           <div>
                                             <p className="text-[10px] text-muted-foreground font-semibold mb-1">Como executar</p>
-                                            <ol className="list-decimal list-inside space-y-1">
-                                              {rec.como_executar.split(";").map((step, si) => (
-                                                <li key={si} className="text-sm text-muted-foreground">{step.trim()}</li>
+                                             <ol className="list-decimal list-inside space-y-1">
+                                              {rec.como_executar
+                                                .split(/(?:;\s*|\s*(?=\d+\.\s))/)
+                                                .map((s: string) => s.replace(/^\d+\.\s*/, "").trim())
+                                                .filter((s: string) => s.length > 0)
+                                                .map((step: string, si: number) => (
+                                                <li key={si} className="text-sm text-muted-foreground">{step}</li>
                                               ))}
                                             </ol>
                                           </div>
                                         )}
-                                        {rec.impacto_esperado && (
+                                        {(rec.impacto_esperado || rec.impacto) && (
                                           <div>
                                             <p className="text-[10px] text-muted-foreground font-semibold mb-1">Impacto esperado</p>
-                                            <p className="text-sm text-emerald-400">{rec.impacto_esperado}</p>
+                                            <p className="text-sm text-emerald-400">{rec.impacto_esperado || rec.impacto}</p>
                                           </div>
                                         )}
                                         {rec.angulos_criativo && (
@@ -843,7 +974,7 @@ const RelatoriosBatch = () => {
                                         {clickupCreated.has(`rec-${i}`) ? (
                                           <span className="inline-flex items-center gap-1 text-xs text-emerald-400 font-semibold"><CheckCircle2 className="w-3.5 h-3.5" /> Tarefa criada</span>
                                         ) : (
-                                          <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => openClickup(rec, i)}>
+                                          <Button size="sm" variant="outline" className="text-xs gap-1" onClick={() => openClickup(rec as Recomendacao, i)}>
                                             <Zap className="w-3.5 h-3.5" /> Criar tarefa ClickUp
                                           </Button>
                                         )}
@@ -855,11 +986,21 @@ const RelatoriosBatch = () => {
                             </AccordionItem>
                           )}
 
-                          {/* Section 7 — Diagnóstico por Campanha */}
-                          {an.diagnostico_por_campanha?.length > 0 && (
+                          {/* Section 6.5 — Análise Narrativa (Google Ads) */}
+                          {analiseNarrativa && (
+                            <AccordionItem value="analise_narrativa" className="rounded-xl overflow-hidden border-none glass-card">
+                              <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
+                                <span>📝 Análise Detalhada</span>
+                              </AccordionTrigger>
+                              <AccordionContent className="px-4 pb-4">
+                                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{analiseNarrativa}</p>
+                              </AccordionContent>
+                            </AccordionItem>
+                          )}
+                          {(an?.diagnostico_por_campanha?.length ?? 0) > 0 && (
                             <AccordionItem value="diag_campanha" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                                <span>📈 Diagnóstico por Campanha ({an.diagnostico_por_campanha.length})</span>
+                                <span>📈 Diagnóstico por Campanha ({an?.diagnostico_por_campanha?.length || 0})</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <div className="overflow-x-auto">
@@ -874,11 +1015,11 @@ const RelatoriosBatch = () => {
                                       </tr>
                                     </thead>
                                     <tbody>
-                                      {an.diagnostico_por_campanha.map((d, i) => (
+                                      {(an?.diagnostico_por_campanha || []).map((d, i) => (
                                         <tr key={i} className="border-b border-border/50">
                                           <td className="py-2 pr-3 font-medium text-foreground max-w-[200px] truncate">{d.nome}</td>
                                           <td className="py-2 pr-3 text-muted-foreground">{d.objetivo}</td>
-                                          <td className="py-2 pr-3"><Badge className={`text-[9px] px-1.5 py-0 ${scoreBadgeStyle(d.status)}`}>{formatScore(d.status)}</Badge></td>
+                                          <td className="py-2 pr-3"><Badge className={`text-[11px] px-2 py-0.5 ${scoreBadgeStyle(d.status)}`}>{formatScore(d.status)}</Badge></td>
                                           <td className="py-2 pr-3 text-muted-foreground max-w-[200px]">{d.causa_raiz}</td>
                                           <td className="py-2 text-muted-foreground max-w-[200px]">{d.acao_principal}</td>
                                         </tr>
@@ -891,35 +1032,35 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 8 — Criativos */}
-                          {!isHistorico && an.diagnostico_criativos && (
+                          {!isHistorico && an?.diagnostico_criativos && (
                             <AccordionItem value="criativos" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
                                 <span>🎨 Criativos</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4 space-y-3">
-                                {an.diagnostico_criativos.resumo && (
+                                {an?.diagnostico_criativos?.resumo && (
                                   <p className="text-sm text-muted-foreground">{an.diagnostico_criativos.resumo}</p>
                                 )}
-                                {an.diagnostico_criativos.fatigados?.length > 0 && (
+                                {(an?.diagnostico_criativos?.fatigados?.length ?? 0) > 0 && (
                                   <div>
                                     <p className="text-xs font-semibold text-amber-400 mb-1">⚠️ Fatigados</p>
-                                    {an.diagnostico_criativos.fatigados.map((f, i) => (
+                                    {(an?.diagnostico_criativos?.fatigados || []).map((f, i) => (
                                       <div key={i} className="text-xs text-muted-foreground pl-3 mb-1">• <strong>{f.nome}</strong>: {f.motivo}</div>
                                     ))}
                                   </div>
                                 )}
-                                {an.diagnostico_criativos.winners?.length > 0 && (
+                                {(an?.diagnostico_criativos?.winners?.length ?? 0) > 0 && (
                                   <div>
                                     <p className="text-xs font-semibold text-emerald-400 mb-1">🏆 Winners</p>
-                                    {an.diagnostico_criativos.winners.map((w, i) => (
+                                    {(an?.diagnostico_criativos?.winners || []).map((w, i) => (
                                       <div key={i} className="text-xs text-muted-foreground pl-3 mb-1">• <strong>{w.nome}</strong>: {w.motivo}</div>
                                     ))}
                                   </div>
                                 )}
-                                {an.diagnostico_criativos.proximos_testes && (
+                                {an?.diagnostico_criativos?.proximos_testes && (
                                   <div>
                                     <p className="text-xs font-semibold text-blue-400 mb-1">🧪 Próximos testes</p>
-                                    <p className="text-sm text-muted-foreground">{an.diagnostico_criativos.proximos_testes}</p>
+                                    <p className="text-sm text-muted-foreground">{an?.diagnostico_criativos?.proximos_testes}</p>
                                   </div>
                                 )}
                               </AccordionContent>
@@ -948,7 +1089,7 @@ const RelatoriosBatch = () => {
                                       {placementInsights.map((p, i) => (
                                         <tr key={i} className="border-b border-border/50">
                                           <td className="py-2 pr-3 text-foreground">{p.posicionamento}</td>
-                                          <td className="py-2 pr-3"><Badge className={`text-[9px] px-1.5 py-0 ${placementStatusBadge(p.status)}`}>{p.status}</Badge></td>
+                                          <td className="py-2 pr-3"><Badge className={`text-[11px] px-2 py-0.5 ${placementStatusBadge(p.status)}`}>{p.status}</Badge></td>
                                           <td className="py-2 pr-3 text-muted-foreground">{formatCurrency(p.cpa)}</td>
                                           <td className="py-2 pr-3 text-muted-foreground">{p.conversoes}</td>
                                           <td className="py-2 text-muted-foreground max-w-[200px]">{p.recomendacao}</td>
@@ -982,7 +1123,7 @@ const RelatoriosBatch = () => {
                                       {demographicInsights.map((d, i) => (
                                         <tr key={i} className="border-b border-border/50">
                                           <td className="py-2 pr-3 text-foreground">{d.segmento}</td>
-                                          <td className="py-2 pr-3"><Badge className={`text-[9px] px-1.5 py-0 ${placementStatusBadge(d.status)}`}>{d.status}</Badge></td>
+                                          <td className="py-2 pr-3"><Badge className={`text-[11px] px-2 py-0.5 ${placementStatusBadge(d.status)}`}>{d.status}</Badge></td>
                                           <td className="py-2 pr-3 text-muted-foreground">{formatCurrency(d.cpa)}</td>
                                           <td className="py-2 text-muted-foreground max-w-[250px]">{d.recomendacao}</td>
                                         </tr>
@@ -1004,7 +1145,7 @@ const RelatoriosBatch = () => {
                                 {alertasTecnicos.map((a, i) => (
                                   <div key={i} className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 space-y-1">
                                     <div className="flex items-center gap-2">
-                                      <Badge className="text-[9px] px-1.5 py-0 bg-amber-500/15 text-amber-400">{a.tipo}</Badge>
+                                      <Badge className="text-[11px] px-2 py-0.5 bg-amber-500/15 text-amber-400">{a.tipo}</Badge>
                                       <span className="text-xs text-foreground font-medium">{a.campanha}</span>
                                     </div>
                                     <p className="text-xs text-muted-foreground">{a.descricao}</p>
@@ -1016,7 +1157,7 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 12 — Projeção */}
-                          {an.projecao && (
+                          {an?.projecao && (
                             <AccordionItem value="projecao" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
                                 <span>🔮 Projeção</span>
@@ -1025,17 +1166,17 @@ const RelatoriosBatch = () => {
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                   <div className="p-3 rounded-lg bg-secondary/50 border border-border">
                                     <p className="text-[10px] text-muted-foreground font-semibold mb-1">Cenário Atual</p>
-                                    <p className="text-sm text-muted-foreground">{an.projecao.cenario_atual}</p>
+                                    <p className="text-sm text-muted-foreground">{an?.projecao?.cenario_atual}</p>
                                   </div>
                                   <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                                     <p className="text-[10px] text-emerald-400 font-semibold mb-1">Com Otimizações</p>
-                                    <p className="text-sm text-muted-foreground">{an.projecao.com_otimizacoes}</p>
+                                    <p className="text-sm text-muted-foreground">{an?.projecao?.com_otimizacoes}</p>
                                   </div>
                                 </div>
-                                {(an.projecao.roas_esperado || an.projecao.reducao_cpa_estimada) && (
+                                {(an?.projecao?.roas_esperado || an?.projecao?.reducao_cpa_estimada) && (
                                   <div className="flex gap-4 mt-3 text-xs text-muted-foreground">
-                                    {an.projecao.roas_esperado && <span>ROAS esperado: <strong className="text-emerald-400">{an.projecao.roas_esperado}</strong></span>}
-                                    {an.projecao.reducao_cpa_estimada && <span>Redução CPA: <strong className="text-emerald-400">{an.projecao.reducao_cpa_estimada}</strong></span>}
+                                    {an?.projecao?.roas_esperado && <span>ROAS esperado: <strong className="text-emerald-400">{an.projecao.roas_esperado}</strong></span>}
+                                    {an?.projecao?.reducao_cpa_estimada && <span>Redução CPA: <strong className="text-emerald-400">{an.projecao.reducao_cpa_estimada}</strong></span>}
                                   </div>
                                 )}
                               </AccordionContent>
@@ -1043,61 +1184,80 @@ const RelatoriosBatch = () => {
                           )}
 
                           {/* Section 13 — Campanhas */}
-                          {!isHistorico && ac.campanhas?.length > 0 && (
+                          {!isHistorico && (ac as any)?.campanhas?.length > 0 && (
                             <AccordionItem value="campanhas" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
-                                <span>📣 Campanhas ({ac.campanhas.length})</span>
+                                <span>📣 Campanhas ({(ac as any).campanhas.length})</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <Accordion type="multiple" className="space-y-2">
-                                  {ac.campanhas.map((camp, i) => (
-                                    <AccordionItem key={i} value={`camp-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
-                                      <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
-                                        <div className="flex items-center gap-2 flex-1 text-left">
-                                          <Badge className={`text-[9px] px-1.5 py-0 ${scoreBadgeStyle(camp.status_performance)}`}>{formatScore(camp.status_performance)}</Badge>
-                                          <span className="font-medium text-foreground truncate">{camp.nome}</span>
-                                          <span className="text-muted-foreground">{camp.tipo_campanha}</span>
-                                        </div>
-                                      </AccordionTrigger>
-                                      <AccordionContent className="px-3 pb-3 space-y-2">
-                                        <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-xs">
-                                          <div><span className="text-muted-foreground">Gasto:</span> <strong>{formatCurrency(camp.metricas.spend)}</strong></div>
-                                          <div><span className="text-muted-foreground">Leads:</span> <strong>{camp.metricas.leads}</strong></div>
-                                          <div><span className="text-muted-foreground">CPM:</span> <strong>{formatCurrency(camp.metricas.cpm)}</strong></div>
-                                          <div><span className="text-muted-foreground">CTR:</span> <strong>{camp.metricas.ctr}%</strong></div>
-                                          <div><span className="text-muted-foreground">Alcance:</span> <strong>{formatNumber(camp.metricas.reach)}</strong></div>
-                                          <div><span className="text-muted-foreground">Freq:</span> <strong>{camp.metricas.frequency}</strong></div>
-                                          <div><span className="text-muted-foreground">Budget:</span> <strong>{camp.budget_utilization}%</strong></div>
-                                        </div>
-                                        {camp.alertas?.length > 0 && (
-                                          <div className="space-y-1">
-                                            {camp.alertas.map((a, ai) => (
-                                              <p key={ai} className="text-xs text-amber-400">⚠️ {a}</p>
-                                            ))}
+                                  {((ac as any).campanhas as any[]).map((camp: any, i: number) => {
+                                    if (!camp) return null;
+                                    const isGA = isGoogleAds;
+                                    const campName = camp.nome || camp.campaign_name || `Campanha ${i + 1}`;
+                                    const campStatus = camp.status_performance || camp.status || "";
+                                    const campType = camp.tipo_campanha || camp.campaign_type || "";
+                                    const m = camp.metricas || camp;
+                                    const gasto = m?.spend ?? m?.cost ?? 0;
+                                    const leads = m?.leads ?? m?.conversions ?? 0;
+                                    const cpm = m?.cpm ?? 0;
+                                    const ctr = m?.ctr ?? "0";
+                                    const reach = m?.reach ?? m?.impressions ?? 0;
+                                    const freq = m?.frequency ?? "—";
+                                    const budget = camp.budget_utilization ?? "—";
+                                    const alertas = camp.alertas || [];
+
+                                    return (
+                                      <AccordionItem key={i} value={`camp-${i}`} className="rounded-lg overflow-hidden border border-border/50 bg-secondary/30">
+                                        <AccordionTrigger className="px-3 py-2.5 hover:no-underline text-xs">
+                                          <div className="flex items-center gap-2 flex-1 text-left">
+                                            {campStatus && <Badge className={`text-[11px] px-2 py-0.5 ${scoreBadgeStyle(campStatus)}`}>{formatScore(campStatus)}</Badge>}
+                                            <span className="font-medium text-foreground truncate">{campName}</span>
+                                            {campType && <span className="text-muted-foreground">{campType}</span>}
                                           </div>
-                                        )}
-                                        {camp.gerenciador_url && (
-                                          <a href={camp.gerenciador_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-400 hover:underline">
-                                            <ExternalLink className="w-3 h-3" /> Abrir no Gerenciador
-                                          </a>
-                                        )}
-                                      </AccordionContent>
-                                    </AccordionItem>
-                                  ))}
+                                        </AccordionTrigger>
+                                        <AccordionContent className="px-3 pb-3 space-y-2">
+                                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-xs">
+                                            <div><span className="text-muted-foreground">Gasto:</span> <strong>{formatCurrency(gasto)}</strong></div>
+                                            <div><span className="text-muted-foreground">{isGA ? "Conversões" : "Leads"}:</span> <strong>{formatNumber(leads)}</strong></div>
+                                            {cpm > 0 && <div><span className="text-muted-foreground">CPM:</span> <strong>{formatCurrency(cpm)}</strong></div>}
+                                            <div><span className="text-muted-foreground">CTR:</span> <strong>{ctr}%</strong></div>
+                                            <div><span className="text-muted-foreground">{isGA ? "Impressões" : "Alcance"}:</span> <strong>{formatNumber(reach)}</strong></div>
+                                            {!isGA && <div><span className="text-muted-foreground">Freq:</span> <strong>{freq}</strong></div>}
+                                            {budget !== "—" && <div><span className="text-muted-foreground">Budget:</span> <strong>{budget}%</strong></div>}
+                                            {isGA && m?.clicks != null && <div><span className="text-muted-foreground">Cliques:</span> <strong>{formatNumber(m.clicks)}</strong></div>}
+                                            {isGA && m?.conversion_rate != null && <div><span className="text-muted-foreground">Conv. Rate:</span> <strong>{m.conversion_rate}%</strong></div>}
+                                          </div>
+                                          {alertas?.length > 0 && (
+                                            <div className="space-y-1">
+                                              {alertas.map((a: any, ai: number) => (
+                                                <p key={ai} className="text-xs text-amber-400">⚠️ {typeof a === "string" ? a : a?.alerta || a?.msg || JSON.stringify(a)}</p>
+                                              ))}
+                                            </div>
+                                          )}
+                                          {camp.gerenciador_url && (
+                                            <a href={camp.gerenciador_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-blue-400 hover:underline">
+                                              <ExternalLink className="w-3 h-3" /> Abrir no Gerenciador
+                                            </a>
+                                          )}
+                                        </AccordionContent>
+                                      </AccordionItem>
+                                    );
+                                  })}
                                 </Accordion>
                               </AccordionContent>
                             </AccordionItem>
                           )}
 
                           {/* Section 14 — Relatório Fiscal */}
-                          {an.relatorio_fiscal && (
+                          {an?.relatorio_fiscal && (
                             <AccordionItem value="fiscal" className="rounded-xl overflow-hidden border-none glass-card">
                               <AccordionTrigger className="px-4 py-3 hover:no-underline text-sm font-semibold">
                                 <span>📑 Relatório Fiscal</span>
                               </AccordionTrigger>
                               <AccordionContent className="px-4 pb-4">
                                 <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono bg-secondary/50 p-4 rounded-lg overflow-x-auto">
-                                  {an.relatorio_fiscal}
+                                  {an?.relatorio_fiscal}
                                 </pre>
                               </AccordionContent>
                             </AccordionItem>
@@ -1160,7 +1320,15 @@ const RelatoriosBatch = () => {
         onClose={() => setClickupOpen(false)}
         taskTitle={clickupTitle}
         taskDescription={clickupDesc}
-        onSuccess={() => {}}
+        onSuccess={() => {
+          if (clickupRecIdx >= 0) {
+            setClickupCreated(prev => {
+              const next = new Set(prev);
+              next.add(`rec-${clickupRecIdx}`);
+              return next;
+            });
+          }
+        }}
       />
     </div>
   );

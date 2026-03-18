@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, CheckSquare, Loader2, Calendar, User, List, Flag, Check, ChevronsUpDown } from "lucide-react";
 import { MentionTextarea } from "@/components/MentionTextarea";
@@ -203,15 +204,24 @@ export function ClickUpTaskModal({
     setErro("");
 
     try {
+      // Extract mention user IDs from @[Name](userId) format
+      const mentionMatches = [...(observacao || '').matchAll(/@\[([^\]]+)\]\((\d+)\)/g)];
+      const mentionUserIds = mentionMatches.map(m => Number(m[2]));
+      // Clean mention format for display: @[Name](userId) → @Name
+      const observacaoClean = observacao ? observacao.replace(/@\[([^\]]+)\]\(\d+\)/g, '@$1') : null;
+
       const body = {
         titulo: taskTitle,
         descricao: taskDescription.replace(/\\n/g, '\n'),
         lista_id: listaSelecionada,
-        responsavel_id: responsavelSelecionado || null,
+        responsavel_id: responsavelSelecionado ? Number(responsavelSelecionado) : null,
         data_conclusao: dataConclusao || null,
         prioridade: prioridade || "normal",
-        observacao: observacao || null,
+        observacao: observacaoClean || null,
+        mention_user_ids: mentionUserIds.length > 0 ? mentionUserIds : null,
       };
+
+      console.log("[ClickUp] Creating task with body:", JSON.stringify(body, null, 2));
 
       const res = await fetch(N8N_CRIAR_TAREFA_URL, {
         method: "POST",
@@ -238,7 +248,7 @@ export function ClickUpTaskModal({
     }
   };
 
-  return (
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <>
@@ -463,6 +473,7 @@ export function ClickUpTaskModal({
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }
