@@ -204,6 +204,12 @@ export function ClickUpTaskModal({
     setErro("");
 
     try {
+      // Extract mention user IDs from @[Name](userId) format
+      const mentionMatches = [...(observacao || '').matchAll(/@\[([^\]]+)\]\((\d+)\)/g)];
+      const mentionUserIds = mentionMatches.map(m => Number(m[2]));
+      // Clean mention format for display: @[Name](userId) → @Name
+      const observacaoClean = observacao ? observacao.replace(/@\[([^\]]+)\]\(\d+\)/g, '@$1') : null;
+
       const body = {
         titulo: taskTitle,
         descricao: taskDescription.replace(/\\n/g, '\n'),
@@ -211,7 +217,8 @@ export function ClickUpTaskModal({
         responsavel_id: responsavelSelecionado ? Number(responsavelSelecionado) : null,
         data_conclusao: dataConclusao || null,
         prioridade: prioridade || "normal",
-        observacao: observacao || null,
+        observacao: observacaoClean || null,
+        mention_user_ids: mentionUserIds.length > 0 ? mentionUserIds : null,
       };
 
       console.log("[ClickUp] Creating task with body:", JSON.stringify(body, null, 2));
