@@ -393,6 +393,9 @@ const RelatoriosBatch = () => {
     if (rec.acao) {
       sections.push(`## Ação Principal\n${rec.acao}`);
     }
+    if (rec.motivo) {
+      sections.push(`## Por quê\n${rec.motivo}`);
+    }
     if (rec.como_executar) {
       const steps = rec.como_executar.split(";").map((s: string) => s.trim()).filter(Boolean);
       const stepsList = steps.map((s: string, i: number) => {
@@ -939,6 +942,12 @@ const RelatoriosBatch = () => {
                                             <p className="text-sm text-muted-foreground">{rec.acao}</p>
                                           </div>
                                         )}
+                                        {rec.motivo && (
+                                          <div>
+                                            <p className="text-[10px] text-muted-foreground font-semibold mb-1">Por quê</p>
+                                            <p className="text-sm text-muted-foreground">{rec.motivo}</p>
+                                          </div>
+                                        )}
                                         {rec.como_executar && (
                                           <div>
                                             <p className="text-[10px] text-muted-foreground font-semibold mb-1">Como executar</p>
@@ -1335,3 +1344,4 @@ const RelatoriosBatch = () => {
 };
 
 export default RelatoriosBatch;
+

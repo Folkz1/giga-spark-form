@@ -26,6 +26,7 @@ export interface Recomendacao {
   urgencia: string;
   diagnostico: string;
   acao: string;
+  motivo?: string;
   como_executar: string;
   impacto_esperado: string;
   descricao?: string;
@@ -230,22 +231,24 @@ export interface Revisado {
 
 // ─── API ───
 const BASE_URL = "https://principaln8o.gigainteligencia.com.br";
+const N8N_API_KEY = "e1893027bdc74625cb097504d272f838aff046851dfa02d44d1728c149799976";
+const n8nHeaders = (extra?: Record<string, string>) => ({ "Content-Type": "application/json", "x-api-key": N8N_API_KEY, ...extra });
 
 export async function fetchBatches(): Promise<Batch[]> {
-  const res = await fetch(`${BASE_URL}/webhook/batch-reports`);
+  const res = await fetch(`${BASE_URL}/webhook/batch-reports`, { headers: { "x-api-key": N8N_API_KEY } });
   if (!res.ok) throw new Error("Falha ao carregar batches");
   const data: BatchesResponse = await res.json();
   return data.batches || [];
 }
 
 export async function fetchBatchClientes(batchId: string): Promise<BatchDetailResponse> {
-  const res = await fetch(`${BASE_URL}/webhook/batch-reports-detail?batchId=${batchId}`);
+  const res = await fetch(`${BASE_URL}/webhook/batch-reports-detail?batchId=${batchId}`, { headers: { "x-api-key": N8N_API_KEY } });
   if (!res.ok) throw new Error("Falha ao carregar clientes");
   return res.json();
 }
 
 export async function fetchAnaliseCliente(batchId: string, customerId: string, plataforma: string): Promise<AnaliseCompleta> {
-  const res = await fetch(`${BASE_URL}/webhook/batch-report-client?batchId=${batchId}&customerId=${customerId}&plataforma=${plataforma}`);
+  const res = await fetch(`${BASE_URL}/webhook/batch-report-client?batchId=${batchId}&customerId=${customerId}&plataforma=${plataforma}`, { headers: { "x-api-key": N8N_API_KEY } });
   if (!res.ok) throw new Error("Falha ao carregar análise");
   return res.json();
 }
@@ -253,7 +256,7 @@ export async function fetchAnaliseCliente(batchId: string, customerId: string, p
 export async function retryCliente(batchId: string, customerId: string, plataforma: string): Promise<void> {
   const res = await fetch(`${BASE_URL}/webhook/batch-report-retry`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: n8nHeaders(),
     body: JSON.stringify({ batchId, customerId, plataforma }),
   });
   if (!res.ok) throw new Error("Falha ao reprocessar");

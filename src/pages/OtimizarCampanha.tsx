@@ -295,7 +295,7 @@ const OtimizarCampanha = () => {
     try {
       console.log('[ACCOUNTS] Buscando contas...');
       const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-accounts", {
-        headers: { "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" }
+        headers: { "x-api-key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" }
       });
       console.log('[ACCOUNTS] Status:', res.status);
       if (!res.ok) throw new Error(`Falha ao carregar contas (status ${res.status})`);
@@ -339,7 +339,7 @@ const OtimizarCampanha = () => {
           try {
             const url = `https://principaln8o.gigainteligencia.com.br/webhook/google-ads-campaigns?customerId=${acc.customerId}`;
             console.log(`[CAMPAIGNS] Buscando campanhas para conta: ${acc.name} (${acc.customerId})`);
-            const res = await fetch(url, { headers: { "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" } });
+            const res = await fetch(url, { headers: { "x-api-key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" } });
             console.log(`[CAMPAIGNS] Status para ${acc.customerId}:`, res.status);
             const text = await res.text();
             console.log(`[CAMPAIGNS] Resposta raw para ${acc.customerId}:`, text?.substring(0, 500));
@@ -396,7 +396,7 @@ const OtimizarCampanha = () => {
             const url = `https://principaln8o.gigainteligencia.com.br/webhook/google-ads-adgroups?customerId=${camp.customerId}&campaignId=${realCampaignId}`;
             console.log(`[ADGROUPS] Buscando grupos para campanha: ${camp.name} (${camp.customerId}/${realCampaignId})`);
             const res = await fetch(url, {
-              headers: { "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" }
+              headers: { "x-api-key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" }
             });
             console.log(`[ADGROUPS] Status para ${camp.customerId}/${realCampaignId}:`, res.status);
             const text = await res.text();
@@ -494,7 +494,7 @@ const OtimizarCampanha = () => {
             console.log("[OPTIMIZE] Enviando request para grupo:", grp.name, body);
             const response = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-optimize", {
               method: "POST",
-              headers: { "Content-Type": "application/json", "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" },
+              headers: { "Content-Type": "application/json", "x-api-key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" },
               body: JSON.stringify(body),
             });
             console.log(`[OPTIMIZE] Status para ${grp.name}:`, response.status);
@@ -568,7 +568,7 @@ const OtimizarCampanha = () => {
       [...grouped.values()].map(async (g) => {
         const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-negative", {
           method: "POST",
-          headers: { "Content-Type": "application/json", "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" },
+          headers: { "Content-Type": "application/json", "x-api-key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" },
           body: JSON.stringify({ customerId: g.customerId, adGroupId: g.adGroupId, termos: g.termos }),
         });
         if (!res.ok) throw new Error("Falha ao aplicar negativações");

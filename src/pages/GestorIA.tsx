@@ -280,7 +280,7 @@ const GestorIA = () => {
   const fetchClickupListas = async () => {
     setClickupListasLoading(true);
     try {
-      const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/gestor-clickup-listas");
+      const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/gestor-clickup-listas", { headers: { "x-api-key": "e1893027bdc74625cb097504d272f838aff046851dfa02d44d1728c149799976" } });
       const data = await res.json();
       const listas = Array.isArray(data?.listas) ? data.listas : Array.isArray(data) ? data : [];
       setClickupListas(listas);
@@ -311,7 +311,7 @@ const GestorIA = () => {
     try {
       const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/gestor-clickup", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": "e1893027bdc74625cb097504d272f838aff046851dfa02d44d1728c149799976" },
         body: JSON.stringify({
           accountName,
           campanha: rec.campanha,
@@ -444,7 +444,7 @@ const GestorIA = () => {
     try {
       const res = await fetch(
         "https://principaln8o.gigainteligencia.com.br/webhook/google-ads-accounts",
-        { headers: { "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" } }
+        { headers: { "x-api-key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" } }
       );
       if (!res.ok) throw new Error("Erro");
       const data = await res.json();

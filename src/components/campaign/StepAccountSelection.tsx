@@ -28,7 +28,7 @@ const StepAccountSelection = ({ selectedAccount, onSelect }: StepAccountSelectio
     setError(null);
     try {
       const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/google-ads-accounts", {
-        headers: { "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" }
+        headers: { "x-api-key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" }
       });
       if (!res.ok) throw new Error("Falha ao carregar contas");
       const data = await res.json();
