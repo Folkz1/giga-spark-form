@@ -396,7 +396,7 @@ const OtimizarCampanha = () => {
             const url = `https://principaln8o.gigainteligencia.com.br/webhook/google-ads-adgroups?customerId=${camp.customerId}&campaignId=${realCampaignId}`;
             console.log(`[ADGROUPS] Buscando grupos para campanha: ${camp.name} (${camp.customerId}/${realCampaignId})`);
             const res = await fetch(url, {
-              headers: { "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI" }
+              headers: { "X-API-Key": "7AWuCCQl7RyrO5t2Pcozn0Iyi2iC6gtsqYqH_CtvLyI", "x-api-key": "e1893027bdc74625cb097504d272f838aff046851dfa02d44d1728c149799976" }
             });
             console.log(`[ADGROUPS] Status para ${camp.customerId}/${realCampaignId}:`, res.status);
             const text = await res.text();
