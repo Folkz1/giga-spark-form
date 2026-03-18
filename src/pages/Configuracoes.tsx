@@ -602,11 +602,10 @@ function ClientFormDialog({
               <Label>Máximo de eventos por sync</Label>
               <Input
                 type="number"
-                min={1}
-                max={100}
-                value={(form.crm_credentials?.sync_settings?.sync_max_events) || 10}
+                min={0}
+                value={(form.crm_credentials?.sync_settings?.sync_max_events) ?? 10}
                 onChange={e => {
-                  const val = parseInt(e.target.value) || 10;
+                  const val = parseInt(e.target.value) || 0;
                   const ss = form.crm_credentials?.sync_settings || { sync_enabled: true };
                   setForm({
                     ...form,
@@ -615,7 +614,7 @@ function ClientFormDialog({
                 }}
                 className="w-[100px]"
               />
-              <p className="text-xs text-muted-foreground">Limita quantos eventos disparam por ciclo de sync (1-100)</p>
+              <p className="text-xs text-muted-foreground">0 = sem limite. Recomendado: comecar com 10 pra validar, depois aumentar.</p>
             </div>
             {isEdit && client?.api_key && (
               <>
