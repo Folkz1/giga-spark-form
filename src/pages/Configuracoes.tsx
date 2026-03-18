@@ -852,18 +852,24 @@ const Configuracoes = () => {
                         </div>
                       </div>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" title="Sincronizar histórico" onClick={async () => {
-                          try {
-                            const res = await startFullSync(client.id!);
-                            if (res.status === "already_running") {
-                              toast.info("Sync já está rodando");
-                            } else {
-                              toast.success("Sync do histórico iniciado em background");
-                            }
-                          } catch (e: any) { toast.error(e.message); }
-                        }}>
-                          <PlayCircle className="h-4 w-4" />
-                        </Button>
+                        {!(client.crm_credentials?.sync_settings as any)?.full_sync_completed ? (
+                          <Button variant="ghost" size="sm" title="Sincronizar histórico" onClick={async () => {
+                            try {
+                              const res = await startFullSync(client.id!);
+                              if (res.status === "already_running") {
+                                toast.info("Sync já está rodando");
+                              } else {
+                                toast.success("Sync do histórico iniciado em background");
+                              }
+                            } catch (e: any) { toast.error(e.message); }
+                          }}>
+                            <PlayCircle className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="sm" disabled title="Histórico já sincronizado">
+                            <Check className="h-4 w-4 text-green-500" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="sm" onClick={() => navigate(`/logs?client=${client.id}`)}>
                           <Activity className="h-4 w-4" />
                         </Button>
