@@ -418,7 +418,7 @@ function ClientFormDialog({
   const fetchPipelines = async () => {
     setLoadingPipelines(true);
     try {
-      const data = await listPipelines();
+      const data = await listPipelines(client?.id);
       setPipelines(data);
       toast.success(`${data.length} pipelines carregados`);
     } catch (e: any) {
@@ -431,7 +431,7 @@ function ClientFormDialog({
   const fetchFields = async () => {
     setLoadingFields(true);
     try {
-      const data = await listLeadFields();
+      const data = await listLeadFields(client?.id);
       const fields = data.fields || [];
       setCrmFields(fields);
       toast.success(`${fields.length} campos encontrados`);

@@ -160,12 +160,14 @@ export interface EventStats {
   total: number;
 }
 
-export async function listPipelines(): Promise<Pipeline[]> {
-  return apiFetch<Pipeline[]>("/api/crm/pipelines");
+export async function listPipelines(clientId?: string): Promise<Pipeline[]> {
+  const params = clientId ? `?client_id=${clientId}` : "";
+  return apiFetch<Pipeline[]>(`/api/crm/pipelines${params}`);
 }
 
-export async function listLeadFields(): Promise<{ fields: LeadField[] }> {
-  return apiFetch<{ fields: LeadField[] }>("/api/crm/lead-fields");
+export async function listLeadFields(clientId?: string): Promise<{ fields: LeadField[] }> {
+  const params = clientId ? `?client_id=${clientId}` : "";
+  return apiFetch<{ fields: LeadField[] }>(`/api/crm/lead-fields${params}`);
 }
 
 // --- Events ---
