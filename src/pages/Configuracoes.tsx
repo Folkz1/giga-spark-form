@@ -517,13 +517,13 @@ function ClientFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="max-w-lg sm:max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? `Editar: ${client?.name}` : "Novo Cliente"}</DialogTitle>
         </DialogHeader>
 
         <Tabs defaultValue="geral" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4">
             <TabsTrigger value="geral">Geral</TabsTrigger>
             <TabsTrigger value="pixels">Pixels</TabsTrigger>
             <TabsTrigger value="estagios">Estágios</TabsTrigger>
