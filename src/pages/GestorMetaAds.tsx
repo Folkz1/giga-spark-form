@@ -304,7 +304,7 @@ const GestorMetaAds = () => {
       const fetchTimeout = setTimeout(() => controller.abort(), 295000);
       const res = await fetch(config.webhookAnalise, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": import.meta.env.VITE_GESTOR_META_API_KEY },
         signal: controller.signal,
         body: JSON.stringify({
           ad_account_id: selectedCliente.adAccountId,

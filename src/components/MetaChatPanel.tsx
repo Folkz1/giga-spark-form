@@ -52,7 +52,7 @@ export function MetaChatPanel({ clienteNome, segmento, tipoNegocio, dadosAnalise
     try {
       const res = await fetch(CHAT_ENDPOINT, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": import.meta.env.VITE_GESTOR_META_API_KEY },
         body: JSON.stringify({
           cliente_nome: clienteNome,
           segmento,
