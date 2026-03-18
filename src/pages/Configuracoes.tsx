@@ -297,9 +297,17 @@ function FieldMappingEditor({
 }) {
   const DEFAULT_FIELDS = ["email", "phone", "name"];
 
-  // Sort CRM fields by count (most populated first)
+  // Filter irrelevant fields and sort by count (most populated first)
+  const IGNORE_FIELDS = ["id", "createdAt", "updatedAt", "attendant", "contacts[0].platform",
+    "contacts[0].lastContactStatus.id", "contacts[0].lastContactStatus.platform",
+    "contacts[0].lastContactStatus.tenantId", "contacts[0].lastContactStatus.createdAt",
+    "contacts[0].lastContactStatus.deletedAt", "contacts[0].lastContactStatus.updatedAt",
+    "contacts[0].lastContactStatus.isPending", "contacts[0].lastContactStatus.instanceId"];
+
   const sortedCrmFields = useMemo(() =>
-    [...crmFields].sort((a, b) => b.count - a.count),
+    crmFields
+      .filter(f => !IGNORE_FIELDS.includes(f.path) && f.count > 0)
+      .sort((a, b) => b.count - a.count),
     [crmFields]
   );
 
@@ -452,7 +460,27 @@ function ClientFormDialog({
     }
     setPipelines([]);
     setCrmFields([]);
+    // Auto-load CRM data when editing existing client with CRM token
+    if (open && client?.id && client?.crm_credentials?.datacrazy_token) {
+      fetchPipelinesQuiet(client.id);
+      fetchFieldsQuiet(client.id);
+    }
   }, [client, open]);
+
+  const fetchPipelinesQuiet = async (cid: string) => {
+    try {
+      const data = await listPipelines(cid);
+      setPipelines(data);
+    } catch { /* silent */ }
+  };
+
+  const fetchFieldsQuiet = async (cid: string) => {
+    setLoadingFields(true);
+    try {
+      const data = await listLeadFields(cid);
+      setCrmFields(data.fields || []);
+    } catch { /* silent */ } finally { setLoadingFields(false); }
+  };
 
   const fetchPipelines = async () => {
     setLoadingPipelines(true);
@@ -517,7 +545,7 @@ function ClientFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="w-[95vw] max-w-xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl max-h-[85vh] overflow-y-auto mx-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? `Editar: ${client?.name}` : "Novo Cliente"}</DialogTitle>
         </DialogHeader>
