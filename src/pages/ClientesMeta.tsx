@@ -133,14 +133,14 @@ const ClientesMeta = () => {
       if (editing) {
         await fetch(`${base}/cliente/atualizar`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "x-api-key": N8N_API_KEY },
           body: JSON.stringify(payload),
         });
         toast.success("Cliente atualizado!");
       } else {
         await fetch(`${base}/cliente/criar`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "x-api-key": N8N_API_KEY },
           body: JSON.stringify(payload),
         });
         toast.success("Cliente adicionado!");
