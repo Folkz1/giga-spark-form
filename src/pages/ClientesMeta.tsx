@@ -44,11 +44,13 @@ function parseN8nResponse(raw: any): any {
   return raw;
 }
 
+const N8N_API_KEY = "e1893027bdc74625cb097504d272f838aff046851dfa02d44d1728c149799976";
+
 export async function fetchClientesMeta(): Promise<ClienteMeta[]> {
   const base = getWebhookBase();
   const res = await fetch(`${base}/cliente/buscar-todos`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-api-key": N8N_API_KEY },
     body: JSON.stringify({}),
   });
   const raw = await res.json();
