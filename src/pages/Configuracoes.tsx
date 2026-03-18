@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Pencil, Trash2, Loader2, Settings2, Plug, Check, X, ChevronDown, ChevronUp, Copy, Search, Activity, RefreshCw } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Loader2, Settings2, Plug, Check, X, ChevronDown, ChevronUp, Copy, Search, Activity, RefreshCw, PlayCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -22,6 +22,8 @@ import {
   deleteClient,
   listPipelines,
   listLeadFields,
+  startFullSync,
+  getFullSyncStatus,
   META_EVENT_TYPES,
   USER_DATA_FIELDS,
   type ClientData,
@@ -850,6 +852,18 @@ const Configuracoes = () => {
                         </div>
                       </div>
                       <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" title="Sincronizar histórico" onClick={async () => {
+                          try {
+                            const res = await startFullSync(client.id!);
+                            if (res.status === "already_running") {
+                              toast.info("Sync já está rodando");
+                            } else {
+                              toast.success("Sync do histórico iniciado em background");
+                            }
+                          } catch (e: any) { toast.error(e.message); }
+                        }}>
+                          <PlayCircle className="h-4 w-4" />
+                        </Button>
                         <Button variant="ghost" size="sm" onClick={() => navigate(`/logs?client=${client.id}`)}>
                           <Activity className="h-4 w-4" />
                         </Button>

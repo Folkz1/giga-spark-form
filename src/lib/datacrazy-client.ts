@@ -183,6 +183,28 @@ export async function getEventStats(clientId?: string): Promise<EventStats> {
   return apiFetch<EventStats>(`/api/events/stats${params}`);
 }
 
+// --- Sync controls ---
+
+export interface FullSyncStatus {
+  status: string;
+  processed?: number;
+  fired?: number;
+  skipped?: number;
+  total?: number;
+  errors?: number;
+  started_at?: string;
+  completed_at?: string;
+  message?: string;
+}
+
+export async function startFullSync(clientId: string): Promise<{ status: string; message?: string }> {
+  return apiFetch(`/api/sync/full?client_id=${clientId}`, { method: "POST" });
+}
+
+export async function getFullSyncStatus(clientId: string): Promise<FullSyncStatus> {
+  return apiFetch<FullSyncStatus>(`/api/sync/status?client_id=${clientId}`);
+}
+
 // --- Event types ---
 
 export const META_EVENT_TYPES = [
