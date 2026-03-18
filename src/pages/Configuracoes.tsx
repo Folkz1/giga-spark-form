@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Plus, Pencil, Trash2, Loader2, Settings2, Plug, Check, X, ChevronDown, ChevronUp, Copy, Search, Activity, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, Loader2, Settings2, Plug, Check, X, ChevronDown, ChevronUp, Copy, Search, Activity, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -22,8 +22,6 @@ import {
   deleteClient,
   listPipelines,
   listLeadFields,
-  listEvents,
-  getEventStats,
   META_EVENT_TYPES,
   USER_DATA_FIELDS,
   type ClientData,
@@ -32,8 +30,6 @@ import {
   type Pipeline,
   type PipelineStage,
   type LeadField,
-  type EventRecord,
-  type EventStats,
   type DataCrazyConnection,
 } from "@/lib/datacrazy-client";
 
@@ -380,112 +376,6 @@ function FieldMappingEditor({
   );
 }
 
-/* ═══════════════════════════════════════════════
-   Event Log Panel
-   ═══════════════════════════════════════════════ */
-
-function EventLogPanel({ clientId, clientName }: { clientId?: string; clientName?: string }) {
-  const [events, setEvents] = useState<EventRecord[]>([]);
-  const [stats, setStats] = useState<EventStats | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  const loadEvents = async () => {
-    setLoading(true);
-    try {
-      const [evts, st] = await Promise.all([
-        listEvents(clientId, 30),
-        getEventStats(clientId),
-      ]);
-      setEvents(evts);
-      setStats(st);
-    } catch (e: any) {
-      toast.error("Erro ao carregar log: " + e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { loadEvents(); }, [clientId]);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Activity className="h-5 w-5" />
-          Log de Eventos {clientName ? `— ${clientName}` : "(Todos)"}
-        </h3>
-        <Button variant="outline" size="sm" onClick={loadEvents} disabled={loading}>
-          {loading ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <RefreshCw className="h-3 w-3 mr-1" />}
-          Atualizar
-        </Button>
-      </div>
-
-      {/* Stats */}
-      {stats && stats.total > 0 && (
-        <div className="grid grid-cols-4 gap-3">
-          <Card className="p-3 text-center">
-            <p className="text-2xl font-bold">{stats.total}</p>
-            <p className="text-xs text-muted-foreground">Total</p>
-          </Card>
-          <Card className="p-3 text-center">
-            <p className="text-2xl font-bold text-green-500">{stats.by_status?.sent || 0}</p>
-            <p className="text-xs text-muted-foreground">Enviados</p>
-          </Card>
-          <Card className="p-3 text-center">
-            <p className="text-2xl font-bold text-red-500">{stats.by_status?.error || 0}</p>
-            <p className="text-xs text-muted-foreground">Erros</p>
-          </Card>
-          <Card className="p-3 text-center">
-            <p className="text-2xl font-bold text-yellow-500">{stats.by_status?.pending || 0}</p>
-            <p className="text-xs text-muted-foreground">Pendentes</p>
-          </Card>
-        </div>
-      )}
-
-      {/* Event list */}
-      {loading && (
-        <div className="flex justify-center py-4">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </div>
-      )}
-
-      {!loading && events.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-4">Nenhum evento registrado</p>
-      )}
-
-      {!loading && events.length > 0 && (
-        <div className="space-y-2 max-h-[400px] overflow-y-auto">
-          {events.map(evt => (
-            <div key={evt.id} className="flex items-center gap-3 p-2 rounded border text-sm">
-              {evt.status === "sent" ? (
-                <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-              ) : (
-                <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="text-xs">{evt.event_type}</Badge>
-                  {(evt.event_data as any)?.pixel_label && (
-                    <span className="text-xs text-muted-foreground">{(evt.event_data as any).pixel_label}</span>
-                  )}
-                  {(evt.event_data as any)?.platform === "google" && (
-                    <Badge variant="secondary" className="text-xs">GA4</Badge>
-                  )}
-                </div>
-                {evt.error_message && (
-                  <p className="text-xs text-red-400 truncate mt-0.5">{evt.error_message}</p>
-                )}
-              </div>
-              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                {new Date(evt.created_at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 /* ═══════════════════════════════════════════════
    Client Form Dialog (with CRM auto-fetch)
@@ -725,9 +615,6 @@ const Configuracoes = () => {
   const [busca, setBusca] = useState("");
   const [page, setPage] = useState(0);
   const [sortBy, setSortBy] = useState<SortKey>("name");
-  const [logClientId, setLogClientId] = useState<string | undefined>(undefined);
-  const [logClientName, setLogClientName] = useState<string | undefined>(undefined);
-  const [showLog, setShowLog] = useState(false);
 
   const loadClients = async () => {
     setLoading(true);
@@ -820,7 +707,7 @@ const Configuracoes = () => {
                   <SelectItem value="active">Status</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" onClick={() => { setLogClientId(undefined); setLogClientName(undefined); setShowLog(!showLog); }}>
+              <Button variant="outline" onClick={() => navigate("/logs")}>
                 <Activity className="h-4 w-4 mr-2" /> Log
               </Button>
               <Button onClick={() => { setEditing(null); setModalOpen(true); }}>
@@ -875,11 +762,7 @@ const Configuracoes = () => {
                         </div>
                       </div>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => {
-                          setLogClientId(client.id);
-                          setLogClientName(client.name);
-                          setShowLog(true);
-                        }}>
+                        <Button variant="ghost" size="sm" onClick={() => navigate(`/logs?client=${client.id}`)}>
                           <Activity className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="sm" onClick={() => { setEditing(client); setModalOpen(true); }}>
@@ -954,14 +837,6 @@ const Configuracoes = () => {
               </div>
             )}
           </div>
-        )}
-
-        {/* Event Log */}
-        {showLog && connected && (
-          <>
-            <Separator />
-            <EventLogPanel clientId={logClientId} clientName={logClientName} />
-          </>
         )}
 
         {/* Client form dialog */}
