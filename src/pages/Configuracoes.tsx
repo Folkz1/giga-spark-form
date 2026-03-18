@@ -298,15 +298,17 @@ function FieldMappingEditor({
   const DEFAULT_FIELDS = ["email", "phone", "name"];
 
   // Filter irrelevant fields and sort by count (most populated first)
-  const IGNORE_FIELDS = ["id", "createdAt", "updatedAt", "attendant", "contacts[0].platform",
-    "contacts[0].lastContactStatus.id", "contacts[0].lastContactStatus.platform",
-    "contacts[0].lastContactStatus.tenantId", "contacts[0].lastContactStatus.createdAt",
-    "contacts[0].lastContactStatus.deletedAt", "contacts[0].lastContactStatus.updatedAt",
-    "contacts[0].lastContactStatus.isPending", "contacts[0].lastContactStatus.instanceId"];
+  // Only show fields useful for tracking (filter metadata, IDs, timestamps, internal fields)
+  const USEFUL_FIELDS = ["email", "phone", "rawPhone", "name", "company",
+    "address.city", "address.state", "address.country", "address.zip",
+    "address.address", "address.number", "address.complement", "address.block",
+    "birthDate", "image", "tags[0].name",
+    "metrics.totalSpent", "metrics.purchaseCount", "metrics.averageTicket",
+    "metrics.openBusinessesCount", "metrics.lostBusinessesCount"];
 
   const sortedCrmFields = useMemo(() =>
     crmFields
-      .filter(f => !IGNORE_FIELDS.includes(f.path) && f.count > 0)
+      .filter(f => USEFUL_FIELDS.includes(f.path) && f.count > 0)
       .sort((a, b) => b.count - a.count),
     [crmFields]
   );
@@ -353,14 +355,13 @@ function FieldMappingEditor({
           </p>
           <div className="max-h-[200px] overflow-y-auto space-y-1 rounded border p-2">
             {sortedCrmFields.map(f => (
-              <div key={f.path} className="flex items-center gap-2 text-xs">
-                <div className="w-[120px] bg-muted rounded-full h-1.5 shrink-0">
-                  <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${maxCount > 0 ? (f.count / maxCount) * 100 : 0}%` }} />
-                </div>
-                <span className="text-muted-foreground w-[50px] text-right shrink-0">{f.count}/{maxCount}</span>
-                <code className="font-mono truncate flex-1">{f.path}</code>
+              <div key={f.path} className="flex items-center gap-1 text-xs">
+                <Badge variant={f.count >= maxCount * 0.8 ? "default" : "outline"} className="text-[10px] w-[55px] justify-center shrink-0">
+                  {f.count}/{maxCount}
+                </Badge>
+                <code className="font-mono truncate">{f.path}</code>
                 {f.sample_value && (
-                  <span className="text-muted-foreground truncate max-w-[150px]">ex: {f.sample_value.slice(0, 25)}</span>
+                  <span className="text-muted-foreground truncate ml-auto text-[10px]">{f.sample_value.slice(0, 20)}</span>
                 )}
               </div>
             ))}
