@@ -597,6 +597,26 @@ function ClientFormDialog({
                 })}
               </div>
             </div>
+            <Separator />
+            <div className="space-y-2">
+              <Label>Máximo de eventos por sync</Label>
+              <Input
+                type="number"
+                min={1}
+                max={100}
+                value={(form.crm_credentials?.sync_settings?.sync_max_events) || 10}
+                onChange={e => {
+                  const val = parseInt(e.target.value) || 10;
+                  const ss = form.crm_credentials?.sync_settings || { sync_enabled: true };
+                  setForm({
+                    ...form,
+                    crm_credentials: { ...crmCreds, sync_settings: { ...ss, sync_max_events: val } },
+                  });
+                }}
+                className="w-[100px]"
+              />
+              <p className="text-xs text-muted-foreground">Limita quantos eventos disparam por ciclo de sync (1-100)</p>
+            </div>
             {isEdit && client?.api_key && (
               <>
                 <Separator />
