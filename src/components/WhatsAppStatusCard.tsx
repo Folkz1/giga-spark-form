@@ -21,7 +21,11 @@ interface WhatsAppStatus {
   offlineList: OfflineInstance[];
 }
 
-export function WhatsAppStatusCard() {
+interface WhatsAppStatusCardProps {
+  onOfflineCount?: (count: number) => void;
+}
+
+export function WhatsAppStatusCard({ onOfflineCount }: WhatsAppStatusCardProps) {
   const [data, setData] = useState<WhatsAppStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -38,12 +42,13 @@ export function WhatsAppStatusCard() {
       const json = await res.json();
       setData(json);
       setError(false);
+      onOfflineCount?.(json.offlineList?.length ?? json.offline ?? 0);
     } catch {
       if (isInitial) setError(true);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [onOfflineCount]);
 
   useEffect(() => {
     fetchStatus(true);
@@ -163,13 +168,13 @@ export function WhatsAppStatusCard() {
         </Collapsible>
       )}
 
-      {/* Footer link — always visible */}
+      {/* Footer — ghost button */}
       <div className="mt-4 pt-3 border-t border-slate-700/40">
         <a
           href={PAINEL_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-white transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-600/50 text-xs text-slate-400 hover:border-slate-500 hover:text-slate-300 transition-colors"
         >
           Ver painel completo <ExternalLink className="w-3 h-3" />
         </a>
