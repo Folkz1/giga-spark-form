@@ -517,7 +517,7 @@ function ClientFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={v => !v && onClose()}>
-      <DialogContent className="max-w-lg sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+      <DialogContent className="w-[95vw] max-w-xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEdit ? `Editar: ${client?.name}` : "Novo Cliente"}</DialogTitle>
         </DialogHeader>
