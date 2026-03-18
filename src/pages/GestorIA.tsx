@@ -311,7 +311,7 @@ const GestorIA = () => {
     try {
       const res = await fetch("https://principaln8o.gigainteligencia.com.br/webhook/gestor-clickup", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": "e1893027bdc74625cb097504d272f838aff046851dfa02d44d1728c149799976" },
         body: JSON.stringify({
           accountName,
           campanha: rec.campanha,
