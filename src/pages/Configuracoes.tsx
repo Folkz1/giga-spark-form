@@ -434,6 +434,7 @@ const emptyClient: ClientData = {
   events_enabled: ["Purchase", "Lead"],
   crm_credentials: {
     field_map: { email: "email", phone: "phone", first_name: "name" },
+    sync_settings: { sync_enabled: true, sync_max_events: 10 },
   },
 };
 
