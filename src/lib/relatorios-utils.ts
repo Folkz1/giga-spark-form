@@ -26,6 +26,7 @@ export interface Recomendacao {
   urgencia: string;
   diagnostico: string;
   acao: string;
+  motivo?: string;
   como_executar: string;
   impacto_esperado: string;
   descricao?: string;
